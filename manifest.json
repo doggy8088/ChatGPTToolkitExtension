@@ -1,0 +1,24 @@
+{
+    "manifest_version": 3,
+    "name": "__MSG_chatgpttoolkit_name__",
+    "description": "__MSG_chatgpttoolkit_description__",
+    "version": "0.1.0",
+    "default_locale": "zh_TW",
+    "author": "_MSG_chatgpttoolkit_author__",
+    "icons": {
+      "16": "images/icon-16.png",
+      "32": "images/icon-32.png",
+      "48": "images/icon-48.png",
+      "128": "images/icon-128.png"
+    },
+    "content_scripts": [
+      {
+        "js": [
+          "scripts/content.js"
+        ],
+        "matches": [
+          "https://chat.openai.com/*"
+        ]
+      }
+    ]
+  }

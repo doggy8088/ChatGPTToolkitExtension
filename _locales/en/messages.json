@@ -1,0 +1,11 @@
+{
+    "chatgpttoolkit_name": {
+        "message": "ChatGPT Toolkit"
+    },
+    "chatgpttoolkit_description": {
+        "message": "Enhances your ChatGPT experience with useful features like a Auto-Fill prompt text from URL, common prompts after response, and much more."
+    },
+    "chatgpttoolkit_author": {
+        "message": "Will Huang"
+    }
+}

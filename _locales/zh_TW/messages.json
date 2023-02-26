@@ -1,0 +1,11 @@
+{
+    "chatgpttoolkit_name": {
+        "message": "ChatGPT 萬能工具箱"
+    },
+    "chatgpttoolkit_description": {
+        "message": "提升 ChatGPT 網站的使用體驗，提供一些好用功能。像是自動從 URL 填入提示、在回應的地方出現自動提示按鈕、以及更多好用功能陸續推出。"
+    },
+    "chatgpttoolkit_author": {
+        "message": "Will 保哥"
+    }
+}
