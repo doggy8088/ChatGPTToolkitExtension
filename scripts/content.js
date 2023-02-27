@@ -76,8 +76,6 @@
 
         const main = document.querySelector("body");
 
-        let counter = 0;
-
         let mutationObserverTimer = undefined;
         const obs = new MutationObserver(() => {
 
@@ -109,9 +107,6 @@
                     // 重新建立回應按鈕
                     rebuild_buttons();
                 }
-
-                counter++;
-                console.log(`MutationObserver: ${counter}`);
 
                 // 重新開始觀察
                 start();
@@ -211,8 +206,10 @@
             // 預設的送出按鈕
             button = textarea.parentElement.querySelector("button:last-child");
 
+            // 自動從 URL 填入提詞(Prompt)
             AutoFillFromURI();
 
+            // 自動監控所有 ChatGPT 回應，用以判斷何時要顯示回應按鈕
             StartMonitoringResponse();
 
             clearInterval(it);
