@@ -1,0 +1,11 @@
+{
+  "chatgpttoolkit_name": {
+    "message": "ChatGPT 番号工具箱"
+  },
+  "chatgpttoolkit_description": {
+    "message": "ChatGPT のウェブサイトの利用体験を向上させ、自動URL入力のプロンプト、レスポンスフィールドに自動提案ボタンが表示されるなど、便利な機能を提供することで、より良いユーザーエクスペリエンスを実現します。これらの機能は順次展開されます"
+  },
+  "chatgpttoolkit_author": {
+    "message": "Will 保哥"
+  }
+}

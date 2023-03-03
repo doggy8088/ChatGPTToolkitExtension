@@ -57,6 +57,18 @@
             // translate to EN
             defaultManualSubmitText.push({ text: "翻譯成英文", value: "Please translate the above response into English." });
         }
+        else if (currentLocale == 'ja'){
+            // continue
+            defaultManualSubmitText.push({ id: 'continue', text: "続けて", value: "続けて" });
+            // exemplify
+            defaultManualSubmitText.push({ text: "例えば", value: "例を挙げて説明して" });
+            // expand
+            defaultManualSubmitText.push({ text: "詳細説明", value: "もっと詳細に説明して" });
+            // translate to TC
+            defaultManualSubmitText.push({ text: "日本語に翻訳", value: "上述の返答内容を日本語に翻訳して" });
+            // translate to EN
+            defaultManualSubmitText.push({ text: "英語に翻訳", value: "Please translate the above response into English." });		
+		}
         else {
             // continue
             defaultManualSubmitText.push({ id: 'continue', text: "Continue", value: "Continue" });
