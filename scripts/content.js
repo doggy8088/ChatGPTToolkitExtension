@@ -33,7 +33,9 @@
             textarea.scrollTop = textarea.scrollHeight; // 自動捲動到最下方
 
             if (autoSubmit) {
-                button.click();
+                setTimeout(() => {
+                    button.click();
+                }, 1000);
             }
 
             history.replaceState({}, document.title, window.location.pathname + window.location.search);
