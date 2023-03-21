@@ -58,6 +58,8 @@
             defaultManualSubmitText.push({ text: "翻譯成繁中", value: "請將上述回應內容翻譯成臺灣常用的繁體中文" });
             // translate to EN
             defaultManualSubmitText.push({ text: "翻譯成英文", value: "Please translate the above response into English." });
+            // display image
+            defaultManualSubmitText.push({ text: "顯示相關圖片", value: "搭配上述回應內容一張相關的圖片，顯示圖片時使用 markdown 語法 (https://source.unsplash.com/960x640/?<上述回應內容>)" });
         }
         else {
             // continue
@@ -70,6 +72,8 @@
             defaultManualSubmitText.push({ text: "Translate to TC", value: "Please translate the above response into Traditional Chinese." });
             // translate to EN
             defaultManualSubmitText.push({ text: "Translate to English", value: "Please translate the above response into English." });
+            // display image
+            defaultManualSubmitText.push({ text: "Display images", value: "Match the above response content with a related picture, and use markdown syntax when displaying the picture (https://source.unsplash.com/960x640/?<the above response content>)" });
         }
 
         let globalButtons = [];
