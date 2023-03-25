@@ -1,5 +1,9 @@
 # Changelog
 
+- 0.3.0 (2023/03/25)
+
+  - Add Japanese version
+
 - 0.2.0 (2023/03/10)
 
   - 修復 `autoSubmit=1` 時可能尚未載入 API Key 的問題（會導致被要求登入）
