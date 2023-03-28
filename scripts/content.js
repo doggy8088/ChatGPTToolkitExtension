@@ -15,9 +15,8 @@
         // 解析參數
         let prompt = params.get('prompt')
             .replace(/\r/g, '')
-            .replace(/\s+$/g, '')
             .replace(/\n{3,}/sg, '\n\n')
-            .replace(/^\s+|\s+$/sg, '')
+            .replace(/^\s+/sg, '')
         let submit = params.get("autoSubmit");
 
         let autoSubmit = false;
@@ -78,8 +77,6 @@
             defaultManualSubmitText.push({ text: "More Examples", value: "Could you please provide me with more examples?" });
             // expand
             defaultManualSubmitText.push({ text: "More Details", value: "Could you please provide me with more details?" });
-            // translate to TC
-            defaultManualSubmitText.push({ text: "Translate to TC", value: "Please translate the above response into Traditional Chinese." });
             // translate to EN
             defaultManualSubmitText.push({ text: "Translate to English", value: "Please translate the above response into English." });
         }

@@ -1,5 +1,10 @@
 # Changelog
 
+- 0.4.0 (2023/03/28)
+
+  - Keep the space for each line which keep all the newlines characters at the end of the prompt text.
+  - You can add `%0D%0A` or `%0A` to the prompt text to enforce input newline characters.
+
 - 0.3.0 (2023/03/25)
 
   - Add Japanese version
