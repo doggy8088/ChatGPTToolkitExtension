@@ -19,11 +19,11 @@ ChatGPT 萬能工具箱提供 ChatGPT 網站一些好用的額外功能，可以
 
     開啟 ChatGPT 網站並填入「你好」且**不會自動送出** (`autoSubmit=0`)
 
-    https://chat.openai.com/chat#autoSubmit=0&prompt=你好
+    https://chat.openai.com/chat/#autoSubmit=0&prompt=你好
 
     開啟 ChatGPT 網站並填入「你好」且**會自動送出** (`autoSubmit=1`)
 
-    https://chat.openai.com/chat#autoSubmit=1&prompt=你好
+    https://chat.openai.com/chat/#autoSubmit=1&prompt=你好
 
 2. 設定為 Chrome / Edge 內建搜尋引擎，例如：
 
@@ -34,7 +34,7 @@ ChatGPT 萬能工具箱提供 ChatGPT 網站一些好用的額外功能，可以
     ```txt
     搜尋引擎: ChatGPT
     快捷字詞: g
-    以 %s 取代查詢的網址: https://chat.openai.com/chat#autoSubmit=1&prompt=%s
+    以 %s 取代查詢的網址: https://chat.openai.com/chat/#autoSubmit=1&prompt=%s
     ```
 
     只要在網址列輸入 `g` 再按 Tab 鍵，就會自動開啟 ChatGPT 並自動填入提示文字。
@@ -62,11 +62,11 @@ More useful features will be launched in the future, and everyone is welcome to 
 
     Open the ChatGPT website and fill in "hello" **without automatically submitting** (`autoSubmit=0`):
 
-    https://chat.openai.com/chat#autoSubmit=0&prompt=hello
+    https://chat.openai.com/chat/#autoSubmit=0&prompt=hello
 
     Open the ChatGPT website and fill in "hello" **with automatic submission** (`autoSubmit=1`):
 
-    https://chat.openai.com/chat#autoSubmit=1&prompt=hello
+    https://chat.openai.com/chat/#autoSubmit=1&prompt=hello
 
 2. Set it as the default search engine in Chrome / Edge, for example:
 
@@ -77,7 +77,7 @@ More useful features will be launched in the future, and everyone is welcome to 
     ```txt
     Search engine: ChatGPT
     Shortcut: g
-    URL with %s in place of query: https://chat.openai.com/chat#autoSubmit=1&prompt=%s
+    URL with %s in place of query: https://chat.openai.com/chat/#autoSubmit=1&prompt=%s
     ```
 
     Just type `g` in the URL bar and press the Tab key, and ChatGPT will automatically open and fill in the prompt text.
