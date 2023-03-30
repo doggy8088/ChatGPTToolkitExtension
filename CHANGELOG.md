@@ -1,5 +1,10 @@
 # Changelog
 
+- 0.6.0 (2023/04/03)
+
+  - Change Japanese extension name to `ChatGPT 多機能ツールキット`.
+  - Bug fixed for buttons due to ChatGPT site DOM structure changed.
+
 - 0.5.0 (2023/03/30)
 
   - Change Japanese extension name to `ChatGPT 万能ツールキット`.
