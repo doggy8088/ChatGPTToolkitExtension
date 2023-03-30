@@ -1,5 +1,9 @@
 # Changelog
 
+- 0.5.0 (2023/03/30)
+
+  - Change Japanese extension name to `ChatGPT 万能ツールキット`.
+
 - 0.4.0 (2023/03/28)
 
   - Keep the space for each line which keep all the newlines characters at the end of the prompt text.
