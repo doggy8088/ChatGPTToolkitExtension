@@ -1,5 +1,9 @@
 # Changelog
 
+- 0.7.0 (2023/04/18)
+
+  - Change term for `翻譯成繁中` to `請將上述回應內容翻譯成臺灣常用的正體中文` (正體中文翻譯效果更好)
+
 - 0.6.0 (2023/04/03)
 
   - Change Japanese extension name to `ChatGPT 多機能ツールキット`.
