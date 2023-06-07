@@ -1,5 +1,9 @@
 # Changelog
 
+- 0.8.0 (2023/06/07)
+
+  - Fixed for additional button disappear due to HTML layout changed on ChatGPT site.
+
 - 0.7.0 (2023/04/18)
 
   - Change term for `翻譯成繁中` to `請將上述回應內容翻譯成臺灣常用的正體中文` (正體中文翻譯效果更好)
