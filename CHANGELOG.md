@@ -1,5 +1,9 @@
 # Changelog
 
+- 0.8.1 (2023/06/08)
+
+  - Remove "Continue" button it because there is a `Continue generating` built-in button on ChatGPT.
+
 - 0.8.0 (2023/06/07)
 
   - Fixed for additional button disappear due to HTML layout changed on ChatGPT site.

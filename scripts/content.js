@@ -47,8 +47,6 @@
 
         const currentLocale = chrome.i18n.getUILanguage();
         if (currentLocale == 'zh-TW') {
-            // continue
-            defaultManualSubmitText.push({ id: 'continue', text: "繼續", value: "繼續" });
             // exemplify
             defaultManualSubmitText.push({ text: "舉例說明", value: "請舉例說明" });
             // expand
@@ -59,8 +57,6 @@
             defaultManualSubmitText.push({ text: "翻譯成英文", value: "Please translate the above response into English." });
         }
         else if (currentLocale == 'ja'){
-            // continue
-            defaultManualSubmitText.push({ id: 'continue', text: "続けて", value: "続けて" });
             // exemplify
             defaultManualSubmitText.push({ text: "例えば", value: "例を挙げて説明して" });
             // expand
@@ -71,8 +67,6 @@
             defaultManualSubmitText.push({ text: "英語に翻訳", value: "Please translate the above response into English." });
 		}
         else {
-            // continue
-            defaultManualSubmitText.push({ id: 'continue', text: "Continue", value: "Continue" });
             // exemplify
             defaultManualSubmitText.push({ text: "More Examples", value: "Could you please provide me with more examples?" });
             // expand
@@ -143,27 +137,6 @@
                 defaultManualSubmitText.forEach((item) => {
 
                     let lastText = talkBlockToInsertButtons.innerText;
-
-                    const isPunctuation = (str) => {
-                        const punctuationRegex = /^[\p{P}\p{S}]$/u;
-                        return punctuationRegex.test(str);
-                    }
-
-                    // 如果回應的最後一個字元是個標點符號，就不需要顯示「繼續」按鈕
-                    if (item.id == 'continue') {
-                        let lastChar = lastText.charAt(lastText.length - 1);
-                        if (isPunctuation(lastChar)) {
-                            // 如果最後一個字元是逗號，通常代表要繼續，因為句子尚未完成
-                            if (lastChar === ',' || lastChar === '，') {
-                                // 如果是逗號，通常代表要繼續，因為句子尚未完成
-                            } else {
-                                // 如果最後一個字元是「。」或「！」或「？」，則不顯示「繼續」按鈕
-                                return;
-                            }
-                        } else {
-                            // 如果不是標點符號，就需要顯示「繼續」按鈕
-                        }
-                    }
 
                     const button = document.createElement("button");
                     button.style.border = "1px solid #d1d5db";
