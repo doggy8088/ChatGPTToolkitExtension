@@ -1,5 +1,9 @@
 # Changelog
 
+- 0.9.0 (2023/08/07)
+
+  - Add a new feature to edit prompt when double click on the prompt text.
+
 - 0.8.1 (2023/06/08)
 
   - Remove "Continue" button it because there is a `Continue generating` built-in button on ChatGPT.

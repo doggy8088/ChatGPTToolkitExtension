@@ -56,7 +56,7 @@
             // translate to EN
             defaultManualSubmitText.push({ text: "翻譯成英文", value: "Please translate the above response into English." });
         }
-        else if (currentLocale == 'ja'){
+        else if (currentLocale == 'ja') {
             // exemplify
             defaultManualSubmitText.push({ text: "例えば", value: "例を挙げて説明して" });
             // expand
@@ -65,7 +65,7 @@
             defaultManualSubmitText.push({ text: "日本語に翻訳", value: "上述の返答内容を日本語に翻訳して" });
             // translate to EN
             defaultManualSubmitText.push({ text: "英語に翻訳", value: "Please translate the above response into English." });
-		}
+        }
         else {
             // exemplify
             defaultManualSubmitText.push({ text: "More Examples", value: "Could you please provide me with more examples?" });
@@ -183,7 +183,7 @@
         start();
     };
 
-    const it = setInterval(() => {
+    const checkForTextareaInput = setInterval(() => {
         textarea = document.activeElement;
         if (textarea.tagName === 'TEXTAREA' && textarea.nextSibling.tagName === 'BUTTON') {
 
@@ -196,8 +196,28 @@
             // 自動監控所有 ChatGPT 回應，用以判斷何時要顯示回應按鈕
             StartMonitoringResponse();
 
-            clearInterval(it);
+            clearInterval(checkForTextareaInput);
         };
     }, 60);
+
+    const checkForMainElement = setInterval(() => {
+        if (document.getElementsByTagName('main').length > 0) {
+            // 由於在切換歷史紀錄時會重建 main 元素，所以要監聽 document.body 的事件
+            document.body.addEventListener('dblclick', (event) => {
+                // 提示的 DOM 都套用 empty:hidden 這個類別
+                if (event.target.className == 'empty:hidden') {
+                    // 由於 ChatGPT 網站上的 DOM 都沒有定位點，所以只能靠 SVG 的線條來決定是哪一個按鈕
+                    // 底下這個線條是編輯按鈕的「鉛筆」圖示
+                    let svg = event.target.parentElement.parentElement.parentElement.querySelector('path[d*=\'M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z\']');
+                    if (svg) {
+                        let btn = svg.parentElement.parentElement;
+                        btn.click();
+                    }
+                }
+            });
+            // console.log('ChatGPT: 滑鼠雙擊編輯提示文字 Initialized');
+            clearInterval(checkForMainElement);
+        }
+    }, 500);
 
 })();
