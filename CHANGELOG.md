@@ -1,5 +1,9 @@
 # Changelog
 
+- 0.10.0 (2023/09/1)
+
+  - Fix a bug due to ChatGPT layout structure changes on August 3, 2023 updates.
+
 - 0.9.0 (2023/08/07)
 
   - Add a new feature to edit prompt when double click on the prompt text.

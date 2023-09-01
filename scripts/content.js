@@ -86,7 +86,7 @@
 
             // 尋找聊天記錄的最後一筆，用來插入按鈕
             const talkBlocks = document.querySelectorAll(
-                ".flex.p-4.gap-4.text-base.md\\:gap-6.md\\:max-w-2xl.lg\\:max-w-\\[38rem\\].xl\\:max-w-3xl.md\\:py-6.lg\\:px-0.m-auto"
+                "div.flex.flex-grow.flex-col.gap-3.max-w-full"
             );
             if (!talkBlocks || !talkBlocks.length) {
                 return;
