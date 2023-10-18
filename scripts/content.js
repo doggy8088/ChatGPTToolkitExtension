@@ -204,14 +204,24 @@
         if (document.getElementsByTagName('main').length > 0) {
             // 由於在切換歷史紀錄時會重建 main 元素，所以要監聽 document.body 的事件
             document.body.addEventListener('dblclick', (event) => {
-                // 提示的 DOM 都套用 empty:hidden 這個類別
-                if (event.target.className == 'empty:hidden') {
+                // 使用者提示文字的圖示是 IMG，且 alt 屬性為 User
+                if (event.target.nodeName === 'IMG' && event.target.alt === 'User') {
                     // 由於 ChatGPT 網站上的 DOM 都沒有定位點，所以只能靠 SVG 的線條來決定是哪一個按鈕
                     // 底下這個線條是編輯按鈕的「鉛筆」圖示
-                    let svg = event.target.parentElement.parentElement.parentElement.querySelector('path[d*=\'M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z\']');
-                    if (svg) {
-                        let btn = svg.parentElement.parentElement;
-                        btn.click();
+                    let div = event.target?.parentElement?.parentElement?.parentElement?.nextSibling;
+
+                    if (div) {
+                        let btn = div.querySelector('button');
+                        if (btn) {
+                            btn.click();
+                            setTimeout(() => {
+                                let txt = div.querySelector('textarea')
+                                if (txt) {
+                                    txt.selectionStart = txt.selectionEnd = txt.value.length;
+                                    txt.focus();
+                                }
+                            }, 0);
+                        }
                     }
                 }
             });

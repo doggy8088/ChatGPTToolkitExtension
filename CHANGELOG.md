@@ -1,5 +1,9 @@
 # Changelog
 
+- 0.11.0 (2023/10/18)
+
+  - Fix a bug due to ChatGPT layout structure changes.
+
 - 0.10.0 (2023/09/1)
 
   - Fix a bug due to ChatGPT layout structure changes on August 3, 2023 updates.
