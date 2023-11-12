@@ -1,10 +1,7 @@
 (function () {
     "use strict";
 
-    let button;
-    let textarea;
-
-    const AutoFillFromURI = () => {
+    const AutoFillFromURI = (textarea, button) => {
 
         // 解析 hash 中的查詢字串並取得所需的參數
         var hash = location.hash.substring(1);
@@ -24,7 +21,7 @@
             autoSubmit = true
         }
 
-        if (prompt) {
+        if (prompt && textarea && button) {
             textarea.value = prompt;
             textarea.dispatchEvent(new Event("input", { bubbles: true }));
             textarea.focus();
@@ -33,7 +30,9 @@
 
             if (autoSubmit) {
                 setTimeout(() => {
-                    button.click();
+                    if (!button.disabled) {
+                        button.click();
+                    }
                 }, 1000);
             }
 
@@ -43,112 +42,116 @@
 
     const StartMonitoringResponse = () => {
 
+        // 預設的回應按鈕
         let defaultManualSubmitText = [];
 
-        const currentLocale = chrome.i18n.getUILanguage();
-        if (currentLocale == 'zh-TW') {
-            // exemplify
-            defaultManualSubmitText.push({ text: "舉例說明", value: "請舉例說明" });
-            // expand
-            defaultManualSubmitText.push({ text: "提供細節", value: "請提供更多細節說明" });
-            // translate to TC
-            defaultManualSubmitText.push({ text: "翻譯成繁中", value: "請將上述回應內容翻譯成臺灣常用的正體中文" });
-            // translate to EN
-            defaultManualSubmitText.push({ text: "翻譯成英文", value: "Please translate the above response into English." });
-        }
-        else if (currentLocale == 'ja') {
-            // exemplify
-            defaultManualSubmitText.push({ text: "例えば", value: "例を挙げて説明して" });
-            // expand
-            defaultManualSubmitText.push({ text: "詳細説明", value: "もっと詳細に説明して" });
-            // translate to JP
-            defaultManualSubmitText.push({ text: "日本語に翻訳", value: "上述の返答内容を日本語に翻訳して" });
-            // translate to EN
-            defaultManualSubmitText.push({ text: "英語に翻訳", value: "Please translate the above response into English." });
-        }
-        else {
-            // exemplify
-            defaultManualSubmitText.push({ text: "More Examples", value: "Could you please provide me with more examples?" });
-            // expand
-            defaultManualSubmitText.push({ text: "More Details", value: "Could you please provide me with more details?" });
-            // translate to EN
-            defaultManualSubmitText.push({ text: "Translate to English", value: "Please translate the above response into English." });
+        const currentLocale = chrome.i18n?.getUILanguage();
+        if (currentLocale) {
+            if (currentLocale == 'zh-TW') {
+                // exemplify
+                defaultManualSubmitText.push({ text: "舉例說明", value: "請舉例說明" });
+                // expand
+                defaultManualSubmitText.push({ text: "提供細節", value: "請提供更多細節說明" });
+                // translate to TC
+                defaultManualSubmitText.push({ text: "翻譯成繁中", value: "請將上述回應內容翻譯成臺灣常用的正體中文" });
+                // translate to EN
+                defaultManualSubmitText.push({ text: "翻譯成英文", value: "Please translate the above response into English." });
+            }
+            else if (currentLocale == 'ja') {
+                // exemplify
+                defaultManualSubmitText.push({ text: "例えば", value: "例を挙げて説明して" });
+                // expand
+                defaultManualSubmitText.push({ text: "詳細説明", value: "もっと詳細に説明して" });
+                // translate to JP
+                defaultManualSubmitText.push({ text: "日本語に翻訳", value: "上述の返答内容を日本語に翻訳して" });
+                // translate to EN
+                defaultManualSubmitText.push({ text: "英語に翻訳", value: "Please translate the above response into English." });
+            }
+            else {
+                // exemplify
+                defaultManualSubmitText.push({ text: "More Examples", value: "Could you please provide me with more examples?" });
+                // expand
+                defaultManualSubmitText.push({ text: "More Details", value: "Could you please provide me with more details?" });
+                // translate to EN
+                defaultManualSubmitText.push({ text: "Translate to English", value: "Please translate the above response into English." });
+            }
         }
 
-        let globalButtons = [];
-        let buttonsArea;
-        let talkBlockToInsertButtons;
-
-        const main = document.querySelector("body");
+        let lastBlock;
 
         let mutationObserverTimer = undefined;
         const obs = new MutationObserver(() => {
 
             // 尋找聊天記錄的最後一筆，用來插入按鈕
-            const talkBlocks = document.querySelectorAll(
-                "div.flex.flex-grow.flex-col.gap-3.max-w-full"
-            );
+            const talkBlocks = [...document.querySelectorAll('div[data-testid^="conversation-turn-"]')];
             if (!talkBlocks || !talkBlocks.length) {
                 return;
             }
 
-            if (talkBlockToInsertButtons != talkBlocks[talkBlocks.length - 1]) {
-                if (buttonsArea) {
-                    // 重新將按鈕區和按鈕移除
-                    buttonsArea.remove();
-                }
-            }
-
+            // console.log(mutationObserverTimer)
             clearTimeout(mutationObserverTimer);
             mutationObserverTimer = setTimeout(() => {
 
                 // 先停止觀察，避免自訂畫面變更被觀察到
                 stop();
 
-                if (talkBlockToInsertButtons != talkBlocks[talkBlocks.length - 1]) {
-                    // 要被插入按鈕的區塊
-                    talkBlockToInsertButtons = talkBlocks[talkBlocks.length - 1];
-
-                    // 重新建立回應按鈕
-                    rebuild_buttons();
-                }
+                // 重新建立回應按鈕
+                rebuild_buttons();
 
                 // 重新開始觀察
                 start();
 
-            }, 600);
+            }, 0);
 
-            function rebuild_buttons() {
+        });
 
-                // remove custom buttons
-                globalButtons = [];
+        function rebuild_buttons() {
 
-                // create a new buttons area
-                buttonsArea = document.createElement("div");
-                buttonsArea.classList = "custom-buttons-area text-base m-auto md:max-w-2xl lg:max-w-2xl xl:max-w-3xl p-4 md:py-6 flex lg:px-0";
-                buttonsArea.style.overflowY = "auto";
-                buttonsArea.style.display = "flex";
-                buttonsArea.style.flexWrap = "wrap";
-                buttonsArea.style.paddingTop = 0;
-                buttonsArea.style.paddingLeft = "calc(30px + 0.75rem)";
-                talkBlockToInsertButtons.after(buttonsArea);
+            const talkBlocks = [...document.querySelectorAll('div[data-testid^="conversation-turn-"]')];
+            let buttonsArea = document.getElementById('custom-chatgpt-magic-box-buttons');
 
-                // add buttons
-                defaultManualSubmitText.forEach((item) => {
+            // 如果正在回答問題中，就不要出現這些按鈕
+            let stopButton = document.querySelector('button[aria-label="Stop generating"]');
+            if (stopButton) {
+                buttonsArea?.remove();
+                return;
+            }
 
-                    let lastText = talkBlockToInsertButtons.innerText;
+            // 如果還沒有輸入框，也不要顯示按鈕
+            const promptTextarea = document.getElementById("prompt-textarea");
+            if (!promptTextarea) {
+                buttonsArea?.remove();
+                return;
+            }
 
-                    const button = document.createElement("button");
-                    button.style.border = "1px solid #d1d5db";
-                    button.style.borderRadius = "5px";
-                    button.style.padding = "0.5rem 1rem";
-                    button.style.margin = "0.5rem";
+            if (talkBlocks[talkBlocks.length - 1] === lastBlock && !!buttonsArea) {
+                return;
+            }
 
-                    button.innerText = item.text;
-                    button.addEventListener("click", () => {
+            // create a new buttons area
+            buttonsArea = document.createElement("div");
+            buttonsArea.id = "custom-chatgpt-magic-box-buttons";
+            buttonsArea.classList = "custom-buttons-area text-base m-auto md:max-w-2xl lg:max-w-2xl xl:max-w-3xl p-4 md:py-6 flex lg:px-0";
+            buttonsArea.style.overflowY = "auto";
+            buttonsArea.style.display = "flex";
+            buttonsArea.style.flexWrap = "wrap";
+            buttonsArea.style.paddingTop = "0.75rem";
+            buttonsArea.style.paddingLeft = "calc(30px + 0.75rem)";
 
-                        // 填入 prompt
-                        const textarea = document.querySelector("textarea");
+            // add buttons to buttonsArea
+            defaultManualSubmitText.forEach((item) => {
+
+                const customButton = document.createElement("button");
+                customButton.style.border = "1px solid #d1d5db";
+                customButton.style.borderRadius = "5px";
+                customButton.style.padding = "0.5rem 1rem";
+                customButton.style.margin = "0.5rem";
+
+                customButton.innerText = item.text;
+                customButton.addEventListener("click", () => {
+                    // 填入 prompt
+                    const textarea = document.getElementById("prompt-textarea");
+                    if (textarea) {
                         textarea.value = item.value;
                         textarea.dispatchEvent(new Event("input", { bubbles: true }));
                         textarea.focus();
@@ -156,20 +159,26 @@
                         textarea.scrollTop = textarea.scrollHeight; // 自動捲動到最下方
 
                         // 預設的送出按鈕
-                        const button = textarea.parentElement.querySelector("button:last-child");
-                        button.click();
-
-                    });
-
-                    buttonsArea.append(button);
-                    globalButtons.push(button);
+                        const sendButton = document.querySelector('button[data-testid="send-button"]');
+                        if (sendButton) {
+                            sendButton.click();
+                        }
+                    }
                 });
+
+                buttonsArea.append(customButton);
+            });
+
+            if (talkBlocks.length > 0) {
+                lastBlock = talkBlocks[talkBlocks.length - 1];
+                lastBlock.after(buttonsArea);
             }
 
-        });
+        }
 
         const start = () => {
-            obs.observe(main.parentElement, {
+            console.log('ChatGPT: Start Monitoring')
+            obs.observe(document.body, {
                 childList: true,
                 attributes: true,
                 subtree: true,
@@ -177,57 +186,60 @@
         };
 
         const stop = () => {
+            console.log('ChatGPT: Stop Monitoring')
             obs.disconnect();
         };
 
+        rebuild_buttons();
+
         start();
+
     };
 
+    // 自動監控所有 ChatGPT 回應，用以判斷何時要顯示回應按鈕
+    StartMonitoringResponse();
+
     const checkForTextareaInput = setInterval(() => {
-        textarea = document.activeElement;
-        if (textarea.tagName === 'TEXTAREA' && textarea.nextSibling.tagName === 'BUTTON') {
+        if (document.activeElement.tagName === 'TEXTAREA' && document.activeElement.id === 'prompt-textarea') {
+            // 預設輸入 Prompt 的 textarea
+            const textarea = document.activeElement;
 
             // 預設的送出按鈕
-            button = textarea.parentElement.querySelector("button:last-child");
+            const button = document.querySelector('button[data-testid="send-button"]');
 
             // 自動從 URL 填入提詞(Prompt)
-            AutoFillFromURI();
-
-            // 自動監控所有 ChatGPT 回應，用以判斷何時要顯示回應按鈕
-            StartMonitoringResponse();
+            AutoFillFromURI(textarea, button);
 
             clearInterval(checkForTextareaInput);
         };
     }, 60);
 
-    const checkForMainElement = setInterval(() => {
-        if (document.getElementsByTagName('main').length > 0) {
-            // 由於在切換歷史紀錄時會重建 main 元素，所以要監聽 document.body 的事件
-            document.body.addEventListener('dblclick', (event) => {
-                // 使用者提示文字的圖示是 IMG，且 alt 屬性為 User
-                if (event.target.nodeName === 'IMG' && event.target.alt === 'User') {
-                    // 由於 ChatGPT 網站上的 DOM 都沒有定位點，所以只能靠 SVG 的線條來決定是哪一個按鈕
-                    // 底下這個線條是編輯按鈕的「鉛筆」圖示
-                    let div = event.target?.parentElement?.parentElement?.parentElement?.nextSibling;
-
-                    if (div) {
-                        let btn = div.querySelector('button');
-                        if (btn) {
-                            btn.click();
-                            setTimeout(() => {
-                                let txt = div.querySelector('textarea')
-                                if (txt) {
-                                    txt.selectionStart = txt.selectionEnd = txt.value.length;
-                                    txt.focus();
-                                }
-                            }, 0);
+    // 由於在切換歷史紀錄時會重建 main 元素，所以要監聽 document.body 的事件
+    document.body.addEventListener('dblclick', (event) => {
+        // 找出最接近的對話列 DIV
+        let closestDIV = event.target.closest('div[data-testid^="conversation-turn-"]');
+        if (closestDIV) {
+            // console.log('closestDIV: ', closestDIV)
+            // 篩選出使用者的對話列 (使用者提示文字的圖示是 IMG，且 alt 屬性為 User)
+            let userIMG = closestDIV.querySelector('img[alt="User"]');
+            if (userIMG) {
+                // console.log('userIMG: ', userIMG)
+                // 找到這一區的最後一顆按鈕
+                let btns = [...closestDIV.querySelectorAll('button')];
+                if (btns.length > 0) {
+                    let btn = btns[btns.length - 1];
+                    // console.log('btn: ', btn)
+                    btn.click();
+                    setTimeout(() => {
+                        let txt = closestDIV.querySelector('textarea')
+                        if (txt) {
+                            txt.selectionStart = txt.selectionEnd = txt.value.length;
+                            txt.focus();
                         }
-                    }
+                    }, 0);
                 }
-            });
-            // console.log('ChatGPT: 滑鼠雙擊編輯提示文字 Initialized');
-            clearInterval(checkForMainElement);
+            }
         }
-    }, 500);
+    });
 
 })();
