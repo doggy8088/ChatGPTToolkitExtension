@@ -4,10 +4,10 @@
     const AutoFillFromURI = (textarea, button) => {
 
         // 解析 hash 中的查詢字串並取得所需的參數
-        var hash = location.hash.substring(1);
+        let hash = location.hash.substring(1);
         if (!hash) return;
 
-        var params = new URLSearchParams(hash);
+        let params = new URLSearchParams(hash);
 
         // 解析參數
         let prompt = params.get('prompt')
@@ -216,6 +216,9 @@
 
     // 由於在切換歷史紀錄時會重建 main 元素，所以要監聽 document.body 的事件
     document.body.addEventListener('dblclick', (event) => {
+        if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+            return;
+        }
         // 找出最接近的對話列 DIV
         let closestDIV = event.target.closest('div[data-testid^="conversation-turn-"]');
         if (closestDIV) {

@@ -1,5 +1,9 @@
 # Changelog
 
+- 0.13.0 (2023/11/13)
+
+  - Ignore the `dblclick` event if the textarea is already in editing mode.
+
 - 0.12.0 (2023/11/13)
 
   - Fix few bugs due to ChatGPT layout structure changes.
