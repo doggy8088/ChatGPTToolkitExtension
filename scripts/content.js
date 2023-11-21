@@ -88,6 +88,10 @@
                 return;
             }
 
+            if (location.pathname.startsWith('/gpts/editor/')) {
+                return;
+            }
+
             // console.log(mutationObserverTimer)
             clearTimeout(mutationObserverTimer);
             mutationObserverTimer = setTimeout(() => {

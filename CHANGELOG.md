@@ -1,5 +1,9 @@
 # Changelog
 
+- 0.14.0 (2023/11/21)
+
+  - Avoid GPTs Editor apply this tool.
+
 - 0.13.0 (2023/11/13)
 
   - Ignore the `dblclick` event if the textarea is already in editing mode.
