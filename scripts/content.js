@@ -88,7 +88,7 @@
                 return;
             }
 
-            if (location.pathname.startsWith('/gpts/editor/')) {
+            if (location.pathname.startsWith('/gpts/editor')) {
                 return;
             }
 

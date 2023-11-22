@@ -1,5 +1,9 @@
 # Changelog
 
+- 0.14.1 (2023/11/22)
+
+  - Bug Fixed: Avoid GPTs Editor apply this tool.
+
 - 0.14.0 (2023/11/21)
 
   - Avoid GPTs Editor apply this tool.
