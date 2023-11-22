@@ -45,6 +45,8 @@
         // 預設的回應按鈕
         let defaultManualSubmitText = [];
 
+        let lastBlock;
+
         const currentLocale = chrome.i18n?.getUILanguage();
         if (currentLocale) {
             if (currentLocale == 'zh-TW') {
@@ -76,8 +78,6 @@
                 defaultManualSubmitText.push({ text: "Translate to English", value: "Please translate the above response into English." });
             }
         }
-
-        let lastBlock;
 
         let mutationObserverTimer = undefined;
         const obs = new MutationObserver(() => {
@@ -112,28 +112,41 @@
         function rebuild_buttons() {
 
             const talkBlocks = [...document.querySelectorAll('div[data-testid^="conversation-turn-"]')];
-            let buttonsArea = document.getElementById('custom-chatgpt-magic-box-buttons');
+
+            let buttonsAreas = document.querySelectorAll('#custom-chatgpt-magic-box-buttons');
 
             // 如果正在回答問題中，就不要出現這些按鈕
             let stopButton = document.querySelector('button[aria-label="Stop generating"]');
             if (stopButton) {
-                buttonsArea?.remove();
+                buttonsAreas?.forEach((item) => {
+                    item.remove();
+                });
                 return;
             }
 
             // 如果還沒有輸入框，也不要顯示按鈕
             const promptTextarea = document.getElementById("prompt-textarea");
             if (!promptTextarea) {
-                buttonsArea?.remove();
+                buttonsAreas?.forEach((item) => {
+                    item.remove();
+                });
                 return;
             }
 
-            if (talkBlocks[talkBlocks.length - 1] === lastBlock && !!buttonsArea) {
+            // 如果因為編輯先前的提示導致整體 DOM 結構改變，就重建 Buttons
+            if (lastBlock != talkBlocks[talkBlocks.length - 1]) {
+                buttonsAreas?.forEach((item) => {
+                    item.remove();
+                });
+            }
+
+            buttonsAreas = document.querySelectorAll('#custom-chatgpt-magic-box-buttons');
+            if (buttonsAreas.length > 0) {
                 return;
             }
 
             // create a new buttons area
-            buttonsArea = document.createElement("div");
+            let buttonsArea = document.createElement("div");
             buttonsArea.id = "custom-chatgpt-magic-box-buttons";
             buttonsArea.classList = "custom-buttons-area text-base m-auto md:max-w-2xl lg:max-w-2xl xl:max-w-3xl p-4 md:py-6 flex lg:px-0";
             buttonsArea.style.overflowY = "auto";
@@ -181,7 +194,7 @@
         }
 
         const start = () => {
-            console.log('ChatGPT: Start Monitoring')
+            // console.log('ChatGPT: Start Monitoring')
             obs.observe(document.body, {
                 childList: true,
                 attributes: true,
@@ -190,7 +203,7 @@
         };
 
         const stop = () => {
-            console.log('ChatGPT: Stop Monitoring')
+            // console.log('ChatGPT: Stop Monitoring')
             obs.disconnect();
         };
 

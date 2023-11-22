@@ -1,5 +1,9 @@
 # Changelog
 
+- 0.15.0 (2023/11/23)
+
+  - Bug Fixed: Remove duplicated Buttons due to switching the previous/next prompts to another version.
+
 - 0.14.1 (2023/11/22)
 
   - Bug Fixed: Avoid GPTs Editor apply this tool.
