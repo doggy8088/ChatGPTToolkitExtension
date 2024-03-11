@@ -4,7 +4,7 @@
     const getParamFromHash = () => {
         // 解析 hash 中的查詢字串並取得所需的參數
         let hash = location.hash.substring(1);
-        if (!hash) return;
+        if (!hash) return [null, false];
 
         let params = new URLSearchParams(hash);
 
@@ -39,7 +39,14 @@
         var ti = setInterval(() => {
             var textarea = document.querySelector('chat-window .textarea');
             if (textarea) {
-                textarea.innerHTML = prompt;
+
+                const lines = prompt.split('\n');
+                textarea.innerHTML = '';
+                lines.forEach(line => {
+                    const paragraph = document.createElement('p');
+                    paragraph.innerText = line;
+                    textarea.appendChild(paragraph);
+                });
 
                 var button = document.querySelector('chat-window button.send-button');
                 if (button) {

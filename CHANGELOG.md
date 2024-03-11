@@ -1,5 +1,9 @@
 # Changelog
 
+- 0.16.1 (2024/03/12)
+
+  - Bug Fixed: Fix the issue that the `AutoFill` and `AutoSubmit` feature produce errors when there is no hash on the location.
+
 - 0.16.0 (2024/03/11)
 
   - Feature: Add `Gemini` Support for `AutoFill` and `AutoSubmit` feature.
