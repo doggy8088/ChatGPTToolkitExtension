@@ -1,5 +1,11 @@
 # Changelog
 
+- 0.16.0 (2024/03/11)
+
+  - Feature: Add `Gemini` Support for `AutoFill` and `AutoSubmit` feature.
+  - Feature: Add `Claude` Support for `AutoFill` and `AutoSubmit` feature.
+  - Feature: Add `phind` Support for `AutoFill` and `AutoSubmit` feature.
+
 - 0.15.0 (2023/11/23)
 
   - Bug Fixed: Remove duplicated Buttons due to switching the previous/next prompts to another version.

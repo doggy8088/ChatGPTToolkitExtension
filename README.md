@@ -12,6 +12,8 @@ ChatGPT 萬能工具箱提供 ChatGPT 網站一些好用的額外功能，可以
 2. 在 ChatGPT 回應的地方出現自動提示按鈕，這些常用的提示詞可以透過按鈕自動輸入。
 3. 在 ChatGPT 已經提問的文字左側的使用者頭像上或文字上按滑鼠左鍵兩下，可以直接編輯提示詞。
 
+📢 此套件 `2024-03-11` 加入 [Gemini](https://gemini.google.com/app), [Claude](https://claude.ai/), [phind](https://www.phind.com/search?home=true) 支援 `AutoFill` 和 `AutoSubmit` 功能。請多加利用 [ChatGPT 提示連結產生器](https://blog.miniasp.com/ChatGPTToolkitExtensionUrlGen.html) 自動產生連結。
+
 以後會陸續推出好用功能，歡迎大家提供想法與建議。
 
 ## 使用說明
@@ -55,6 +57,8 @@ The ChatGPT Toolbox provides some useful additional features for the ChatGPT web
 1. Automatic prompt filling from URL: This allows you to save commonly used prompts as bookmarks and quickly fill them in when needed.
 2. Automatic prompt buttons in the ChatGPT response. These commonly used prompts can be automatically entered through a button.
 3. You can directly edit the prompt by double-clicking on the user entered prompt text or user's image.
+
+📢 This extension adds support for AutoFill and AutoSubmit functions for [Gemini](https://gemini.google.com/app), [Claude](https://claude.ai/), and [phind](https://www.phind.com/search?home=true) on 2024-03-11. Please make use of the ChatGPT Prompt Link Generator: https://blog.miniasp.com/ChatGPTToolkitExtensionUrlGen.html to automatically generate links.
 
 More useful features will be launched in the future, and everyone is welcome to provide ideas and suggestions.
 

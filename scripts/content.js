@@ -1,8 +1,7 @@
 (function () {
     "use strict";
 
-    const AutoFillFromURI = (textarea, button) => {
-
+    const getParamFromHash = () => {
         // 解析 hash 中的查詢字串並取得所需的參數
         let hash = location.hash.substring(1);
         if (!hash) return;
@@ -20,6 +19,130 @@
         if (submit == '1' || submit == 'true') {
             autoSubmit = true
         }
+
+        if (!!prompt) {
+            if (history.replaceState) {
+                history.replaceState(null, document.title, window.location.pathname + window.location.search);
+            } else {
+                window.location.hash = '';
+            }
+        }
+
+        return [prompt, autoSubmit];
+    };
+
+    if (location.hostname === 'gemini.google.com') {
+        const [prompt, autoSubmit] = getParamFromHash();
+        if (!prompt) return;
+
+        var retry = 10;
+        var ti = setInterval(() => {
+            var textarea = document.querySelector('chat-window .textarea');
+            if (textarea) {
+                textarea.innerHTML = prompt;
+
+                var button = document.querySelector('chat-window button.send-button');
+                if (button) {
+
+                    if (autoSubmit) {
+                        button.focus();
+                        setTimeout(() => {
+                            // Gemini 一定要先 focus() 才能按下 click()
+                            button.click();
+                        }, 500);
+                    }
+
+                    clearInterval(ti);
+                    return;
+                }
+            }
+
+            retry--;
+
+            if (retry == 0) {
+                clearInterval(ti);
+            }
+
+        }, 500);
+
+        return;
+    }
+
+    if (location.hostname === 'claude.ai') {
+        const [prompt, autoSubmit] = getParamFromHash();
+        if (!prompt) return;
+
+        var retry = 10;
+        var ti = setInterval(() => {
+            var textarea = document.querySelector('div[contenteditable]');
+            if (textarea) {
+                const lines = prompt.split('\n');
+                textarea.innerHTML = '';
+                lines.forEach(line => {
+                    const paragraph = document.createElement('p');
+                    paragraph.innerText = line;
+                    textarea.appendChild(paragraph);
+                });
+
+                var button = document.querySelector('button');
+                if (button) {
+
+                    if (autoSubmit) {
+                        button.focus();
+                        setTimeout(() => {
+                            button.click();
+                        }, 500);
+                    }
+
+                    clearInterval(ti);
+                    return;
+                }
+            }
+
+            retry--;
+
+            if (retry == 0) {
+                clearInterval(ti);
+            }
+
+        }, 500);
+
+        return;
+    }
+
+    if (location.hostname === 'www.phind.com') {
+        const [prompt, autoSubmit] = getParamFromHash();
+        if (!prompt) return;
+
+        var retry = 10;
+        var ti = setInterval(() => {
+            var textarea = document.querySelector('textarea[name="q"]');
+            if (textarea) {
+                textarea.value = prompt;
+                textarea.dispatchEvent(new Event("input", { bubbles: true }));
+
+                if (autoSubmit) {
+                    textarea.form.submit();
+                }
+
+                clearInterval(ti);
+                return;
+            }
+
+            retry--;
+
+            if (retry == 0) {
+                clearInterval(ti);
+            }
+
+        }, 500);
+
+        return;
+    }
+
+    const AutoFillFromURI = (textarea, button) => {
+
+        const [prompt, autoSubmit] = getParamFromHash();
 
         if (prompt && textarea && button) {
             textarea.value = prompt;
