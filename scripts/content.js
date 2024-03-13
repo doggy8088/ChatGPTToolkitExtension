@@ -43,6 +43,10 @@
         let hash = location.hash.substring(1);
         if (!hash) return [null, false];
 
+        // 將 + 轉換為 %2B 可以避免 URLSearchParams 解析的問題
+        // 理論上 prompt 不應該會出現 + 符號才對，因為 encodeURIComponent 不可能產生 + 符號
+        hash = hash.replace(/\+/g, '%2B');
+
         let params = new URLSearchParams(hash);
 
         let prompt = params.get('prompt');

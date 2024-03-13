@@ -1,5 +1,9 @@
 # Changelog
 
+- 0.16.3 (2024/03/13)
+
+  - Bug Fixed: Fix the issue that the `hash` contains `+` character.
+
 - 0.16.2 (2024/03/13)
 
   - New Feature: Support `prompt` text can be encoded by `b64EncodeUnicode` function.
