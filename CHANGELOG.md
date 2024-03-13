@@ -1,5 +1,9 @@
 # Changelog
 
+- 0.16.2 (2024/03/13)
+
+  - New Feature: Support `prompt` text can be encoded by `b64EncodeUnicode` function.
+
 - 0.16.1 (2024/03/12)
 
   - Bug Fixed: Fix the issue that the `AutoFill` and `AutoSubmit` feature produce errors when there is no hash on the location.

@@ -1,6 +1,43 @@
 (function () {
     "use strict";
 
+    function b64EncodeUnicode(str) {
+        const bytes = new TextEncoder().encode(str);
+        const base64 = window.btoa(String.fromCharCode(...new Uint8Array(bytes)));
+        return base64;
+    }
+
+    function isBase64Unicode(str) {
+        // Base64編碼後的字串僅包含 A-Z、a-z、0-9、+、/、= 這些字元
+        const base64Regex = /^[\w\+\/=]+$/;
+        if (!base64Regex.test(str)) return false;
+
+        try {
+            const decoded = window.atob(str);
+
+            // 解碼後的字串應該是合法的 UTF-8 序列
+            // 使用 TextDecoder 檢查是否可以成功解碼為 Unicode 字串
+            const bytes = new Uint8Array(decoded.length);
+            for (let i = 0; i < decoded.length; i++) {
+                bytes[i] = decoded.charCodeAt(i);
+            }
+            const decoder = new TextDecoder('utf-8');
+            decoder.decode(bytes);
+
+            // 如果沒有拋出異常，則表示是合法的 Base64Unicode 編碼字串
+            return true;
+        } catch (e) {
+            // 解碼失敗，則不是合法的 Base64Unicode 編碼字串
+            return false;
+        }
+    }
+
+    function b64DecodeUnicode(str) {
+        const bytes = Uint8Array.from(window.atob(str), c => c.charCodeAt(0));
+        const decoded = new TextDecoder().decode(bytes);
+        return decoded;
+    }
+
     const getParamFromHash = () => {
         // 解析 hash 中的查詢字串並取得所需的參數
         let hash = location.hash.substring(1);
@@ -8,9 +45,15 @@
 
         let params = new URLSearchParams(hash);
 
+        let prompt = params.get('prompt');
+        if (!prompt) return [null, false];
+
+        if (isBase64Unicode(prompt)) {
+            prompt = b64DecodeUnicode(prompt);
+        }
+
         // 解析參數
-        let prompt = params.get('prompt')
-            .replace(/\r/g, '')
+        prompt = prompt.replace(/\r/g, '')
             .replace(/\n{3,}/sg, '\n\n')
             .replace(/^\s+/sg, '')
         let submit = params.get("autoSubmit");
