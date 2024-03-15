@@ -1,5 +1,19 @@
 # Changelog
 
+- 0.16.4 (2024/03/16)
+
+  - Bug Fixed: Fix the Query String parsing issue when using Chrome's site search feature.
+
+      Because when users input %s content in Chrome's Site search, it automatically determines which encoding method to use.
+
+      If there is a Query String, it will automatically use encodeURIComponent for encoding.
+
+      If there is no Query String, it will automatically use encodeURI for encoding.
+
+      The encodeURI method does not encode certain reserved characters, such as ";", "/", "?", ":", "@", "&", "=", "+", "$", and "#".
+
+      Therefore, we need to specially handle this situation!
+
 - 0.16.3 (2024/03/13)
 
   - Bug Fixed: Fix the issue that the `hash` contains `+` character.

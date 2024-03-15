@@ -1,6 +1,14 @@
 (function () {
     "use strict";
 
+    // Test case:
+    // I+B = C&D
+    // https://www.phind.com/search?home=true#autoSubmit=false&prompt=I%2BB+%3D+C%26D
+    // https://www.phind.com/search?home=true#prompt=I%2BB+%3D+C%26D&autoSubmit=false
+    // https://claude.ai/#autoSubmit=true&prompt=I+B%20=%20C&D
+    // https://claude.ai/#prompt=I+B%20=%20C&D&autoSubmit=true
+    let debug = false;
+
     function b64EncodeUnicode(str) {
         const bytes = new TextEncoder().encode(str);
         const base64 = window.btoa(String.fromCharCode(...new Uint8Array(bytes)));
@@ -38,35 +46,98 @@
         return decoded;
     }
 
-    const getParamFromHash = () => {
+    // 取得 URI 查詢字串中的參數值
+    function getUriComponent(segment, name) {
+        let idx = segment.indexOf('=');
+        if (idx == -1) return;
+
+        let key = segment.substring(0, idx);
+        let val = segment.substring(idx + 1);
+
+        if (!key || !val) return;
+
+        if (key === name) {
+            return val;
+        }
+    }
+
+    const getParamsFromHash = () => {
         // 解析 hash 中的查詢字串並取得所需的參數
         let hash = location.hash.substring(1);
         if (!hash) return [null, false];
 
-        // 將 + 轉換為 %2B 可以避免 URLSearchParams 解析的問題
-        // 理論上 prompt 不應該會出現 + 符號才對，因為 encodeURIComponent 不可能產生 + 符號
-        hash = hash.replace(/\+/g, '%2B');
+        let prompt = '';
+        let submit = '';
+        let autoSubmit = false;
 
-        let params = new URLSearchParams(hash);
+        if (debug) console.log('hash: ', hash);
 
-        let prompt = params.get('prompt');
+        let idx = hash.indexOf('&');
+
+        // 若找不到 & 就只搜尋 prompt 參數即可
+        if (idx == -1) {
+            prompt = getUriComponent(hash, 'prompt');
+        } else {
+            // 如果第一個參數是 prompt 的話，由於 prompt 參數可能包含 & 字元 (因為 %s 的特性)，所以要改變解析參數的邏輯
+            if (hash.startsWith('prompt')) {
+                idx = hash.lastIndexOf('&');
+            }
+
+            let arg1 = hash.substring(0, idx);
+            let arg2 = hash.substring(idx + 1);
+
+            prompt = getUriComponent(arg1, 'prompt') || getUriComponent(arg2, 'prompt');
+            submit = getUriComponent(arg1, 'autoSubmit') || getUriComponent(arg2, 'autoSubmit');
+
+            autoSubmit = (submit === '1' || submit === 'true');
+        }
+
+        if (debug) console.log('prompt: ', prompt);
+        if (debug) console.log('autoSubmit: ', autoSubmit);
+
+        // 沒有 prompt 就不處理了
         if (!prompt) return [null, false];
 
+        // 因為 Chrome 的 Site search 在使用者輸入 %s 內容時，會自動判斷要用哪一種編碼方式
+        // 如果有 Query String 的話，他會自動用 encodeURIComponent 進行編碼
+        // 如果沒有 Query String 的話，他會自動用 encodeURI 進行編碼。
+        // 這個 encodeURI 方法不會對某些保留的字元進行編碼，例如 ";", "/", "?", ":", "@", "&", "=", "+", "$", 和 "#"。
+        // 因此我們要特別處理這個狀況！
+        if (location.search == '') {
+            prompt = prompt
+                .replace(/\;/g, "%3B")
+                .replace(/\//g, "%2F")
+                .replace(/\?/g, "%3F")
+                .replace(/\:/g, "%3A")
+                .replace(/\@/g, "%40")
+                .replace(/\&/g, "%26")
+                .replace(/\=/g, "%3D")
+                .replace(/\+/g, "%2B")
+                .replace(/\$/g, "%24")
+                .replace(/\#/g, "%23");
+        }
+
+        // 這裡理論上已經不會再出現 + 符號了，如果出現就轉成 %20
+        prompt = prompt.replace(/\+/g, "%20")
+
+        // 正式取得 prompt 參數的內容
+        prompt = decodeURIComponent(prompt);
+
+        if (debug) console.log('prompt: ', prompt);
+
+        // 如果 prompt 內容為 Base64Unicode 編碼字串，則解碼為 Unicode 字串
         if (isBase64Unicode(prompt)) {
             prompt = b64DecodeUnicode(prompt);
         }
 
-        // 解析參數
+        // 正規化 prompt 內容，移除多餘的空白與換行字元
         prompt = prompt.replace(/\r/g, '')
             .replace(/\n{3,}/sg, '\n\n')
             .replace(/^\s+/sg, '')
-        let submit = params.get("autoSubmit");
 
-        let autoSubmit = false;
-        if (submit == '1' || submit == 'true') {
-            autoSubmit = true
-        }
+        if (!prompt) return [null, false];
 
+        // 已經完成參數解析，移除 ChatGPT 萬能工具箱專屬的 hash 內容
         if (!!prompt) {
             if (history.replaceState) {
                 history.replaceState(null, document.title, window.location.pathname + window.location.search);
@@ -79,7 +150,7 @@
     };
 
     if (location.hostname === 'gemini.google.com') {
-        const [prompt, autoSubmit] = getParamFromHash();
+        const [prompt, autoSubmit] = getParamsFromHash();
         if (!prompt) return;
 
         var retry = 10;
@@ -123,7 +194,7 @@
     }
 
     if (location.hostname === 'claude.ai') {
-        const [prompt, autoSubmit] = getParamFromHash();
+        const [prompt, autoSubmit] = getParamsFromHash();
         if (!prompt) return;
 
         var retry = 10;
@@ -165,7 +236,7 @@
     }
 
     if (location.hostname === 'www.phind.com') {
-        const [prompt, autoSubmit] = getParamFromHash();
+        const [prompt, autoSubmit] = getParamsFromHash();
         if (!prompt) return;
 
         var retry = 10;
@@ -196,7 +267,7 @@
 
     const AutoFillFromURI = (textarea, button) => {
 
-        const [prompt, autoSubmit] = getParamFromHash();
+        const [prompt, autoSubmit] = getParamsFromHash();
 
         if (prompt && textarea && button) {
             textarea.value = prompt;
