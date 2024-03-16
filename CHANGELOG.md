@@ -1,5 +1,10 @@
 # Changelog
 
+- 0.17.0 (2024/03/16)
+
+  - Feature: Add `Perplexity` Support for `AutoFill` and `AutoSubmit` feature.
+  - Feature: Add `GroqChat` Support for `AutoFill` and `AutoSubmit` feature.
+
 - 0.16.4 (2024/03/16)
 
   - Bug Fixed: Fix the Query String parsing issue when using Chrome's site search feature.

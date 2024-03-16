@@ -265,6 +265,72 @@
         return;
     }
 
+    if (location.hostname === 'www.perplexity.ai') {
+        const [prompt, autoSubmit] = getParamsFromHash();
+        if (!prompt) return;
+
+        var retry = 10;
+        var ti = setInterval(() => {
+            var textarea = document.querySelector('textarea[autofocus]');
+            if (textarea) {
+                textarea.value = prompt;
+                textarea.dispatchEvent(new Event("input", { bubbles: true }));
+
+                if (autoSubmit) {
+                    setTimeout(() => {
+                        var buttons = textarea.parentElement.querySelectorAll('button');
+                        buttons[buttons.length - 1].click();
+                    }, 500);
+                }
+
+                clearInterval(ti);
+                return;
+            }
+
+            retry--;
+
+            if (retry == 0) {
+                clearInterval(ti);
+            }
+
+        }, 500);
+
+        return;
+    }
+
+    if (location.hostname === 'groq.com') {
+        const [prompt, autoSubmit] = getParamsFromHash();
+        if (!prompt) return;
+
+        var retry = 10;
+        var ti = setInterval(() => {
+            var textarea = chat;
+            if (textarea) {
+                textarea.value = prompt;
+                textarea.dispatchEvent(new Event("input", { bubbles: true }));
+
+                if (autoSubmit) {
+                    setTimeout(() => {
+                        const btn = textarea.parentElement.querySelector('button');
+                        btn.click();
+                    }, 2000);
+                }
+
+                clearInterval(ti);
+                return;
+            }
+
+            retry--;
+
+            if (retry == 0) {
+                clearInterval(ti);
+            }
+
+        }, 500);
+
+        return;
+    }
+
     const AutoFillFromURI = (textarea, button) => {
 
         const [prompt, autoSubmit] = getParamsFromHash();
