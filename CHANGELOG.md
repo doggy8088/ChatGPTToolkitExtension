@@ -1,5 +1,9 @@
 # Changelog
 
+- 0.18.0 (2024/05/06)
+
+  - Add new domain for ChatGPT: `chatgpt.com`
+
 - 0.17.0 (2024/03/16)
 
   - Feature: Add `Perplexity` Support for `AutoFill` and `AutoSubmit` feature.

@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "__MSG_chatgpttoolkit_name__",
     "description": "__MSG_chatgpttoolkit_description__",
-    "version": "0.17.0",
+    "version": "0.18.0",
     "default_locale": "zh_TW",
     "author": "__MSG_chatgpttoolkit_author__",
     "icons": {
@@ -22,6 +22,7 @@
           "https://www.phind.com/*",
           "https://claude.ai/*",
           "https://gemini.google.com/*",
+          "https://chat.openai.com/*",
           "https://chatgpt.com/*"
         ]
       }
