@@ -22,7 +22,7 @@
           "https://www.phind.com/*",
           "https://claude.ai/*",
           "https://gemini.google.com/*",
-          "https://chat.openai.com/*"
+          "https://chatgpt.com/*"
         ]
       }
     ]
