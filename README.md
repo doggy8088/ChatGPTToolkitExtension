@@ -12,7 +12,7 @@ ChatGPT 萬能工具箱提供 ChatGPT 網站一些好用的額外功能，可以
 2. 在 ChatGPT 回應的地方出現自動提示按鈕，這些常用的提示詞可以透過按鈕自動輸入。
 3. 在 ChatGPT 已經提問的文字左側的使用者頭像上或文字上按滑鼠左鍵兩下，可以直接編輯提示詞。
 
-📢 此套件 `2024-03-11` 加入 [Gemini](https://gemini.google.com/app), [Claude](https://claude.ai/), [phind](https://www.phind.com/search?home=true) 支援 `AutoFill` 和 `AutoSubmit` 功能。請多加利用 [ChatGPT 提示連結產生器](https://blog.miniasp.com/ChatGPTToolkitExtensionUrlGen.html) 自動產生連結。
+📢 此套件 `2024-03-11` 加入 [Gemini](https://gemini.google.com/app), [Claude](https://claude.ai/), [phind](https://www.phind.com/search?home=true), [Groq](https://groq.com/) 支援 `AutoFill` 和 `AutoSubmit` 功能。請多加利用 [ChatGPT 提示連結產生器](https://blog.miniasp.com/ChatGPTToolkitExtensionUrlGen.html) 自動產生連結。
 
 以後會陸續推出好用功能，歡迎大家提供想法與建議。
 

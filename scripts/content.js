@@ -321,7 +321,9 @@
 
         var retry = 10;
         var ti = setInterval(() => {
-            var textarea = chat;
+            retry--;
+
+            var textarea = document.getElementById('chat');
             if (textarea) {
                 textarea.value = prompt;
                 textarea.dispatchEvent(new Event("input", { bubbles: true }));
@@ -337,9 +339,7 @@
                 return;
             }
 
-            retry--;
-
-            if (retry == 0) {
+            if (retry <= 0) {
                 clearInterval(ti);
             }
 
@@ -412,6 +412,14 @@
                 // translate to EN
                 defaultManualSubmitText.push({ text: "Translate to English", value: "Please translate the above response into English." });
             }
+        }
+
+        const customPrompts = localStorage.getItem('chatgpttoolkit.customPrompts');
+        if (customPrompts) {
+            defaultManualSubmitText = [];
+            JSON.parse(customPrompts).forEach((item) => {
+                defaultManualSubmitText.push({ text: item.title, value: item.prompt });
+            });
         }
 
         let mutationObserverTimer = undefined;

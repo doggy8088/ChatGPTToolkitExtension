@@ -1,5 +1,31 @@
 # Changelog
 
+- 0.20.0 (2024/06/18)
+
+  - Fixed a bug on `groq.com`.
+  - Added the ability to customize prompts. Here are the usage examples:
+
+  ```js
+  localStorage.setItem('chatgpttoolkit.customPrompts', `[
+      {
+          "title": "搞笑寫作",
+          "prompt": "請用喜劇演員的口語，將上述的回應重寫一次，讓它變得更有趣。"
+      },
+      {
+          "title": "媽媽口吻",
+          "prompt": "請用一個親和力爆表的地方媽媽口吻，將上述的回應重寫一次，讓它變得更好像是一個媽媽在教小孩的感覺。"
+      },
+      {
+          "title": "悲劇抓馬",
+          "prompt": "請用一個悲劇演員的口吻，將上述的回應重寫一次，讓它變得更悲傷、更戲劇化。"
+      },
+      {
+          "title": "鄉民用語",
+          "prompt": "請用鄉民用語，將上述的回應重寫一次，讓它變得更有趣。"
+      }
+  ]`);
+  ```
+
 - 0.19.0 (2024/06/17)
 
   - Bug fix for `chatgpt.com`.
