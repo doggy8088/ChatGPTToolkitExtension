@@ -7,7 +7,7 @@
     // https://www.phind.com/search?home=true#prompt=I%2BB+%3D+C%26D&autoSubmit=false
     // https://claude.ai/#autoSubmit=true&prompt=I+B%20=%20C&D
     // https://claude.ai/#prompt=I+B%20=%20C&D&autoSubmit=true
-    let debug = false;
+    let debug = true;
 
     function b64EncodeUnicode(str) {
         const bytes = new TextEncoder().encode(str);
@@ -19,6 +19,8 @@
         // Base64編碼後的字串僅包含 A-Z、a-z、0-9、+、/、= 這些字元
         const base64Regex = /^[\w\+\/=]+$/;
         if (!base64Regex.test(str)) return false;
+
+        if (str.length < 64) return false;
 
         try {
             const decoded = window.atob(str);
@@ -42,8 +44,17 @@
 
     function b64DecodeUnicode(str) {
         const bytes = Uint8Array.from(window.atob(str), c => c.charCodeAt(0));
-        const decoded = new TextDecoder().decode(bytes);
-        return decoded;
+        let decoded = new TextDecoder().decode(bytes);
+
+        decoded = decoded?.replace(/\s/g, '');
+
+        if (debug) console.log('decoded:', decoded, 'decoded length', decoded?.length);
+
+        if (!!decoded && decoded.length > 0) {
+            return decoded;
+        } else {
+            return str;
+        }
     }
 
     // 取得 URI 查詢字串中的參數值
@@ -123,17 +134,21 @@
         // 正式取得 prompt 參數的內容
         prompt = decodeURIComponent(prompt);
 
-        if (debug) console.log('prompt: ', prompt);
+        if (debug) console.log('prompt1: ', prompt);
 
         // 如果 prompt 內容為 Base64Unicode 編碼字串，則解碼為 Unicode 字串
         if (isBase64Unicode(prompt)) {
             prompt = b64DecodeUnicode(prompt);
         }
 
+        if (debug) console.log('prompt2: ', prompt);
+
         // 正規化 prompt 內容，移除多餘的空白與換行字元
         prompt = prompt.replace(/\r/g, '')
             .replace(/\n{3,}/sg, '\n\n')
             .replace(/^\s+/sg, '')
+
+        if (debug) console.log('prompt3: ', prompt);
 
         if (!prompt) return [null, false];
 
@@ -145,6 +160,8 @@
                 window.location.hash = '';
             }
         }
+
+        if (debug) console.log('prompt4: ', prompt);
 
         return [prompt, autoSubmit];
     };
@@ -331,11 +348,13 @@
         return;
     }
 
-    const AutoFillFromURI = (textarea, button) => {
+    // Default logic for ChatGPT below.
+
+    const AutoFillFromURI = (textarea) => {
 
         const [prompt, autoSubmit] = getParamsFromHash();
 
-        if (prompt && textarea && button) {
+        if (prompt && textarea) {
             textarea.value = prompt;
             textarea.dispatchEvent(new Event("input", { bubbles: true }));
             textarea.focus();
@@ -344,6 +363,8 @@
 
             if (autoSubmit) {
                 setTimeout(() => {
+                    // 預設的送出按鈕
+                    const button = document.querySelector('button[data-testid*="send-button"]');
                     if (!button.disabled) {
                         button.click();
                     }
@@ -490,7 +511,7 @@
                         textarea.scrollTop = textarea.scrollHeight; // 自動捲動到最下方
 
                         // 預設的送出按鈕
-                        const sendButton = document.querySelector('button[data-testid="send-button"]');
+                        const sendButton = document.querySelector('button[data-testid*="send-button"]');
                         if (sendButton) {
                             sendButton.click();
                         }
@@ -531,15 +552,11 @@
     StartMonitoringResponse();
 
     const checkForTextareaInput = setInterval(() => {
-        if (document.activeElement.tagName === 'TEXTAREA' && document.activeElement.id === 'prompt-textarea') {
-            // 預設輸入 Prompt 的 textarea
-            const textarea = document.activeElement;
-
-            // 預設的送出按鈕
-            const button = document.querySelector('button[data-testid="send-button"]');
+        let textarea = document.getElementById('prompt-textarea')
+        if (!!textarea) {
 
             // 自動從 URL 填入提詞(Prompt)
-            AutoFillFromURI(textarea, button);
+            AutoFillFromURI(textarea);
 
             clearInterval(checkForTextareaInput);
         };

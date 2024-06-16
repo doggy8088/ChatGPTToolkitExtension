@@ -1,5 +1,10 @@
 # Changelog
 
+- 0.19.0 (2024/06/17)
+
+  - Bug fix for `chatgpt.com`.
+  - fixes #8
+
 - 0.18.0 (2024/05/06)
 
   - Add new domain for ChatGPT: `chatgpt.com`
