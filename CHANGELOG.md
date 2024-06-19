@@ -1,30 +1,69 @@
 # Changelog
 
+- 0.21.0 (2024/06/20)
+
+  - Add a `enabled` and `autoSubmit` property to the `customPrompts` object to control the prompt's visibility and auto-submit behavior. Here are the usage examples:
+
+    ```js
+    localStorage.setItem('chatgpttoolkit.customPrompts', `[
+        {
+            "enabled": false,
+            "title": "搞笑寫作",
+            "prompt": "請用喜劇演員的口語，將上述的回應重寫一次，讓它變得更有趣。",
+            "autoSubmit": true
+        },
+        {
+            "enabled": false,
+            "title": "移除文字",
+            "prompt": "請移除圖片中所有文字",
+            "autoSubmit": true
+        },
+        {
+            "enabled": true,
+            "title": "你確定嗎",
+            "prompt": "請再看一次你的回答，你確定你寫的是正確的嗎？",
+            "autoSubmit": true
+        },
+        {
+            "enabled": true,
+            "title": "總結內容",
+            "prompt": "請將我們剛剛的對話總結為幾個重點項目，讓我可以更快的掌握重點。",
+            "autoSubmit": true
+        },
+        {
+            "enabled": true,
+            "title": "翻成中文",
+            "prompt": "請將上述內容翻譯為正體中文。",
+            "autoSubmit": true
+        }
+    ]`);
+    ```
+
 - 0.20.0 (2024/06/18)
 
   - Fixed a bug on `groq.com`.
   - Added the ability to customize prompts. Here are the usage examples:
 
-  ```js
-  localStorage.setItem('chatgpttoolkit.customPrompts', `[
-      {
-          "title": "搞笑寫作",
-          "prompt": "請用喜劇演員的口語，將上述的回應重寫一次，讓它變得更有趣。"
-      },
-      {
-          "title": "媽媽口吻",
-          "prompt": "請用一個親和力爆表的地方媽媽口吻，將上述的回應重寫一次，讓它變得更好像是一個媽媽在教小孩的感覺。"
-      },
-      {
-          "title": "悲劇抓馬",
-          "prompt": "請用一個悲劇演員的口吻，將上述的回應重寫一次，讓它變得更悲傷、更戲劇化。"
-      },
-      {
-          "title": "鄉民用語",
-          "prompt": "請用鄉民用語，將上述的回應重寫一次，讓它變得更有趣。"
-      }
-  ]`);
-  ```
+    ```js
+    localStorage.setItem('chatgpttoolkit.customPrompts', `[
+        {
+            "title": "搞笑寫作",
+            "prompt": "請用喜劇演員的口語，將上述的回應重寫一次，讓它變得更有趣。"
+        },
+        {
+            "title": "媽媽口吻",
+            "prompt": "請用一個親和力爆表的地方媽媽口吻，將上述的回應重寫一次，讓它變得更好像是一個媽媽在教小孩的感覺。"
+        },
+        {
+            "title": "悲劇抓馬",
+            "prompt": "請用一個悲劇演員的口吻，將上述的回應重寫一次，讓它變得更悲傷、更戲劇化。"
+        },
+        {
+            "title": "鄉民用語",
+            "prompt": "請用鄉民用語，將上述的回應重寫一次，讓它變得更有趣。"
+        }
+    ]`);
+    ```
 
 - 0.19.0 (2024/06/17)
 

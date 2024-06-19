@@ -418,7 +418,10 @@
         if (customPrompts) {
             defaultManualSubmitText = [];
             JSON.parse(customPrompts).forEach((item) => {
-                defaultManualSubmitText.push({ text: item.title, value: item.prompt });
+                const isItemEnabled = !item.hasOwnProperty('enabled') || item.enabled;
+                if (isItemEnabled) {
+                    defaultManualSubmitText.push({ text: item.title, value: item.prompt, autoSubmit: item.autoSubmit});
+                }
             });
         }
 
@@ -520,7 +523,7 @@
 
                         // 預設的送出按鈕
                         const sendButton = document.querySelector('button[data-testid*="send-button"]');
-                        if (sendButton) {
+                        if (sendButton && (!item.hasOwnProperty('autoSubmit') || item.autoSubmit)) {
                             sendButton.click();
                         }
                     }
