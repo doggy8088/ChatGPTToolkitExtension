@@ -1,5 +1,9 @@
 # Changelog
 
+- 0.22.0 (2024/06/30)
+
+  - Bug fix for `chatgpt.com` when double-clicking on the prompt text.
+
 - 0.21.0 (2024/06/20)
 
   - Add a `enabled` and `autoSubmit` property to the `customPrompts` object to control the prompt's visibility and auto-submit behavior. Here are the usage examples:

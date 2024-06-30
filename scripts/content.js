@@ -582,24 +582,18 @@
         let closestDIV = event.target.closest('div[data-testid^="conversation-turn-"]');
         if (closestDIV) {
             // console.log('closestDIV: ', closestDIV)
-            // 篩選出使用者的對話列 (使用者提示文字的圖示是 IMG，且 alt 屬性為 User)
-            let userIMG = closestDIV.querySelector('img[alt="User"]');
-            if (userIMG) {
-                // console.log('userIMG: ', userIMG)
-                // 找到這一區的最後一顆按鈕
-                let btns = [...closestDIV.querySelectorAll('button')];
-                if (btns.length > 0) {
-                    let btn = btns[btns.length - 1];
-                    // console.log('btn: ', btn)
-                    btn.click();
-                    setTimeout(() => {
-                        let txt = closestDIV.querySelector('textarea')
-                        if (txt) {
-                            txt.selectionStart = txt.selectionEnd = txt.value.length;
-                            txt.focus();
-                        }
-                    }, 0);
-                }
+            let btns = [...closestDIV.querySelectorAll('button')];
+            if (btns.length > 0) {
+                let btn = btns[btns.length - 1];
+                // console.log('btn: ', btn)
+                btn.click();
+                setTimeout(() => {
+                    let txt = closestDIV.querySelector('textarea')
+                    if (txt) {
+                        txt.selectionStart = txt.selectionEnd = txt.value.length;
+                        txt.focus();
+                    }
+                }, 0);
             }
         }
     });
