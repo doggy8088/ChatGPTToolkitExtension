@@ -1,5 +1,9 @@
 # Changelog
 
+- 0.23.0 (2024/07/01)
+
+  - Add `altText` to the `customPrompts` that can hint for the buttons.
+
 - 0.22.0 (2024/06/30)
 
   - Bug fix for `chatgpt.com` when double-clicking on the prompt text.

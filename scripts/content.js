@@ -419,8 +419,8 @@
             defaultManualSubmitText = [];
             JSON.parse(customPrompts).forEach((item) => {
                 const isItemEnabled = !item.hasOwnProperty('enabled') || item.enabled;
-                if (isItemEnabled) {
-                    defaultManualSubmitText.push({ text: item.title, value: item.prompt, autoSubmit: item.autoSubmit});
+                if (isItemEnabled && !!item.title && !!item.prompt) {
+                    defaultManualSubmitText.push(item);
                 }
             });
         }
@@ -510,12 +510,13 @@
                 customButton.style.padding = "0.5rem 1rem";
                 customButton.style.margin = "0.5rem";
 
-                customButton.innerText = item.text;
+                customButton.title = item.altText;
+                customButton.innerText = item.title;
                 customButton.addEventListener("click", () => {
                     // 填入 prompt
                     const textarea = document.getElementById("prompt-textarea");
                     if (textarea) {
-                        textarea.value = item.value;
+                        textarea.value = item.prompt;
                         textarea.dispatchEvent(new Event("input", { bubbles: true }));
                         textarea.focus();
                         textarea.setSelectionRange(textarea.value.length, textarea.value.length); //將選擇範圍設定為文本的末尾
