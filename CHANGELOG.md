@@ -1,5 +1,9 @@
 # Changelog
 
+- 0.24.0 (2024/07/02)
+
+  - Bug fixed: When the `prompt` has been edited, only the first button in the conversation is the `edit` button.
+
 - 0.23.0 (2024/07/01)
 
   - Add `altText` to the `customPrompts` that can hint for the buttons.

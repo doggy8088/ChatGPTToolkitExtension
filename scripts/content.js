@@ -585,7 +585,7 @@
             // console.log('closestDIV: ', closestDIV)
             let btns = [...closestDIV.querySelectorAll('button')];
             if (btns.length > 0) {
-                let btn = btns[btns.length - 1];
+                let btn = btns[0];
                 // console.log('btn: ', btn)
                 btn.click();
                 setTimeout(() => {
