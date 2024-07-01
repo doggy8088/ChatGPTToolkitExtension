@@ -3,16 +3,17 @@ customPrompts.push({
     "enabled": true,
     "title": "提供反思",
     "altText": "",
-    "prompt": "Review your answer and suggest any improvements to make it more accurate or natural.",
+    "prompt": "Your task is to carefully read a source text and a translation from English to Traditional Chinese, and then give constructive criticism and helpful suggestions to improve the translation. The final style and tone of the translation should match the style of Traditional Chinese colloquially spoken in Taiwan. When writing suggestions, pay attention to whether there are ways to improve the translation's \n(i) accuracy (by correcting errors of addition, mistranslation, omission, or untranslated text),\n(ii) fluency (by applying Traditional Chinese grammar, spelling and punctuation rules, and ensuring there are no unnecessary repetitions),\n(iii) style (by ensuring the translations reflect the style of the source text and takes into account any cultural context),\n(iv) terminology (by ensuring terminology use is consistent and reflects the source text domain; and by only ensuring you use equivalent idioms Traditional Chinese).\nWrite a list of specific, helpful and constructive suggestions for improving the translation. Each suggestion should address one specific part of the translation. Output only the suggestions and nothing else.",
     "autoSubmit": true
 });
 customPrompts.push({
     "enabled": true,
     "title": "優化回應",
     "altText": "",
-    "prompt": "Using your reflections, improve the answer if needed",
+    "prompt": "Please take into account the expert suggestions when editing the translation. Edit the translation by ensuring:\n\n(i) accuracy (by correcting errors of addition, mistranslation, omission, or untranslated text),\n(ii) fluency (by applying {target_lang} grammar, spelling and punctuation rules and ensuring there are no unnecessary repetitions),\n(iii) style (by ensuring the translations reflect the style of the source text)\n(iv) terminology (inappropriate for context, inconsistent use), or\n(v) other errors.\n\nOutput only the new translation and nothing else.",
     "autoSubmit": true
 });
+
 customPrompts.push({
     "enabled": false,
     "title": "提升品質",
