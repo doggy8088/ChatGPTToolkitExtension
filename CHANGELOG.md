@@ -1,5 +1,9 @@
 # Changelog
 
+- 0.26.0 (2024/07/03)
+
+  - Feature: Add "Auto-Continue" feature for ChatGPT. It will automatically click the "Continue generating" button when the button is ready.
+
 - 0.25.0 (2024/07/02)
 
   - Bug fixed: The buttons become `undefined` due to last update.
