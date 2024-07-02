@@ -386,31 +386,31 @@
         if (currentLocale) {
             if (currentLocale == 'zh-TW') {
                 // exemplify
-                defaultManualSubmitText.push({ text: "舉例說明", value: "請舉例說明" });
+                defaultManualSubmitText.push({ title: "舉例說明", prompt: "請舉例說明" });
                 // expand
-                defaultManualSubmitText.push({ text: "提供細節", value: "請提供更多細節說明" });
+                defaultManualSubmitText.push({ title: "提供細節", prompt: "請提供更多細節說明" });
                 // translate to TC
-                defaultManualSubmitText.push({ text: "翻譯成繁中", value: "請將上述回應內容翻譯成臺灣常用的正體中文" });
+                defaultManualSubmitText.push({ title: "翻譯成繁中", prompt: "請將上述回應內容翻譯成臺灣常用的正體中文" });
                 // translate to EN
-                defaultManualSubmitText.push({ text: "翻譯成英文", value: "Please translate the above response into English." });
+                defaultManualSubmitText.push({ title: "翻譯成英文", prompt: "Please translate the above response into English." });
             }
             else if (currentLocale == 'ja') {
                 // exemplify
-                defaultManualSubmitText.push({ text: "例えば", value: "例を挙げて説明して" });
+                defaultManualSubmitText.push({ title: "例えば", prompt: "例を挙げて説明して" });
                 // expand
-                defaultManualSubmitText.push({ text: "詳細説明", value: "もっと詳細に説明して" });
+                defaultManualSubmitText.push({ title: "詳細説明", prompt: "もっと詳細に説明して" });
                 // translate to JP
-                defaultManualSubmitText.push({ text: "日本語に翻訳", value: "上述の返答内容を日本語に翻訳して" });
+                defaultManualSubmitText.push({ title: "日本語に翻訳", prompt: "上述の返答内容を日本語に翻訳して" });
                 // translate to EN
-                defaultManualSubmitText.push({ text: "英語に翻訳", value: "Please translate the above response into English." });
+                defaultManualSubmitText.push({ title: "英語に翻訳", prompt: "Please translate the above response into English." });
             }
             else {
                 // exemplify
-                defaultManualSubmitText.push({ text: "More Examples", value: "Could you please provide me with more examples?" });
+                defaultManualSubmitText.push({ title: "More Examples", prompt: "Could you please provide me with more examples?" });
                 // expand
-                defaultManualSubmitText.push({ text: "More Details", value: "Could you please provide me with more details?" });
+                defaultManualSubmitText.push({ title: "More Details", prompt: "Could you please provide me with more details?" });
                 // translate to EN
-                defaultManualSubmitText.push({ text: "Translate to English", value: "Please translate the above response into English." });
+                defaultManualSubmitText.push({ title: "Translate to English", prompt: "Please translate the above response into English." });
             }
         }
 

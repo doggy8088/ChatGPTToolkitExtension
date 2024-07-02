@@ -1,5 +1,9 @@
 # Changelog
 
+- 0.25.0 (2024/07/02)
+
+  - Bug fixed: The buttons become `undefined` due to last update.
+
 - 0.24.0 (2024/07/02)
 
   - Bug fixed: When the `prompt` has been edited, only the first button in the conversation is the `edit` button.
