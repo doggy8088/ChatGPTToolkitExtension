@@ -1,5 +1,13 @@
 # Changelog
 
+- 0.27.0 (2024/07/07)
+
+  - Feature: Turn-off "Auto-Continue" feature for ChatGPT. Add a `chatgpttoolkit.featureToggle.autoContinue` key in the localStorage to control enabling the feature. Here are the usage examples:
+
+    ```js
+    localStorage.setItem('chatgpttoolkit.featureToggle.autoContinue', '1');
+    ```
+
 - 0.26.0 (2024/07/03)
 
   - Feature: Add "Auto-Continue" feature for ChatGPT. It will automatically click the "Continue generating" button when the button is ready.

@@ -448,10 +448,13 @@
                 // 重新建立回應按鈕
                 rebuild_buttons();
 
-                // 找到繼續生成的按鈕，並點擊讓 ChatGPT 繼續生成回應
-                var btnContinue = [...document.querySelectorAll('button')].filter(e => e.innerText.trim() == '繼續生成' || e.innerText.trim() == 'Continue generating' || e.innerText.trim() == '生成を続ける')
-                if (btnContinue && btnContinue.length > 0) {
-                    btnContinue[0].click();
+                const autoContinue = localStorage.getItem('chatgpttoolkit.featureToggle.autoContinue');
+                if (autoContinue) {
+                    // 找到繼續生成的按鈕，並點擊讓 ChatGPT 繼續生成回應
+                    var btnContinue = [...document.querySelectorAll('button')].filter(e => e.innerText.trim() == '繼續生成' || e.innerText.trim() == 'Continue generating' || e.innerText.trim() == '生成を続ける')
+                    if (btnContinue && btnContinue.length > 0) {
+                        btnContinue[0].click();
+                    }
                 }
 
                 // 重新開始觀察
