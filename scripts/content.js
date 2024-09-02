@@ -429,7 +429,7 @@
         const obs = new MutationObserver(() => {
 
             // 尋找聊天記錄的最後一筆，用來插入按鈕
-            const talkBlocks = [...document.querySelectorAll('div[data-testid^="conversation-turn-"]')];
+            const talkBlocks = [...document.querySelectorAll('div[data-message-author-role="assistant"]')];
             if (!talkBlocks || !talkBlocks.length) {
                 return;
             }
@@ -466,12 +466,12 @@
 
         function rebuild_buttons() {
 
-            const talkBlocks = [...document.querySelectorAll('div[data-testid^="conversation-turn-"]')];
+            const talkBlocks = [...document.querySelectorAll('div[data-message-author-role="assistant"]')];
 
             let buttonsAreas = document.querySelectorAll('#custom-chatgpt-magic-box-buttons');
-
+            
             // 如果正在回答問題中，就不要出現這些按鈕
-            let stopButton = document.querySelector('button[aria-label="Stop generating"]');
+            let stopButton = document.querySelector('button[data-testid="stop-button"]');
             if (stopButton) {
                 buttonsAreas?.forEach((item) => {
                     item.remove();
@@ -589,7 +589,7 @@
             return;
         }
         // 找出最接近的對話列 DIV
-        let closestDIV = event.target.closest('div[data-testid^="conversation-turn-"]');
+        let closestDIV = event.target.closest('div[data-message-author-role="assistant"]');
         if (closestDIV) {
             // console.log('closestDIV: ', closestDIV)
             let btns = [...closestDIV.querySelectorAll('button')];
