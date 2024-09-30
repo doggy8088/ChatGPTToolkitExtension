@@ -469,7 +469,7 @@
             const talkBlocks = [...document.querySelectorAll('div[data-message-author-role="assistant"]')];
 
             let buttonsAreas = document.querySelectorAll('#custom-chatgpt-magic-box-buttons');
-            
+
             // 如果正在回答問題中，就不要出現這些按鈕
             let stopButton = document.querySelector('button[data-testid="stop-button"]');
             if (stopButton) {
@@ -523,19 +523,20 @@
                 customButton.innerText = item.title;
                 customButton.addEventListener("click", () => {
                     // 填入 prompt
-                    const textarea = document.getElementById("prompt-textarea");
-                    if (textarea) {
-                        textarea.value = item.prompt;
-                        textarea.dispatchEvent(new Event("input", { bubbles: true }));
-                        textarea.focus();
-                        textarea.setSelectionRange(textarea.value.length, textarea.value.length); //將選擇範圍設定為文本的末尾
-                        textarea.scrollTop = textarea.scrollHeight; // 自動捲動到最下方
+                    const div = document.getElementById("prompt-textarea");
+                    if (div) {
+                        div.innerHTML = '<p>' + item.prompt + '</p>'
+                        div.dispatchEvent(new Event("input", { bubbles: true }));
+                        div.focus();
 
-                        // 預設的送出按鈕
-                        const sendButton = document.querySelector('button[data-testid*="send-button"]');
-                        if (sendButton && (!item.hasOwnProperty('autoSubmit') || item.autoSubmit)) {
-                            sendButton.click();
-                        }
+                        setTimeout(() => {
+                            // 預設的送出按鈕
+                            const sendButton = document.querySelector('button[data-testid*="send-button"]');
+                            if (sendButton && (!item.hasOwnProperty('autoSubmit') || item.autoSubmit)) {
+                                sendButton.click();
+                            }
+                        }, 50);
+
                     }
                 });
 
@@ -589,7 +590,7 @@
             return;
         }
         // 找出最接近的對話列 DIV
-        let closestDIV = event.target.closest('div[data-message-author-role="assistant"]');
+        let closestDIV = event.target.closest('div[data-message-author-role="user"]');
         if (closestDIV) {
             // console.log('closestDIV: ', closestDIV)
             let btns = [...closestDIV.querySelectorAll('button')];

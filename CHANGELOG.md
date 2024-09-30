@@ -1,5 +1,9 @@
 # Changelog
 
+- 0.28.0 (2024/10/01)
+
+  - Fix few bugs due to ChatGPT layout structure changes.
+
 - 0.27.0 (2024/07/07)
 
   - Feature: Turn-off "Auto-Continue" feature for ChatGPT. Add a `chatgpttoolkit.featureToggle.autoContinue` key in the localStorage to control enabling the feature. Here are the usage examples:
