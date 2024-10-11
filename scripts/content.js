@@ -355,20 +355,28 @@
         const [prompt, autoSubmit] = getParamsFromHash();
 
         if (prompt && textarea) {
-            textarea.value = prompt;
+
+            // 新版已經改為 div + contentEditable 的方式，所以要改變填入內容的方式
+            textarea.innerHTML = '<p>' + prompt + '</p>'
             textarea.dispatchEvent(new Event("input", { bubbles: true }));
             textarea.focus();
-            textarea.setSelectionRange(textarea.value.length, textarea.value.length); //將選擇範圍設定為文本的末尾
-            textarea.scrollTop = textarea.scrollHeight; // 自動捲動到最下方
+
+            // textarea.value = prompt;
+            // textarea.dispatchEvent(new Event("input", { bubbles: true }));
+            // textarea.focus();
+            // textarea.setSelectionRange(textarea.value.length, textarea.value.length); //將選擇範圍設定為文本的末尾
+            // textarea.scrollTop = textarea.scrollHeight; // 自動捲動到最下方
 
             if (autoSubmit) {
+
                 setTimeout(() => {
                     // 預設的送出按鈕
-                    const button = document.querySelector('button[data-testid*="send-button"]');
-                    if (!button.disabled) {
-                        button.click();
+                    const sendButton = document.querySelector('button[data-testid*="send-button"]');
+                    if (sendButton) {
+                        sendButton.click();
                     }
-                }, 1000);
+                }, 50);
+
             }
 
             history.replaceState({}, document.title, window.location.pathname + window.location.search);
@@ -571,7 +579,9 @@
     };
 
     // 自動監控所有 ChatGPT 回應，用以判斷何時要顯示回應按鈕
-    StartMonitoringResponse();
+    setTimeout(() => {
+        StartMonitoringResponse();
+    }, 1000);
 
     const checkForTextareaInput = setInterval(() => {
         let textarea = document.getElementById('prompt-textarea')
