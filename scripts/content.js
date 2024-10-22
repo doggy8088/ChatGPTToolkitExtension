@@ -46,8 +46,6 @@
         const bytes = Uint8Array.from(window.atob(str), c => c.charCodeAt(0));
         let decoded = new TextDecoder().decode(bytes);
 
-        decoded = decoded?.replace(/\s/g, '');
-
         if (debug) console.log('decoded:', decoded, 'decoded length', decoded?.length);
 
         if (!!decoded && decoded.length > 0) {
@@ -535,6 +533,14 @@
                     if (div) {
                         div.innerHTML = '<p>' + item.prompt + '</p>'
                         div.dispatchEvent(new Event("input", { bubbles: true }));
+
+                        // move cursor to the end
+                        const range = document.createRange();
+                        const sel = window.getSelection();
+                        range.setStart(div, 1);
+                        range.collapse(true);
+                        sel.removeAllRanges();
+                        sel.addRange(range);
                         div.focus();
 
                         setTimeout(() => {
