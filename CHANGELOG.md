@@ -1,5 +1,10 @@
 # Changelog
 
+- 0.30.0 (2024/10/24)
+
+  - Fix the template for custom prompts.
+  - Fix the bug with auto input & ensure the button input stays at the end of the input field.
+
 - 0.29.0 (2024/10/11)
 
   - Fix few bugs due to ChatGPT layout structure changes.
