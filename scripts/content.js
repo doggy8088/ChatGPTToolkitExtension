@@ -411,12 +411,74 @@
                 defaultManualSubmitText.push({ title: "英語に翻訳", prompt: "Please translate the above response into English." });
             }
             else {
-                // exemplify
-                defaultManualSubmitText.push({ title: "More Examples", prompt: "Could you please provide me with more examples?" });
-                // expand
-                defaultManualSubmitText.push({ title: "More Details", prompt: "Could you please provide me with more details?" });
-                // translate to EN
-                defaultManualSubmitText.push({ title: "Translate to English", prompt: "Please translate the above response into English." });
+                defaultManualSubmitText.push({
+                    title: "文章總結大師",
+                    prompt: "You are now a master of article summarization. Based on the content I provide, please summarize several key points, takeaways, conclusions, and notes to be aware of, not exceeding 2000 words. 你現在是文章總結大師，請根據我提供的內容(或URL)，總結幾個重點、takeaway、結論、注意事項。"
+                  });
+                  
+                  defaultManualSubmitText.push({
+                    title: "表格整理大師",
+                    prompt: "You are now a table organisation expert. Please take the content I provide and present all the professional terms in a table format as follows: Column 1: English abbreviation of the professional term (if available) Column 2: Full English name of the professional term (with a YouTube keyword search URL, formatted like this: https://www.youtube.com/results?search_query=English_term) Column 3: The explanation of the term in English (no more than 30 words) Column 4: Chinese name of the professional term (with a Bilibili search URL, formatted like this: https://search.bilibili.com/all?keyword=Chinese_term) Column 5: The explanation of the term in Chinese (no more than 30 words). 你現在是表格整理大師，請根據我提供的內容，將內容中所有的專業詞彙(產品、方法、算法、硬體、軟體...等艱深名詞、動詞)用表格方式呈現，第1欄位:專業名詞的英文縮寫(如果有的話)，第2欄位:專業詞彙的英文名稱，第3欄位:專業詞彙的Youtube 關鍵字搜尋 URL，格式範例如下:https://www.youtube.com/results?search_query=該專業詞彙的英文，第4欄位:英文解釋(不超過30字)，第5欄位:專業詞彙的中文名稱，第6欄位:專業詞彙的Bilibili URL，格式範例如下:https://search.bilibili.com/all?keyword=該專業詞彙的中文)，)，第7欄位:中文解釋(不超過30字)。"
+                  });
+                  
+                  defaultManualSubmitText.push({
+                    title: "看圖說故事",
+                    prompt: "Task 1: Please transcribe all the words you see in the image I provide without altering the content. Task 2: Based on the content of the image, present all professional terms (products, methods, algorithms, hardware, software, etc.) in table format: Column 1: English abbreviation of the professional term (if any), Column 2: Full English name of the professional term (with a YouTube keyword search URL), Column 3: Explanation of the term in English (no more than 30 words), Column 4: Chinese name of the professional term (with a Bilibili search URL), Column 5: Explanation of the term in Chinese (no more than 30 words). Lastly, explain the key message or insight the image author is trying to convey. 任務1: 請根據我提供的圖檔，把圖中你看到的字，一字不漏打出來(不要更改字內容)。任務2: 並根據內容及圖，將內容中所有的專業詞彙(產品、方法、算法、硬體、軟體...等艱深名詞、動詞)用表格方式呈現，第1欄位:專業名詞的英文縮寫(如果有的話)，第2欄位:專業詞彙的英文名稱(並附上Youtube 關鍵字搜尋的 URL)，第3欄位:英文解釋(不超過30字)，第4欄位:專業詞彙的中文名稱(請連上Bilibili URL)，第5欄位:中文解釋(不超過30字)，最後解釋這張圖作者想要表達或講解的內容心得。"
+                  });
+                  
+                  defaultManualSubmitText.push({
+                    title: "論文指導老師",
+                    prompt: "You are now a thesis advisor. Based on the content I provide, please complete the following two tasks: Task A: List the research topic, background, purpose, problems, methods, data collection, analysis, research results, research findings, significance of research findings, limitations of research findings, research contributions, practical contributions, and future research directions of this thesis. Task B: Present the professional terms in the article in a table format: Column 1: English abbreviation of the professional term (if any), Column 2: Full English name of the professional term (with a URL or wiki hyperlink), Column 3: English explanation (not exceeding 30 words), Column 4: Chinese name of the professional term, Column 5: Chinese explanation (not exceeding 30 words). 你現在是論文指導老師，請根據我提供的內容，完成下列2個任務，任務A: 列出此論文的研究主題、背景、目的、研究的方法、評估指標或標準、研究發現、研究發現的局限性、實務貢獻、結論、未來研究方向。任務B: 把文章中的專業詞彙用表格方式呈現說明，第1欄位:專業名詞的英文縮寫(如果有的話)，第2欄位:專業詞彙的英文名稱(請連上URL或wiki的超連結)，第3欄位:英文解釋(不超過30字)，第4欄位:專業詞彙的中文名稱，第5欄位:中文解釋(不超過30字)。"
+                  });
+                  
+                  defaultManualSubmitText.push({
+                    title: "採購大師",
+                    prompt: "You are now a procurement expert. Based on the content I provide, please present the materials mentioned in a table format: Column 1: Material name in English, Column 2: Explanation of the material’s function in English, Column 3: Material name in Chinese, Column 4: Explanation of the material’s function in Chinese, Column 5: YouTube URL, Column 6: Bilibili URL, Column 7: Taobao URL, Column 8: eBay URL, Column 9: Amazon URL, Column 10: Temu URL. 你現在是物料採購大師，請根據我提供的內容，將內容中提及的所有的物件,物料用表格方式呈現，第1欄位:該物件的名稱(英文)，第2欄位:該物件的功能解釋(英文)，第3欄位:該物件的名稱(中文)，第4欄位:該物件的功能解釋(中文)，第5欄位:該物件的Youtube URL，第6欄位:該物件的bilibili URL，第7欄位:該物件的掏寶URL，第8欄位:該物件的ebay URL，第9欄位:該物件的Amazon URL，第10欄位:該物件的Temu URL。"
+                  });
+                  defaultManualSubmitText.push({ 
+                    title: "DIY大師", 
+                    prompt: `你現在是DIY大師，請根據我提供的資料，將內容中所有的專業詞彙(產品、方法、算法、硬體、軟體...等艱深名詞、動詞)用表格方式呈現，第1欄位:專業名詞的英文縮寫(如果有的話)，第2欄位:專業詞彙的英文名稱，第3欄位:專業詞彙的Youtube 關鍵字搜尋 URL，格式範例如下:https://www.youtube.com/results?search_query=該專業詞彙的英文，第4欄位:英文解釋(不超過30字)，第5欄位:專業詞彙的中文名稱，第6欄位:專業詞彙的Bilibili URL，格式範例如下:https://search.bilibili.com/all?keyword=該專業詞彙的中文)，第7欄位:中文解釋(不超過30字)。然後把文章中DIY的步驟一步一步整理出來。`
+                });
+                
+                defaultManualSubmitText.push({ 
+                    title: "雙語翻譯小幫手", 
+                    prompt: `你現在是多語言翻譯專家。內容如果是英文，幫我用中文解釋。內容如果是中文，幫我用英文解釋。如果是其他語言，統一幫我用中文解釋。`
+                });
+                
+                defaultManualSubmitText.push({ 
+                    title: "法律顧問", 
+                    prompt: `你現在是License 法律顧問，請根據我提供的資料，幫我分析這個license可否免費商用?我可以修改後出售給第三者嗎?我需要公布我修改後的代碼嗎? 還要注意哪些事項?`
+                });
+                
+                defaultManualSubmitText.push({ 
+                    title: "GITHUB分析大師", 
+                    prompt: `你現在Github分析大師，請根據我提供的資料，把上面的專業詞彙用表格方式呈現，第1欄位:該軟體github repo URL(或該軟體的官方URL)。第2欄位:軟體名稱。第3欄位:功能特色。第4欄位:download數/月。第5欄位:Contrubutors貢獻者人數。第6欄位:License。第7欄位:該repo使用的所有language與%。第8欄位:使用者人數。`
+                });
+                
+                defaultManualSubmitText.push({ 
+                    title: "PCB主板接口分析大師", 
+                    prompt: `你現在是PCB主板接口分析大師，把圖中所有接口、元件整理出來並用表格說明解釋其用法，第1欄位:該接口或元件的網路圖片URL，第2欄位:該接口或元件的英文字母簡稱，第3欄位:該接口或元件的英文全名稱，第4欄位:該接口或元件的功能與用法(英文)，第5欄位:該接口或元件的中文名稱，第6欄位:該接口或元件的功能與用法(中文)。並解釋這張電路圖的運作原理及方法，以及重要接口元件與外部設備的關係。`
+                });
+                
+                defaultManualSubmitText.push({ 
+                    title: "產業分析師/公司介紹", 
+                    prompt: `你現在是產業分析師，請根據我提供的資料，把這些關鍵字公司用表格整理介紹出來，第1欄位:公司股票編號(如果有的話，須註明在哪個國家的股票交易市場上市櫃)，第2欄位:公司完整URL，第3欄位:公司英文名稱，第4欄位:公司的主要產品或服務(用英文說明不超過30字)，第5欄位:公司中文名稱，第6欄位:公司的主要產品或服務(用中文說明不超過30字)。第7欄位:主要的競爭對手有哪些公司?`
+                });
+                
+                defaultManualSubmitText.push({ 
+                    title: "電路圖分析大師", 
+                    prompt: `你現在是電路圖分析大師，把圖中的專業詞彙整理出來並用表格說明解釋其用法，第1欄位:該接口或元件的網路圖片URL，第2欄位:該接口或元件的英文字母簡稱，第3欄位:該接口或元件的英文全名稱，第4欄位:該接口或元件的功能與用法(英文)，第5欄位:該接口或元件的中文名稱，第6欄位:該接口或元件的功能與用法(中文)。並解釋這張電路圖的運作原理及方法，以及重要接口元件與外部設備的關係。`
+                });
+                
+                defaultManualSubmitText.push({ 
+                    title: "Solidworks功能說明", 
+                    prompt: `根據圖片，說明solidworks CAM中，個選項的用法，用表格說明。`
+                });
+                
+                defaultManualSubmitText.push({ 
+                    title: "Solidworks總工程師", 
+                    prompt: `你現在是Solidworks教學大師，請根據我提供的講師教學內容，總結出:1. 教學目的，2.課程使用到的Solidworks指令(用表格說明，第一欄位:指令英文名稱，第二欄位:指令中文名稱，第三欄位:指令使用方法(英文)，第四欄位:指令使用方法(中文))，3.最後:說明講師上課的教學重點與注意事項。`
+                });
             }
         }
 
