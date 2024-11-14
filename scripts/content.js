@@ -425,7 +425,8 @@
             defaultManualSubmitText = [];
             JSON.parse(customPrompts).forEach((item) => {
                 const isItemEnabled = !item.hasOwnProperty('enabled') || item.enabled;
-                if (isItemEnabled && !!item.title && !!item.prompt) {
+                const isItemInitial = !!item.hasOwnProperty('initial') || item.initial;
+                if (isItemEnabled && !isItemInitial && !!item.title && !!item.prompt) {
                     defaultManualSubmitText.push(item);
                 }
             });
@@ -528,30 +529,7 @@
                 customButton.title = item.altText;
                 customButton.innerText = item.title;
                 customButton.addEventListener("click", () => {
-                    // 填入 prompt
-                    const div = document.getElementById("prompt-textarea");
-                    if (div) {
-                        div.innerHTML = '<p>' + item.prompt + '</p>'
-                        div.dispatchEvent(new Event("input", { bubbles: true }));
-
-                        // move cursor to the end
-                        const range = document.createRange();
-                        const sel = window.getSelection();
-                        range.setStart(div, 1);
-                        range.collapse(true);
-                        sel.removeAllRanges();
-                        sel.addRange(range);
-                        div.focus();
-
-                        setTimeout(() => {
-                            // 預設的送出按鈕
-                            const sendButton = document.querySelector('button[data-testid*="send-button"]');
-                            if (sendButton && (!item.hasOwnProperty('autoSubmit') || item.autoSubmit)) {
-                                sendButton.click();
-                            }
-                        }, 50);
-
-                    }
+                    fillPrompt(item.prompt, item.autoSubmit);
                 });
 
                 buttonsArea.append(customButton);
@@ -599,6 +577,108 @@
             clearInterval(checkForTextareaInput);
         };
     }, 60);
+
+    const checkForInitialButtons = setInterval(() => {
+        let uls = document.querySelectorAll('ul')
+        let shouldInsertInitialButtons = false;
+        for (let i = 0; i < uls.length; i++) {
+            const ul = uls[i];
+            for (let j = 0; j < ul.children.length; j++) {
+                const li = ul.children[j];
+                if (li.style.opacity == '1') {
+                    shouldInsertInitialButtons = true;
+                }
+                if (li.dataset.customButton) {
+                    shouldInsertInitialButtons = false;
+                    break;
+                }
+            }
+        }
+
+        // 因為 RWD 的關係，所以會有兩個 ul，其中一個是隱藏的
+        if (uls.length == 2 && shouldInsertInitialButtons) {
+            // console.warn(uls.children[1])
+            const customPrompts = localStorage.getItem('chatgpttoolkit.customPrompts');
+            if (customPrompts) {
+                JSON.parse(customPrompts).reverse().forEach((item) => {
+                    // console.log(item);
+                    // debugger;
+                    const isItemEnabled = !item.hasOwnProperty('enabled') || item.enabled;
+                    const isItemInitial = !!item.hasOwnProperty('initial') || item.initial;
+                    const autoPasteEnabled = !!item.hasOwnProperty('autoPaste') || item.autoPaste;
+                    const svgIcon = item.svgIcon || "<svg width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg' class='icon-md' style='color: rgb(226, 197, 65);'><path fill-rule='evenodd' clip-rule='evenodd' d='M12 3C8.41496 3 5.5 5.92254 5.5 9.53846C5.5 11.8211 6.662 13.8298 8.42476 15H15.5752C17.338 13.8298 18.5 11.8211 18.5 9.53846C18.5 5.92254 15.585 3 12 3ZM14.8653 17H9.13473V18H14.8653V17ZM13.7324 20H10.2676C10.6134 20.5978 11.2597 21 12 21C12.7403 21 13.3866 20.5978 13.7324 20ZM8.12601 20C8.57004 21.7252 10.1361 23 12 23C13.8639 23 15.43 21.7252 15.874 20C16.4223 19.9953 16.8653 19.5494 16.8653 19V16.5407C19.0622 14.9976 20.5 12.4362 20.5 9.53846C20.5 4.82763 16.6992 1 12 1C7.30076 1 3.5 4.82763 3.5 9.53846C3.5 12.4362 4.93784 14.9976 7.13473 16.5407V19C7.13473 19.5494 7.57774 19.9953 8.12601 20Z' fill='currentColor'></path></svg>";
+                    if (isItemEnabled && isItemInitial && !!item.title && !!item.prompt) {
+                        uls.forEach((ul) => {
+                            const newLi = document.createElement('li');
+
+                            newLi.dataset.customButton = '1';
+
+                            // 設定 li 的屬性
+                            newLi.style.opacity = '1';
+                            newLi.style.willChange = 'auto';
+                            newLi.style.transform = 'none';
+
+                            // 建立 button 元素
+                            const button = document.createElement('button');
+                            button.className = 'group relative flex h-[42px] items-center gap-1.5 rounded-full border border-token-border-light px-3 py-2 text-start text-[13px] shadow-xxs transition enabled:hover:bg-token-main-surface-secondary disabled:cursor-not-allowed xl:gap-2 xl:text-[14px]';
+
+                            button.title = item.altText;
+                            // 插入 SVG 和文字內容
+                            button.innerHTML = `${svgIcon}<span class="max-w-full select-none whitespace-nowrap text-gray-600 transition group-hover:text-token-text-primary dark:text-gray-500">${item.title}</span>`;
+
+                            // 將 button 加入 li
+                            newLi.appendChild(button);
+
+                            newLi.addEventListener('click', () => {
+                                if (autoPasteEnabled) {
+                                    navigator.clipboard.readText().then((text) => {
+                                        if (!!text) {
+                                            fillPrompt(item.prompt + text, true);
+                                        } else {
+                                            fillPrompt(item.prompt, item.autoSubmit);
+                                        }
+                                    });
+                                } else {
+                                    fillPrompt(item.prompt, item.autoSubmit);
+                                }
+                            });
+
+                            // 將新的 li 加入 ul
+                            ul.prepend(newLi);
+                        });
+                    }
+                });
+            }
+
+            // clearInterval(checkForInitialButtons);
+        };
+    }, 60);
+
+    function fillPrompt(prompt, autoSubmit = true) {
+        const div = document.getElementById("prompt-textarea");
+        if (div) {
+            div.innerHTML = '<p>' + prompt + '</p>'
+            div.dispatchEvent(new Event("input", { bubbles: true }));
+
+            // move cursor to the end
+            const range = document.createRange();
+            const sel = window.getSelection();
+            range.setStart(div, 1);
+            range.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(range);
+            div.focus();
+
+            setTimeout(() => {
+                // 預設的送出按鈕
+                const sendButton = document.querySelector('button[data-testid*="send-button"]');
+                if (sendButton && autoSubmit) {
+                    sendButton.click();
+                }
+            }, 50);
+
+        }
+    }
 
     // 由於在切換歷史紀錄時會重建 main 元素，所以要監聽 document.body 的事件
     document.body.addEventListener('dblclick', (event) => {

@@ -1,5 +1,26 @@
 # Changelog
 
+- 0.31.0 (2024/11/15)
+
+  - Feature: Add custom prompts for initial buttons
+
+      ```js
+      let customPrompts = [];
+
+      customPrompts.push({
+          "enabled": true,
+          "initial": true, // Used only in Initial Buttons
+          "svgIcon": "📝", // This can be replaced with a SVG tag
+          "title": "記事", // The text of the button
+          "altText": "用來記錄手邊的筆記，但不需要 ChatGPT 回答。", // The hint text for the button
+          "prompt": "除非我詢問你問題，否則請回答我 OK 即可", // The prompt text
+          "autoPaste": true, // Auto paste the prompt text to the input field
+          "autoSubmit": true // Auto submit the prompt text
+      });
+
+      localStorage.setItem('chatgpttoolkit.customPrompts', JSON.stringify(customPrompts.filter(prompt => prompt.enabled && !!prompt.title)));
+      ```
+
 - 0.30.0 (2024/10/24)
 
   - Fix the template for custom prompts.
