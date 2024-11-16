@@ -1,5 +1,25 @@
 # Changelog
 
+- 0.32.0 (2024/11/17)
+
+  - Feature: Add `alt+s` hotkey to toggle `Search the web` feature
+  - Feature: Add `autoPaste` feature to custom reply buttons
+
+      ```js
+      let customPrompts = [];
+
+      customPrompts.push({
+          "enabled": true,
+          "title": "記事",
+          "altText": "用來記錄手邊的筆記，但不需要 ChatGPT 回答。",
+          "prompt": "請幫我記錄以下內容，僅需回答我 OK 即可：\n\n",
+          "autoPaste": true,
+          "autoSubmit": false
+      });
+
+      localStorage.setItem('chatgpttoolkit.customPrompts', JSON.stringify(customPrompts.filter(prompt => prompt.enabled && !!prompt.title)));
+      ```
+
 - 0.31.0 (2024/11/15)
 
   - Feature: Add custom prompts for initial buttons

@@ -348,6 +348,20 @@
 
     // Default logic for ChatGPT below.
 
+    // 監聽鍵盤事件
+    document.addEventListener('keydown', function(event) {
+        // 檢查是否按下 Alt + S
+        if (event.altKey && event.key.toLowerCase() === 's') {
+            // 找到指定的按鈕
+            const searchButton = document.querySelector('button[aria-label="Search the web"]')
+                || document.querySelector('button[aria-label="搜尋網頁"]');
+            if (searchButton) {
+                // 執行點擊動作
+                searchButton.click();
+            }
+        }
+    });
+
     const AutoFillFromURI = (textarea) => {
 
         const [prompt, autoSubmit] = getParamsFromHash();
@@ -519,6 +533,7 @@
 
             // add buttons to buttonsArea
             defaultManualSubmitText.forEach((item) => {
+                const autoPasteEnabled = !!item.hasOwnProperty('autoPaste') || item.autoPaste;
 
                 const customButton = document.createElement("button");
                 customButton.style.border = "1px solid #d1d5db";
@@ -529,7 +544,17 @@
                 customButton.title = item.altText;
                 customButton.innerText = item.title;
                 customButton.addEventListener("click", () => {
-                    fillPrompt(item.prompt, item.autoSubmit);
+                    if (autoPasteEnabled) {
+                        navigator.clipboard.readText().then((text) => {
+                            if (!!text) {
+                                fillPrompt(item.prompt + text, true);
+                            } else {
+                                fillPrompt(item.prompt, item.autoSubmit);
+                            }
+                        });
+                    } else {
+                        fillPrompt(item.prompt, item.autoSubmit);
+                    }
                 });
 
                 buttonsArea.append(customButton);
