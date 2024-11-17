@@ -1,5 +1,11 @@
 # Changelog
 
+- 0.33.0 (2024/11/18)
+
+  - Fixed: Add Japanese support for text detection.
+  - Fixed: The clipboard will no longer automatically send prompt when there is no content.
+  - Feature: Added a hotkey hint `alt+s` for the "Search the web" hint text.
+
 - 0.32.0 (2024/11/17)
 
   - Feature: Add `alt+s` hotkey to toggle `Search the web` feature

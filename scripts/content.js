@@ -352,9 +352,12 @@
     document.addEventListener('keydown', function(event) {
         // 檢查是否按下 Alt + S
         if (event.altKey && event.key.toLowerCase() === 's') {
-            // 找到指定的按鈕
-            const searchButton = document.querySelector('button[aria-label="Search the web"]')
-                || document.querySelector('button[aria-label="搜尋網頁"]');
+            // 找到切換搜尋功能的按鈕
+            const searchButton =
+                document.querySelector('button[aria-label="Search the web"]')
+                || document.querySelector('button[aria-label="搜尋網頁"]')
+                || document.querySelector('button[aria-label="ウェブを検索"]')
+
             if (searchButton) {
                 // 執行點擊動作
                 searchButton.click();
@@ -546,10 +549,11 @@
                 customButton.addEventListener("click", () => {
                     if (autoPasteEnabled) {
                         navigator.clipboard.readText().then((text) => {
+                            text = text.trim();
                             if (!!text) {
                                 fillPrompt(item.prompt + text, true);
                             } else {
-                                fillPrompt(item.prompt, item.autoSubmit);
+                                fillPrompt(item.prompt, false);
                             }
                         });
                     } else {
@@ -657,10 +661,11 @@
                             newLi.addEventListener('click', () => {
                                 if (autoPasteEnabled) {
                                     navigator.clipboard.readText().then((text) => {
+                                        text = text.trim();
                                         if (!!text) {
                                             fillPrompt(item.prompt + text, true);
                                         } else {
-                                            fillPrompt(item.prompt, item.autoSubmit);
+                                            fillPrompt(item.prompt, false);
                                         }
                                     });
                                 } else {
@@ -677,7 +682,23 @@
 
             // clearInterval(checkForInitialButtons);
         };
+
+        // 找出畫面中顯示為「搜尋網頁」的按鈕，並且加上 " (alt+s)" 快速鍵的提示
+        const spans = document.querySelectorAll('div[data-radix-popper-content-wrapper] span');
+        spans.forEach(span => {
+            if (isFoundTextInDOM(span, ['搜尋網頁', 'Search the web', 'ウェブを検索'])) {
+                span.textContent += ' (alt+s)';
+            }
+        });
+
     }, 60);
+
+    function isFoundTextInDOM(dom, texts = []) {
+        if (typeof texts === 'string') {
+            texts = [texts];
+        }
+        return dom && texts.includes(dom.textContent.trim());
+    }
 
     function fillPrompt(prompt, autoSubmit = true) {
         const div = document.getElementById("prompt-textarea");
