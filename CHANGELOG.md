@@ -1,5 +1,11 @@
 # Changelog
 
+- 0.34.0 (2024/11/19)
+
+  - Feature: Added `pasteImage` parameter that can paste image from user's clipboard automatically.
+  - Chore: Rewrite "hash" parsing logic to better readability.
+  - Fixed: The "Search the web" feature apply the wrong hotkey to a popup.
+
 - 0.33.0 (2024/11/18)
 
   - Fixed: Add Japanese support for text detection.

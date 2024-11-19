@@ -20,7 +20,7 @@
         const base64Regex = /^[\w\+\/=]+$/;
         if (!base64Regex.test(str)) return false;
 
-        if (str.length < 64) return false;
+        if (str.length < 32) return false;
 
         try {
             const decoded = window.atob(str);
@@ -70,42 +70,36 @@
         }
     }
 
-    const getParamsFromHash = () => {
-        // 解析 hash 中的查詢字串並取得所需的參數
-        let hash = location.hash.substring(1);
-        if (!hash) return [null, false];
-
+    // 為了相容於一開始的設計，怕使用者傳入不合格式的 prompt 內容，所以要特殊處理
+    function flexiblePromptDetection(hash) {
         let prompt = '';
-        let submit = '';
-        let autoSubmit = false;
-
-        if (debug) console.log('hash: ', hash);
 
         let idx = hash.indexOf('&');
+
+        // 如果第一個參數是 prompt 的話，由於 prompt 參數可能包含 & 字元 (因為 %s 的特性)，所以要改變解析參數的邏輯
+        if (hash.startsWith('prompt')) {
+            hash = hash
+                .replace(/&autoSubmit=([^&]+)/, '')
+                .replace(/&pasteImage=([^&]+)/, '')
+            idx = hash.lastIndexOf('&');
+        }
 
         // 若找不到 & 就只搜尋 prompt 參數即可
         if (idx == -1) {
             prompt = getUriComponent(hash, 'prompt');
         } else {
-            // 如果第一個參數是 prompt 的話，由於 prompt 參數可能包含 & 字元 (因為 %s 的特性)，所以要改變解析參數的邏輯
-            if (hash.startsWith('prompt')) {
-                idx = hash.lastIndexOf('&');
-            }
-
             let arg1 = hash.substring(0, idx);
             let arg2 = hash.substring(idx + 1);
+            if (debug) console.log('arg1: ', arg1);
+            if (debug) console.log('arg2: ', arg2);
 
             prompt = getUriComponent(arg1, 'prompt') || getUriComponent(arg2, 'prompt');
-            submit = getUriComponent(arg1, 'autoSubmit') || getUriComponent(arg2, 'autoSubmit');
-
-            autoSubmit = (submit === '1' || submit === 'true');
         }
 
-        if (debug) console.log('prompt: ', prompt);
-        if (debug) console.log('autoSubmit: ', autoSubmit);
+        if (debug) console.log('prompt1: ', prompt);
 
         // 沒有 prompt 就不處理了
-        if (!prompt) return [null, false];
+        if (!prompt) return null;
 
         // 因為 Chrome 的 Site search 在使用者輸入 %s 內容時，會自動判斷要用哪一種編碼方式
         // 如果有 Query String 的話，他會自動用 encodeURIComponent 進行編碼
@@ -129,26 +123,55 @@
         // 這裡理論上已經不會再出現 + 符號了，如果出現就轉成 %20
         prompt = prompt.replace(/\+/g, "%20")
 
+        if (debug) console.log('prompt2: ', prompt);
+
         // 正式取得 prompt 參數的內容
         prompt = decodeURIComponent(prompt);
 
-        if (debug) console.log('prompt1: ', prompt);
+        if (debug) console.log('prompt3: ', prompt);
 
         // 如果 prompt 內容為 Base64Unicode 編碼字串，則解碼為 Unicode 字串
         if (isBase64Unicode(prompt)) {
             prompt = b64DecodeUnicode(prompt);
         }
 
-        if (debug) console.log('prompt2: ', prompt);
+        if (debug) console.log('prompt4: ', prompt);
 
         // 正規化 prompt 內容，移除多餘的空白與換行字元
         prompt = prompt.replace(/\r/g, '')
             .replace(/\n{3,}/sg, '\n\n')
             .replace(/^\s+/sg, '')
 
-        if (debug) console.log('prompt3: ', prompt);
+        if (debug) console.log('prompt5: ', prompt);
 
-        if (!prompt) return [null, false];
+        if (!prompt) return null;
+
+        return prompt;
+    }
+
+    let prompt = '';
+    let autoSubmit = false;
+    let pasteImage = false;
+
+    const getParamsFromHash = () => {
+        // 解析 hash 中的查詢字串並取得所需的參數
+        let hash = location.hash.substring(1);
+        if (!hash) return [null, false, false];
+
+        if (debug) console.log('hash: ', hash);
+
+        var qs = new URLSearchParams(hash);
+
+        prompt = qs.get('prompt');
+        autoSubmit = (qs.get('autoSubmit') === '1' || qs.get('autoSubmit') === 'true');
+        pasteImage = (qs.get('pasteImage') === '1' || qs.get('pasteImage') === 'true');
+
+        // 為了處理一些不合規定的 prompt 參數，所以要實作客製化的參數解析邏輯
+        prompt = flexiblePromptDetection(hash) || prompt;
+
+        if (debug) console.log('prompt: ', prompt);
+        if (debug) console.log('autoSubmit: ', autoSubmit);
+        if (debug) console.log('pasteImage: ', pasteImage);
 
         // 已經完成參數解析，移除 ChatGPT 萬能工具箱專屬的 hash 內容
         if (!!prompt) {
@@ -157,11 +180,12 @@
             } else {
                 window.location.hash = '';
             }
+        } else {
+            // 沒有 prompt 就不處理了
+            return [null, false, false];
         }
 
-        if (debug) console.log('prompt4: ', prompt);
-
-        return [prompt, autoSubmit];
+        return [prompt, autoSubmit, pasteImage];
     };
 
     if (location.hostname === 'gemini.google.com') {
@@ -349,7 +373,7 @@
     // Default logic for ChatGPT below.
 
     // 監聽鍵盤事件
-    document.addEventListener('keydown', function(event) {
+    document.addEventListener('keydown', function (event) {
         // 檢查是否按下 Alt + S
         if (event.altKey && event.key.toLowerCase() === 's') {
             // 找到切換搜尋功能的按鈕
@@ -365,9 +389,10 @@
         }
     });
 
-    const AutoFillFromURI = (textarea) => {
+    const AutoFillFromURI = async (textarea) => {
 
-        const [prompt, autoSubmit] = getParamsFromHash();
+        // 呼叫這個函式會渲染 Closure 的 prompt, autoSubmit, pasteImage 變數
+        getParamsFromHash();
 
         if (prompt && textarea) {
 
@@ -382,20 +407,54 @@
             // textarea.setSelectionRange(textarea.value.length, textarea.value.length); //將選擇範圍設定為文本的末尾
             // textarea.scrollTop = textarea.scrollHeight; // 自動捲動到最下方
 
-            if (autoSubmit) {
-
-                setTimeout(() => {
-                    // 預設的送出按鈕
-                    const sendButton = document.querySelector('button[data-testid*="send-button"]');
-                    if (sendButton) {
-                        sendButton.click();
-                    }
-                }, 50);
-
-            }
+            // 如果有 autoSubmit 參數，並且值為 true，就等初始按鈕加入之後才能自動送出，因為還有可能會貼上圖片
 
             history.replaceState({}, document.title, window.location.pathname + window.location.search);
         }
+    }
+
+    // 抓取剪貼簿中的圖片並模擬貼上事件
+    async function fetchClipboardImageAndSimulatePaste(targetElement) {
+        if (!targetElement) return;
+
+        try {
+            if (debug) console.log('從剪貼簿抓取圖片');
+            const clipboardItems = await navigator.clipboard.read();
+            for (const item of clipboardItems) {
+                for (const type of item.types) {
+                    if (type.startsWith('image/')) {
+                        // 取得圖片 Blob
+                        const blob = await item.getType(type);
+                        const file = new File([blob], 'clipboard-image.png', { type });
+
+                        // 使用 DataTransfer 模擬貼上行為
+                        const dataTransfer = new DataTransfer();
+                        dataTransfer.items.add(file);
+
+                        // 建立自訂的 paste 事件
+                        const pasteEvent = new ClipboardEvent('paste', {
+                            bubbles: true,
+                            cancelable: true,
+                            clipboardData: dataTransfer
+                        });
+
+                        // 觸發貼上事件
+                        targetElement.dispatchEvent(pasteEvent);
+
+                        console.log('模擬貼上圖片成功');
+                        return;
+                    }
+                }
+            }
+
+            console.log('剪貼簿中沒有圖片');
+        } catch (error) {
+            console.error('抓取剪貼簿圖片失敗:', error);
+        }
+    }
+
+    function delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     const StartMonitoringResponse = () => {
@@ -596,18 +655,18 @@
         StartMonitoringResponse();
     }, 1000);
 
-    const checkForTextareaInput = setInterval(() => {
+    const checkForTextareaInput = setInterval(async () => {
         let textarea = document.getElementById('prompt-textarea')
         if (!!textarea) {
 
             // 自動從 URL 填入提詞(Prompt)
-            AutoFillFromURI(textarea);
+            await AutoFillFromURI(textarea);
 
             clearInterval(checkForTextareaInput);
         };
     }, 60);
 
-    const checkForInitialButtons = setInterval(() => {
+    const checkForInitialButtons = setInterval(async () => {
         let uls = document.querySelectorAll('ul')
         let shouldInsertInitialButtons = false;
         for (let i = 0; i < uls.length; i++) {
@@ -680,19 +739,43 @@
                 });
             }
 
+            // 必須等到這個時間點才能貼圖，否則 ChatGPT 的 paste 事件還沒註冊，就無法貼圖了！
+            if (pasteImage) {
+                const textarea = document.getElementById("prompt-textarea");
+                await fetchClipboardImageAndSimulatePaste(textarea);
+                // 這個 pasteImage 狀態只有在 AutoFillFromURI 這個函式中才會設定為 true
+                // 貼圖完畢後，將 pasteImage 設定為 false，避免重複貼圖
+                pasteImage = false;
+            }
+
+            // 這個階段已經完成按鈕的插入，但是不能停止檢查，因為使用者隨時會建立新的 Session 聊天
             // clearInterval(checkForInitialButtons);
         };
 
-        // 找出畫面中顯示為「搜尋網頁」的按鈕，並且加上 " (alt+s)" 快速鍵的提示
-        const spans = document.querySelectorAll('div[data-radix-popper-content-wrapper] span');
-        spans.forEach(span => {
-            if (isFoundTextInDOM(span, ['搜尋網頁', 'Search the web', 'ウェブを検索'])) {
-                span.textContent += ' (alt+s)';
+        if (autoSubmit) {
+            // 預設的送出按鈕
+            const sendButton = document.querySelector('button[data-testid*="send-button"]');
+            if (sendButton && !sendButton.disabled && !pasteImage) {
+                // 必須等剪貼簿中的貼圖上傳完畢後才能送出
+                sendButton.click();
+                // 這個 autoSubmit 狀態只有在 AutoFillFromURI 這個函式中才會設定為 true
+                autoSubmit = false;
             }
+        }
+
+        // 找出畫面中顯示為「搜尋網頁」的按鈕，並且加上 " (alt+s)" 快速鍵的提示，每秒執行 16 次
+        requestAnimationFrame(() => {
+            const spans = document.querySelectorAll('div[data-radix-popper-content-wrapper] > div[data-side="right"] span');
+            spans.forEach(span => {
+                if (isFoundTextInDOM(span, ['搜尋網頁', 'Search the web', 'ウェブを検索'])) {
+                    span.textContent += ' (alt+s)';
+                }
+            });
         });
 
     }, 60);
 
+    // 檢查是否有指定的文字在 DOM 中，而且是精準比對，被改過就不會判斷出來
     function isFoundTextInDOM(dom, texts = []) {
         if (typeof texts === 'string') {
             texts = [texts];
@@ -700,6 +783,7 @@
         return dom && texts.includes(dom.textContent.trim());
     }
 
+    // 填入提示(Prompt)內容
     function fillPrompt(prompt, autoSubmit = true) {
         const div = document.getElementById("prompt-textarea");
         if (div) {
