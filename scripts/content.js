@@ -130,19 +130,12 @@
 
         if (debug) console.log('prompt3: ', prompt);
 
-        // 如果 prompt 內容為 Base64Unicode 編碼字串，則解碼為 Unicode 字串
-        if (isBase64Unicode(prompt)) {
-            prompt = b64DecodeUnicode(prompt);
-        }
-
-        if (debug) console.log('prompt4: ', prompt);
-
         // 正規化 prompt 內容，移除多餘的空白與換行字元
         prompt = prompt.replace(/\r/g, '')
             .replace(/\n{3,}/sg, '\n\n')
             .replace(/^\s+/sg, '')
 
-        if (debug) console.log('prompt5: ', prompt);
+        if (debug) console.log('prompt4: ', prompt);
 
         if (!prompt) return null;
 
@@ -168,6 +161,11 @@
 
         // 為了處理一些不合規定的 prompt 參數，所以要實作客製化的參數解析邏輯
         prompt = flexiblePromptDetection(hash) || prompt;
+
+        // 如果 prompt 內容為 Base64Unicode 編碼字串，則解碼為 Unicode 字串
+        if (isBase64Unicode(prompt)) {
+            prompt = b64DecodeUnicode(prompt);
+        }
 
         if (debug) console.log('prompt: ', prompt);
         if (debug) console.log('autoSubmit: ', autoSubmit);

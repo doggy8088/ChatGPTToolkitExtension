@@ -1,5 +1,9 @@
 # Changelog
 
+- 0.35.0 (2024/11/20)
+
+  - Fixed: The "base64 decode" handling was wrongly implemented in the last update.
+
 - 0.34.0 (2024/11/19)
 
   - Feature: Added `pasteImage` parameter that can paste image from user's clipboard automatically.
