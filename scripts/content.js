@@ -370,23 +370,6 @@
 
     // Default logic for ChatGPT below.
 
-    // 監聽鍵盤事件
-    document.addEventListener('keydown', function (event) {
-        // 檢查是否按下 Alt + S
-        if (event.altKey && event.key.toLowerCase() === 's') {
-            // 找到切換搜尋功能的按鈕
-            const searchButton =
-                document.querySelector('button[aria-label="Search the web"]')
-                || document.querySelector('button[aria-label="搜尋網頁"]')
-                || document.querySelector('button[aria-label="ウェブを検索"]')
-
-            if (searchButton) {
-                // 執行點擊動作
-                searchButton.click();
-            }
-        }
-    });
-
     const AutoFillFromURI = async (textarea) => {
 
         // 呼叫這個函式會渲染 Closure 的 prompt, autoSubmit, pasteImage 變數

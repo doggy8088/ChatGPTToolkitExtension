@@ -1,5 +1,9 @@
 # Changelog
 
+- 0.36.2 (2024/12/23)
+
+  - Remove the Alt+S hotkey for the "Search the web" feature.
+
 - 0.36.1 (2024/12/23)
 
   - fix(content): exclude "Projects"'s ul from initial buttons.
