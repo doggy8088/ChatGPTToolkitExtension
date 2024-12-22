@@ -1,5 +1,9 @@
 # Changelog
 
+- 0.36.0 (2024/12/22)
+
+  - fix(content): the initial buttons not shown due to ChatGPT layout changes.
+
 - 0.35.0 (2024/11/20)
 
   - Fixed: The "base64 decode" handling was wrongly implemented in the last update.

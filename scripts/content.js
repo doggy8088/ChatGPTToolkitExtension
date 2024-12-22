@@ -682,7 +682,7 @@
         }
 
         // 因為 RWD 的關係，所以會有兩個 ul，其中一個是隱藏的
-        if (uls.length == 2 && shouldInsertInitialButtons) {
+        if (uls.length >= 2 && shouldInsertInitialButtons) {
             // console.warn(uls.children[1])
             const customPrompts = localStorage.getItem('chatgpttoolkit.customPrompts');
             if (customPrompts) {
