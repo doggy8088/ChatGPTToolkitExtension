@@ -1,5 +1,9 @@
 # Changelog
 
+- 0.36.1 (2024/12/23)
+
+  - fix(content): exclude "Projects"'s ul from initial buttons.
+
 - 0.36.0 (2024/12/22)
 
   - fix(content): the initial buttons not shown due to ChatGPT layout changes.
