@@ -1,5 +1,9 @@
 # Changelog
 
+- 0.36.3 (2024/12/23)
+
+  - Fix a possible undefined error.
+
 - 0.36.2 (2024/12/23)
 
   - Remove the Alt+S hotkey for the "Search the web" feature.

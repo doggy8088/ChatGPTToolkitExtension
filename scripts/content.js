@@ -163,7 +163,7 @@
         prompt = flexiblePromptDetection(hash) || prompt;
 
         // 如果 prompt 內容為 Base64Unicode 編碼字串，則解碼為 Unicode 字串
-        if (isBase64Unicode(prompt)) {
+        if (!!prompt && isBase64Unicode(prompt)) {
             prompt = b64DecodeUnicode(prompt);
         }
 
