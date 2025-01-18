@@ -1,5 +1,9 @@
 # Changelog
 
+- 0.37.0 (2025/01/19)
+
+  - Fix a bug on initial buttons detection.
+
 - 0.36.3 (2024/12/23)
 
   - Fix a possible undefined error.
