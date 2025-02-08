@@ -805,4 +805,18 @@
         }
     });
 
+    // Add an event listener for the Ctrl+Enter key combination on document.body
+    document.body.addEventListener('keyup', (event) => {
+        if (event.ctrlKey && event.key === 'Enter') {
+            // Check if the target element is a textarea
+            if (event.target.tagName === 'TEXTAREA') {
+                // Locate the send button based on the relative position of the button related to the textarea
+                const sendButton = event.target.closest('div.group\\/conversation-turn').querySelector('button.btn-primary');
+                if (sendButton) {
+                    sendButton.click();
+                }
+            }
+        }
+    });
+
 })();

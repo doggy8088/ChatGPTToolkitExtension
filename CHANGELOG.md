@@ -1,5 +1,11 @@
 # Changelog
 
+- 0.38.0 (2025/02/01)
+
+  - Feature: Pressing Ctrl+Enter in the textarea now triggers the send button action based on the interface language.
+  - Added an event listener for the Ctrl+Enter key combination in `scripts/content.js`.
+  - The event listener is registered on `document.body` and checks if the target is a textarea.
+
 - 0.37.0 (2025/01/19)
 
   - Fix a bug on initial buttons detection.
