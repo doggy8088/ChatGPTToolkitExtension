@@ -1,5 +1,13 @@
 # Changelog
 
+- 0.40.0 (2025/02/28)
+
+  - chore: remove initial buttons due to ChatGPT layout changes.
+
+- 0.39.0 (2025/02/08)
+
+  - chore: Setup CI/CD for Chrome Web Store publishing.
+
 - 0.38.0 (2025/02/01)
 
   - Feature: Pressing Ctrl+Enter in the textarea now triggers the send button action based on the interface language.
