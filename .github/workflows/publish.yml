@@ -9,6 +9,10 @@ on:
 jobs:
   publish:
     runs-on: windows-latest
+
+    permissions:
+      contents: write
+
     steps:
       - uses: actions/checkout@v4
 
@@ -26,16 +30,11 @@ jobs:
       - name: 建立 GitHub Release
         id: create_release
         uses: softprops/action-gh-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         with:
           tag_name: v${{ steps.get_version.outputs.version }}
           name: Release v${{ steps.get_version.outputs.version }}
           draft: false
           prerelease: false
-
-      - name: 安裝 7-Zip
-        run: choco install 7zip -y
 
       - name: 建立 ZIP 封裝檔
         run: |
@@ -44,8 +43,6 @@ jobs:
 
       - name: 上傳 Release 附件
         uses: softprops/action-gh-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         with:
           tag_name: v${{ steps.get_version.outputs.version }}
           files: ./ChatGPTToolkitExtension_v${{ steps.get_version.outputs.version }}.zip
