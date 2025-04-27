@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "__MSG_chatgpttoolkit_name__",
     "description": "__MSG_chatgpttoolkit_description__",
-    "version": "0.40.0",
+    "version": "0.41.0",
     "default_locale": "zh_TW",
     "author": "__MSG_chatgpttoolkit_author__",
     "icons": {
@@ -14,6 +14,9 @@
     "content_scripts": [
       {
         "js": [
+          "scripts/d3@7.js",
+          "scripts/markmap-lib@0.18.11.js",
+          "scripts/markmap-view@0.18.10.js",
           "scripts/content.js"
         ],
         "matches": [
