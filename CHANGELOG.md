@@ -1,5 +1,9 @@
 # Changelog
 
+- 0.41.0 (2025/04/27)
+
+  - feat: add [Markmap](https://markmap.js.org/) support for Markdown code fences.
+
 - 0.40.0 (2025/02/28)
 
   - chore: remove initial buttons due to ChatGPT layout changes.
