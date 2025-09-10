@@ -747,7 +747,9 @@
             // Check if the target element is a textarea
             if (event.target.tagName === 'TEXTAREA') {
                 // Locate the send button based on the relative position of the button related to the textarea
-                const sendButton = event.target.closest('div.group\\/conversation-turn').querySelector('button.btn-primary');
+                const container = event.target?.parentElement?.parentElement;
+                const sibling = container?.nextElementSibling;
+                const sendButton = sibling?.querySelector('button.btn-primary');
                 if (sendButton) {
                     sendButton.click();
                 }

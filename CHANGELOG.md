@@ -1,5 +1,19 @@
 # Changelog
 
+- 0.42.0 (2025/09/10)
+
+  - Chore
+    - Bump extension version to 0.42.0 for release. No functional changes.
+
+  - New features
+    - None
+
+  - Bug fixes
+    - Fix Ctrl+Enter issue due to ChatGPT website layout changes.
+
+  - Breaking changes
+    - None
+
 - 0.41.0 (2025/04/27)
 
   - feat: add [Markmap](https://markmap.js.org/) support for Markdown code fences.
