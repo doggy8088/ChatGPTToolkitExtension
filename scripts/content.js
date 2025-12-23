@@ -9,130 +9,105 @@
     // https://claude.ai/#prompt=I+B%20=%20C&D&autoSubmit=true
     let debug = true;
 
+    // scripts/content-utils.js 需要在 content.js 之前載入（已在 manifest.json 中排序）。
+    // 這樣可以把純邏輯抽離出來，讓專案可以用 Node 跑單元測試。
+    const ContentUtils = window.ChatGPTToolkitContentUtils;
+    if (!ContentUtils) {
+        console.error('[ChatGPTToolkit] Missing ChatGPTToolkitContentUtils; check manifest.json script order.');
+        return;
+    }
+
     function b64EncodeUnicode(str) {
-        const bytes = new TextEncoder().encode(str);
-        const base64 = window.btoa(String.fromCharCode(...new Uint8Array(bytes)));
-        return base64;
+        // NOTE: 為了讓這些純邏輯能寫單元測試，已抽到 scripts/content-utils.js
+        // 這裡保留原本函式名稱，避免重構時不小心改到呼叫點。
+        return ContentUtils.b64EncodeUnicode(str);
     }
 
     function isBase64Unicode(str) {
         // Base64編碼後的字串僅包含 A-Z、a-z、0-9、+、/、= 這些字元
-        const base64Regex = /^[\w\+\/=]+$/;
-        if (!base64Regex.test(str)) return false;
-
-        if (str.length < 32) return false;
-
-        try {
-            const decoded = window.atob(str);
-
-            // 解碼後的字串應該是合法的 UTF-8 序列
-            // 使用 TextDecoder 檢查是否可以成功解碼為 Unicode 字串
-            const bytes = new Uint8Array(decoded.length);
-            for (let i = 0; i < decoded.length; i++) {
-                bytes[i] = decoded.charCodeAt(i);
-            }
-            const decoder = new TextDecoder('utf-8');
-            decoder.decode(bytes);
-
-            // 如果沒有拋出異常，則表示是合法的 Base64Unicode 編碼字串
-            return true;
-        } catch (e) {
-            // 解碼失敗，則不是合法的 Base64Unicode 編碼字串
-            return false;
-        }
+        //
+        // 解碼後的字串應該是合法的 UTF-8 序列
+        // 使用 TextDecoder 檢查是否可以成功解碼為 Unicode 字串
+        //
+        // NOTE: 判斷/解碼細節已抽到 scripts/content-utils.js（可單元測試），這裡保留註解與介面。
+        return ContentUtils.isBase64Unicode(str);
     }
 
     function b64DecodeUnicode(str) {
-        const bytes = Uint8Array.from(window.atob(str), c => c.charCodeAt(0));
-        let decoded = new TextDecoder().decode(bytes);
-
+        // NOTE: scripts/content-utils.js 的版本會回傳「解碼後的字串」（可能是空字串）。
+        // 原始版本會印出 decoded 並在空字串時 fallback 回傳原始 str，所以這裡保留同樣行為。
+        const decoded = ContentUtils.b64DecodeUnicode(str);
         if (debug) console.log('decoded:', decoded, 'decoded length', decoded?.length);
-
-        if (!!decoded && decoded.length > 0) {
-            return decoded;
-        } else {
-            return str;
-        }
+        return (!!decoded && decoded.length > 0) ? decoded : str;
     }
 
     // 取得 URI 查詢字串中的參數值
     function getUriComponent(segment, name) {
-        let idx = segment.indexOf('=');
-        if (idx == -1) return;
-
-        let key = segment.substring(0, idx);
-        let val = segment.substring(idx + 1);
-
-        if (!key || !val) return;
-
-        if (key === name) {
-            return val;
-        }
+        return ContentUtils.getUriComponent(segment, name);
     }
 
     // 為了相容於一開始的設計，怕使用者傳入不合格式的 prompt 內容，所以要特殊處理
     function flexiblePromptDetection(hash) {
-        let prompt = '';
-
         // 找到 prompt= 的位置 (假設 prompt 參數總是在最後一位)
-        const promptIndex = hash.indexOf('prompt=');
-
-        if (promptIndex === -1) {
-            // 沒有找到 prompt 參數
-            return null;
-        }
-
-        if (promptIndex === 0) {
-            prompt = getUriComponent(hash, 'prompt');
-        } else {
-            // prompt 不是第一個參數（假設在最後），從 prompt= 開始提取
-            prompt = hash.substring(promptIndex + 'prompt'.length + 1);
-        }
-
-        if (debug) console.log('prompt1: ', prompt);
-
-        // 沒有 prompt 就不處理了
-        if (!prompt) return null;
-
+        //
         // 因為 Chrome 的 Site search 在使用者輸入 %s 內容時，會自動判斷要用哪一種編碼方式
         // 如果有 Query String 的話，他會自動用 encodeURIComponent 進行編碼
         // 如果沒有 Query String 的話，他會自動用 encodeURI 進行編碼。
         // 這個 encodeURI 方法不會對某些保留的字元進行編碼，例如 ";", "/", "?", ":", "@", "&", "=", "+", "$", 和 "#"。
         // 因此我們要特別處理這個狀況！
-        if (location.search == '') {
-            prompt = prompt
-                .replace(/\;/g, "%3B")
-                .replace(/\//g, "%2F")
-                .replace(/\?/g, "%3F")
-                .replace(/\:/g, "%3A")
-                .replace(/\@/g, "%40")
-                .replace(/\&/g, "%26")
-                .replace(/\=/g, "%3D")
-                .replace(/\+/g, "%2B")
-                .replace(/\$/g, "%24")
-                .replace(/\#/g, "%23");
-        }
+        //
+        // NOTE: 為了可測試性，prompt parsing 已抽到 scripts/content-utils.js。
+        // 這裡保留原函式名稱，但行為一致：會依 location.search 來處理 encodeURI/encodeURIComponent 的差異。
+        return ContentUtils.flexiblePromptDetection(hash, location.search);
+    }
 
-        // 這裡理論上已經不會再出現 + 符號了，如果出現就轉成 %20
-        prompt = prompt.replace(/\+/g, "%20")
+    // ---------------------------------------------------------------------
+    // Shared / reusable helpers (避免各站重複邏輯)
+    // ---------------------------------------------------------------------
 
-        if (debug) console.log('prompt2: ', prompt);
+    // 將多行文字填入 contentEditable 容器：每一行建立一個 <p>，確保換行呈現一致。
+    function fillContentEditableWithParagraphs(target, text) {
+        if (!target) return;
+        const lines = (text || '').split('\n');
+        target.innerHTML = '';
+        lines.forEach(line => {
+            const paragraph = document.createElement('p');
+            paragraph.innerText = line;
+            target.appendChild(paragraph);
+        });
+    }
 
-        // 正式取得 prompt 參數的內容
-        prompt = decodeURIComponent(prompt);
+    // 將文字填入 <textarea> 並觸發 input，讓網站框架能收到變更通知。
+    function fillTextareaAndDispatchInput(textarea, text) {
+        if (!textarea) return;
+        textarea.value = text;
+        textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    }
 
-        if (debug) console.log('prompt3: ', prompt);
+    /**
+     * 通用輪詢器：固定間隔檢查 DOM，直到 tick() 回傳 true 或重試耗盡。
+     * - tick 允許是 async (例如需要等待剪貼簿讀取或延遲)。
+     * - 這個 helper 只負責「何時停」，不改變各站的 DOM 操作細節。
+     */
+    function startRetryInterval({ intervalMs = 500, retries = 10, tick }) {
+        let remaining = retries;
+        const ti = setInterval(async () => {
+            try {
+                const shouldStop = await tick();
+                if (shouldStop) {
+                    clearInterval(ti);
+                    return;
+                }
+            } catch (e) {
+                // 保持原本的「失敗就繼續重試」特性，避免單次例外讓整個 interval 掛掉。
+            }
 
-        // 正規化 prompt 內容，移除多餘的空白與換行字元
-        prompt = prompt.replace(/\r/g, '')
-            .replace(/\n{3,}/sg, '\n\n')
-            .replace(/^\s+/sg, '')
-
-        if (debug) console.log('prompt4: ', prompt);
-
-        if (!prompt) return null;
-
-        return prompt;
+            remaining--;
+            if (remaining <= 0) {
+                clearInterval(ti);
+            }
+        }, intervalMs);
+        return ti;
     }
 
     let prompt = '';
@@ -148,20 +123,13 @@
 
         if (debug) console.log('hash: ', hash);
 
-        var qs = new URLSearchParams(hash);
-
-        prompt = qs.get('prompt');
-        autoSubmit = (qs.get('autoSubmit') === '1' || qs.get('autoSubmit') === 'true');
-        pasteImage = (qs.get('pasteImage') === '1' || qs.get('pasteImage') === 'true');
-        tool = (qs.get('tool') || '').toLowerCase();
-
-        // 為了處理一些不合規定的 prompt 參數，所以要實作客製化的參數解析邏輯
-        prompt = flexiblePromptDetection(hash) || prompt;
-
-        // 如果 prompt 內容為 Base64Unicode 編碼字串，則解碼為 Unicode 字串
-        if (!!prompt && isBase64Unicode(prompt)) {
-            prompt = b64DecodeUnicode(prompt);
-        }
+        // NOTE: 這段邏輯會被多個站點共用，因此抽到 scripts/content-utils.js 方便單元測試。
+        // 這裡仍維持「把結果寫回 prompt/autoSubmit/pasteImage/tool 這些 closure 變數」的行為。
+        const parsed = ContentUtils.parseToolkitHash(hash, location.search);
+        prompt = parsed.prompt;
+        autoSubmit = parsed.autoSubmit;
+        pasteImage = parsed.pasteImage;
+        tool = parsed.tool;
 
         if (debug) console.log('prompt: ', prompt);
         if (debug) console.log('autoSubmit: ', autoSubmit);
@@ -183,6 +151,10 @@
         return [prompt, autoSubmit, pasteImage];
     };
 
+    // ---------------------------------------------------------------------
+    // Site: Gemini (gemini.google.com)
+    // - 支援: AutoFill / AutoSubmit / pasteImage / tool=image
+    // ---------------------------------------------------------------------
     if (location.hostname === 'gemini.google.com') {
         const [prompt, autoSubmit, pasteImage] = getParamsFromHash();
         if (!prompt) return;
@@ -216,193 +188,172 @@
             }
         };
 
-        var retry = 30;
-        var ti = setInterval(async () => {
-            tryClickImageToolButton();
+        startRetryInterval({
+            intervalMs: 500,
+            retries: 30,
+            tick: async () => {
+                tryClickImageToolButton();
 
-            var textarea = document.querySelector('chat-window .textarea');
-            if (textarea && !promptFilled) {
+                const textarea = document.querySelector('chat-window .textarea');
+                if (textarea && !promptFilled) {
+                    // Gemini 的輸入框是 contentEditable，因此用 <p> 逐行填入以保留換行
+                    fillContentEditableWithParagraphs(textarea, prompt);
+                    promptFilled = true;
+                }
 
-                const lines = prompt.split('\n');
-                textarea.innerHTML = '';
-                lines.forEach(line => {
-                    const paragraph = document.createElement('p');
-                    paragraph.innerText = line;
-                    textarea.appendChild(paragraph);
-                });
+                if (textarea && pasteImage && !pastingGeminiImage && !geminiImagePasteAttempted) {
+                    pastingGeminiImage = true;
+                    geminiImagePasteAttempted = true;
+                    if (debug) console.log('Gemini: 貼上圖片中');
+                    await delay(300); // 等待 Gemini 網頁的圖片貼上事件被註冊才能開始
+                    await fetchClipboardImageAndSimulatePaste(textarea);
+                    if (debug) console.log('Gemini: 貼上圖片完成');
+                    pastingGeminiImage = false;
+                }
 
-                promptFilled = true;
+                const button = document.querySelector('chat-window button.send-button');
+                const canSubmit =
+                    button &&
+                    !button.disabled &&
+                    promptFilled &&
+                    autoSubmit &&
+                    !submitted &&
+                    !pastingGeminiImage &&
+                    (!pasteImage || geminiImagePasteAttempted) &&
+                    (tool !== 'image' || toolImageClicked);
+
+                if (canSubmit) {
+                    submitted = true;
+                    button.focus();
+                    setTimeout(() => {
+                        // Gemini 一定要先 focus() 才能按下 click()
+                        button.click();
+                    }, 500);
+                }
+
+                const done =
+                    promptFilled &&
+                    (!pasteImage || geminiImagePasteAttempted) &&
+                    (!autoSubmit || submitted) &&
+                    (tool !== 'image' || toolImageClicked);
+
+                return done;
             }
-
-            if (textarea && pasteImage && !pastingGeminiImage && !geminiImagePasteAttempted) {
-                pastingGeminiImage = true;
-                geminiImagePasteAttempted = true;
-                if (debug) console.log('Gemini: 貼上圖片中');
-                await delay(300); // 等待 Gemini 網頁的圖片貼上事件被註冊才能開始
-                await fetchClipboardImageAndSimulatePaste(textarea);
-                if (debug) console.log('Gemini: 貼上圖片完成');
-                pastingGeminiImage = false;
-            }
-
-            var button = document.querySelector('chat-window button.send-button');
-            const canSubmit =
-                button &&
-                !button.disabled &&
-                promptFilled &&
-                autoSubmit &&
-                !submitted &&
-                !pastingGeminiImage &&
-                (!pasteImage || geminiImagePasteAttempted) &&
-                (tool !== 'image' || toolImageClicked);
-
-            if (canSubmit) {
-                submitted = true;
-                button.focus();
-                setTimeout(() => {
-                    // Gemini 一定要先 focus() 才能按下 click()
-                    button.click();
-                }, 500);
-            }
-
-            const done =
-                promptFilled &&
-                (!pasteImage || geminiImagePasteAttempted) &&
-                (!autoSubmit || submitted) &&
-                (tool !== 'image' || toolImageClicked);
-
-            if (done) {
-                clearInterval(ti);
-                return;
-            }
-
-            retry--;
-
-            if (retry == 0) {
-                clearInterval(ti);
-            }
-
-        }, 500);
+        });
 
         return;
     }
 
+    // ---------------------------------------------------------------------
+    // Site: Claude (claude.ai)
+    // - 支援: AutoFill / AutoSubmit
+    // ---------------------------------------------------------------------
     if (location.hostname === 'claude.ai') {
         const [prompt, autoSubmit] = getParamsFromHash();
         if (!prompt) return;
 
-        var retry = 10;
-        var ti = setInterval(() => {
-            var textarea = document.querySelector('div[contenteditable]');
-            if (textarea) {
-                const lines = prompt.split('\n');
-                textarea.innerHTML = '';
-                lines.forEach(line => {
-                    const paragraph = document.createElement('p');
-                    paragraph.innerText = line;
-                    textarea.appendChild(paragraph);
-                });
+        startRetryInterval({
+            intervalMs: 500,
+            retries: 10,
+            tick: () => {
+                const textarea = document.querySelector('div[contenteditable]');
+                if (!textarea) return false;
 
-                var button = document.querySelector('button');
-                if (button) {
+                // Claude 的輸入框是 contentEditable，因此用 <p> 逐行填入以保留換行
+                fillContentEditableWithParagraphs(textarea, prompt);
 
-                    if (autoSubmit) {
-                        button.focus();
-                        setTimeout(() => {
-                            button.click();
-                        }, 500);
-                    }
+                const button = document.querySelector('button');
+                if (!button) return false;
 
-                    clearInterval(ti);
-                    return;
+                if (autoSubmit) {
+                    button.focus();
+                    setTimeout(() => {
+                        button.click();
+                    }, 500);
                 }
+
+                return true;
             }
-
-            retry--;
-
-            if (retry == 0) {
-                clearInterval(ti);
-            }
-
-        }, 500);
+        });
 
         return;
     }
 
+    // ---------------------------------------------------------------------
+    // Site: Phind (www.phind.com)
+    // - 支援: AutoFill / AutoSubmit
+    // ---------------------------------------------------------------------
     if (location.hostname === 'www.phind.com') {
         const [prompt, autoSubmit] = getParamsFromHash();
         if (!prompt) return;
 
-        var retry = 10;
-        var ti = setInterval(() => {
-            var textarea = document.querySelector('textarea[name="q"]');
-            if (textarea) {
-                textarea.value = prompt;
-                textarea.dispatchEvent(new Event("input", { bubbles: true }));
+        startRetryInterval({
+            intervalMs: 500,
+            retries: 10,
+            tick: () => {
+                const textarea = document.querySelector('textarea[name="q"]');
+                if (!textarea) return false;
+
+                fillTextareaAndDispatchInput(textarea, prompt);
 
                 if (autoSubmit) {
                     textarea.form.submit();
                 }
 
-                clearInterval(ti);
-                return;
+                return true;
             }
-
-            retry--;
-
-            if (retry == 0) {
-                clearInterval(ti);
-            }
-
-        }, 500);
+        });
 
         return;
     }
 
+    // ---------------------------------------------------------------------
+    // Site: Perplexity (www.perplexity.ai)
+    // - 支援: AutoFill / AutoSubmit
+    // ---------------------------------------------------------------------
     if (location.hostname === 'www.perplexity.ai') {
         const [prompt, autoSubmit] = getParamsFromHash();
         if (!prompt) return;
 
-        var retry = 10;
-        var ti = setInterval(() => {
-            var textarea = document.querySelector('textarea[autofocus]');
-            if (textarea) {
-                textarea.value = prompt;
-                textarea.dispatchEvent(new Event("input", { bubbles: true }));
+        startRetryInterval({
+            intervalMs: 500,
+            retries: 10,
+            tick: () => {
+                const textarea = document.querySelector('textarea[autofocus]');
+                if (!textarea) return false;
+
+                fillTextareaAndDispatchInput(textarea, prompt);
 
                 if (autoSubmit) {
                     setTimeout(() => {
-                        var buttons = textarea.parentElement.querySelectorAll('button');
+                        const buttons = textarea.parentElement.querySelectorAll('button');
                         buttons[buttons.length - 1].click();
                     }, 500);
                 }
 
-                clearInterval(ti);
-                return;
+                return true;
             }
-
-            retry--;
-
-            if (retry == 0) {
-                clearInterval(ti);
-            }
-
-        }, 500);
+        });
 
         return;
     }
 
+    // ---------------------------------------------------------------------
+    // Site: Groq (groq.com)
+    // - 支援: AutoFill / AutoSubmit
+    // ---------------------------------------------------------------------
     if (location.hostname === 'groq.com') {
         const [prompt, autoSubmit] = getParamsFromHash();
         if (!prompt) return;
 
-        var retry = 10;
-        var ti = setInterval(() => {
-            retry--;
+        startRetryInterval({
+            intervalMs: 500,
+            retries: 10,
+            tick: () => {
+                const textarea = document.getElementById('chat');
+                if (!textarea) return false;
 
-            var textarea = document.getElementById('chat');
-            if (textarea) {
-                textarea.value = prompt;
-                textarea.dispatchEvent(new Event("input", { bubbles: true }));
+                fillTextareaAndDispatchInput(textarea, prompt);
 
                 if (autoSubmit) {
                     setTimeout(() => {
@@ -411,20 +362,27 @@
                     }, 2000);
                 }
 
-                clearInterval(ti);
-                return;
+                return true;
             }
-
-            if (retry <= 0) {
-                clearInterval(ti);
-            }
-
-        }, 500);
+        });
 
         return;
     }
 
     // Default logic for ChatGPT below.
+
+    /**
+     * ChatGPT 的輸入框是 `#prompt-textarea` (contentEditable)。
+     * 這裡用 innerHTML 寫入 <p> 包裹的內容，並觸發 input 事件讓 React 能接到變更。
+     *
+     * NOTE: 這個行為是既有邏輯的一部分（可能允許 prompt 中含有 HTML），重構時刻意不改變。
+     */
+    function setChatGPTPromptEditor(editorDiv, promptText) {
+        if (!editorDiv) return;
+        editorDiv.innerHTML = '<p>' + promptText + '</p>'
+        editorDiv.dispatchEvent(new Event("input", { bubbles: true }));
+        editorDiv.focus();
+    }
 
     const AutoFillFromURI = async (textarea) => {
 
@@ -434,9 +392,7 @@
         if (prompt && textarea) {
 
             // 新版已經改為 div + contentEditable 的方式，所以要改變填入內容的方式
-            textarea.innerHTML = '<p>' + prompt + '</p>'
-            textarea.dispatchEvent(new Event("input", { bubbles: true }));
-            textarea.focus();
+            setChatGPTPromptEditor(textarea, prompt);
 
             // textarea.value = prompt;
             // textarea.dispatchEvent(new Event("input", { bubbles: true }));
@@ -713,29 +669,45 @@
         };
     }, 60);
 
-    // 處理 pasteImage 的狀態
-    setInterval(async () => {
-        if (pasteImage && !pastingImage) {
-            const textarea = document.getElementById("prompt-textarea");
-            if (textarea) {
-                pastingImage = true;
-                if (debug) console.log('貼上圖片中');
-                await delay(300); // 等待 ChatGPT 網頁的圖片貼上事件被註冊才能開始
-                await fetchClipboardImageAndSimulatePaste(textarea);
-                if (debug) console.log('貼上圖片完成');
-                pasteImage = false;
-                pastingImage = false;
-            }
-        }
+    // ---------------------------------------------------------------------
+    // ChatGPT: pasteImage / autoSubmit state machine
+    // ---------------------------------------------------------------------
 
-        if (autoSubmit && !pasteImage) {
-            const sendButton = document.querySelector('button[data-testid*="send-button"]');
-            if (sendButton && !sendButton.disabled) {
-                if (debug) console.log('自動提交按鈕被點擊');
-                sendButton.click();
-                autoSubmit = false;
-            }
+    // 處理 pasteImage 的狀態（一次性動作：成功後會把 pasteImage 設為 false）
+    async function maybePasteImageIntoChatGPT() {
+        if (!pasteImage || pastingImage) return;
+
+        const textarea = document.getElementById("prompt-textarea");
+        if (!textarea) return;
+
+        pastingImage = true;
+        if (debug) console.log('貼上圖片中');
+
+        // 等待 ChatGPT 網頁的圖片貼上事件被註冊才能開始
+        await delay(300);
+        await fetchClipboardImageAndSimulatePaste(textarea);
+
+        if (debug) console.log('貼上圖片完成');
+        pasteImage = false;
+        pastingImage = false;
+    }
+
+    // 處理 autoSubmit 的狀態（前提：pasteImage 已完成或未啟用）
+    function maybeAutoSubmitChatGPT() {
+        if (!autoSubmit || pasteImage) return;
+
+        const sendButton = document.querySelector('button[data-testid*="send-button"]');
+        if (sendButton && !sendButton.disabled) {
+            if (debug) console.log('自動提交按鈕被點擊');
+            sendButton.click();
+            autoSubmit = false;
         }
+    }
+
+    // 使用高頻輪詢是因為 ChatGPT 的按鈕/輸入框會動態建立，且貼圖/送出需要抓「可操作」的瞬間。
+    setInterval(async () => {
+        await maybePasteImageIntoChatGPT();
+        maybeAutoSubmitChatGPT();
     }, 60);
 
     // 檢查是否有指定的文字在 DOM 中，而且是精準比對，被改過就不會判斷出來
@@ -750,8 +722,7 @@
     function fillPrompt(prompt, autoSubmit = true) {
         const div = document.getElementById("prompt-textarea");
         if (div) {
-            div.innerHTML = '<p>' + prompt + '</p>'
-            div.dispatchEvent(new Event("input", { bubbles: true }));
+            setChatGPTPromptEditor(div, prompt);
 
             // move cursor to the end
             const range = document.createRange();

@@ -1,0 +1,13 @@
+{
+  "name": "chatgpttoolkitextension",
+  "private": true,
+  "description": "Developer tooling for ChatGPTToolkitExtension (unit tests for content script helpers).",
+  "type": "commonjs",
+  "scripts": {
+    "test": "node --test tests/content-utils.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
+

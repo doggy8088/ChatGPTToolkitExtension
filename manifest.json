@@ -17,6 +17,7 @@
           "scripts/d3@7.js",
           "scripts/markmap-lib@0.18.11.js",
           "scripts/markmap-view@0.18.10.js",
+          "scripts/content-utils.js",
           "scripts/content.js"
         ],
         "matches": [
