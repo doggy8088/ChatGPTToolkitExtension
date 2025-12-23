@@ -1,5 +1,16 @@
 # Changelog
 
+- 0.43.0 (2025/12/23)
+
+  - Chore
+    - Bump extension version to 0.43.0 for release.
+
+  - New features
+    - Added a new `tool=image` parameter for `gemini.google.com` to automatically select the image generation tool.
+
+  - Breaking changes
+    - None
+
 - 0.42.0 (2025/09/10)
 
   - Chore

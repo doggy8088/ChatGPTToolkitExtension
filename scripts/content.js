@@ -81,6 +81,7 @@
             hash = hash
                 .replace(/&autoSubmit=([^&]+)/, '')
                 .replace(/&pasteImage=([^&]+)/, '')
+                .replace(/&tool=([^&]+)/, '')
             idx = hash.lastIndexOf('&');
         }
 
@@ -145,6 +146,7 @@
     let prompt = '';
     let autoSubmit = false;
     let pasteImage = false;
+    let tool = '';
     let pastingImage = false;
 
     const getParamsFromHash = () => {
@@ -159,6 +161,7 @@
         prompt = qs.get('prompt');
         autoSubmit = (qs.get('autoSubmit') === '1' || qs.get('autoSubmit') === 'true');
         pasteImage = (qs.get('pasteImage') === '1' || qs.get('pasteImage') === 'true');
+        tool = (qs.get('tool') || '').toLowerCase();
 
         // 為了處理一些不合規定的 prompt 參數，所以要實作客製化的參數解析邏輯
         prompt = flexiblePromptDetection(hash) || prompt;
@@ -171,6 +174,7 @@
         if (debug) console.log('prompt: ', prompt);
         if (debug) console.log('autoSubmit: ', autoSubmit);
         if (debug) console.log('pasteImage: ', pasteImage);
+        if (debug) console.log('tool: ', tool);
 
         // 已經完成參數解析，移除 ChatGPT 萬能工具箱專屬的 hash 內容
         if (!!prompt) {
@@ -191,10 +195,39 @@
         const [prompt, autoSubmit] = getParamsFromHash();
         if (!prompt) return;
 
-        var retry = 10;
+        let toolImageClicked = false;
+        let promptFilled = false;
+        let submitted = false;
+
+        const tryClickImageToolButton = () => {
+            if (toolImageClicked) return;
+            if (tool !== 'image') return;
+
+            const buttons = [...document.querySelectorAll('button')];
+            for (const button of buttons) {
+                const textContent = (button.textContent || '').replace(/\s+/g, ' ').trim();
+                if (!textContent) continue;
+
+                const isMatch =
+                    textContent.includes('生成圖片') ||
+                    textContent.toLowerCase().includes('create image');
+
+                if (!isMatch) continue;
+                if (button.disabled) continue;
+
+                toolImageClicked = true;
+                button.focus();
+                button.click();
+                return;
+            }
+        };
+
+        var retry = 30;
         var ti = setInterval(() => {
+            tryClickImageToolButton();
+
             var textarea = document.querySelector('chat-window .textarea');
-            if (textarea) {
+            if (textarea && !promptFilled) {
 
                 const lines = prompt.split('\n');
                 textarea.innerHTML = '';
@@ -204,20 +237,27 @@
                     textarea.appendChild(paragraph);
                 });
 
-                var button = document.querySelector('chat-window button.send-button');
-                if (button) {
+                promptFilled = true;
+            }
 
-                    if (autoSubmit) {
-                        button.focus();
-                        setTimeout(() => {
-                            // Gemini 一定要先 focus() 才能按下 click()
-                            button.click();
-                        }, 500);
-                    }
+            var button = document.querySelector('chat-window button.send-button');
+            if (button && promptFilled && autoSubmit && !submitted && (tool !== 'image' || toolImageClicked)) {
+                submitted = true;
+                button.focus();
+                setTimeout(() => {
+                    // Gemini 一定要先 focus() 才能按下 click()
+                    button.click();
+                }, 500);
+            }
 
-                    clearInterval(ti);
-                    return;
-                }
+            const done =
+                promptFilled &&
+                (!autoSubmit || submitted) &&
+                (tool !== 'image' || toolImageClicked);
+
+            if (done) {
+                clearInterval(ti);
+                return;
             }
 
             retry--;
