@@ -1,6 +1,6 @@
 ---
-mode: agent
-tools: ['codebase', 'editFiles', 'fetch']
+agent: agent
+tools: ['read', 'edit', 'web']
 ---
 I need to bump the minor version of my Chrome extension. Please help me with the following tasks:
 
