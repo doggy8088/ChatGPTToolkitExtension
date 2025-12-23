@@ -74,27 +74,19 @@
     function flexiblePromptDetection(hash) {
         let prompt = '';
 
-        let idx = hash.indexOf('&');
+        // 找到 prompt= 的位置 (假設 prompt 參數總是在最後一位)
+        const promptIndex = hash.indexOf('prompt=');
 
-        // 如果第一個參數是 prompt 的話，由於 prompt 參數可能包含 & 字元 (因為 %s 的特性)，所以要改變解析參數的邏輯
-        if (hash.startsWith('prompt')) {
-            hash = hash
-                .replace(/&autoSubmit=([^&]+)/, '')
-                .replace(/&pasteImage=([^&]+)/, '')
-                .replace(/&tool=([^&]+)/, '')
-            idx = hash.lastIndexOf('&');
+        if (promptIndex === -1) {
+            // 沒有找到 prompt 參數
+            return null;
         }
 
-        // 若找不到 & 就只搜尋 prompt 參數即可
-        if (idx == -1) {
+        if (promptIndex === 0) {
             prompt = getUriComponent(hash, 'prompt');
         } else {
-            let arg1 = hash.substring(0, idx);
-            let arg2 = hash.substring(idx + 1);
-            if (debug) console.log('arg1: ', arg1);
-            if (debug) console.log('arg2: ', arg2);
-
-            prompt = getUriComponent(arg1, 'prompt') || getUriComponent(arg2, 'prompt');
+            // prompt 不是第一個參數（假設在最後），從 prompt= 開始提取
+            prompt = hash.substring(promptIndex + 'prompt'.length + 1);
         }
 
         if (debug) console.log('prompt1: ', prompt);
@@ -192,11 +184,13 @@
     };
 
     if (location.hostname === 'gemini.google.com') {
-        const [prompt, autoSubmit] = getParamsFromHash();
+        const [prompt, autoSubmit, pasteImage] = getParamsFromHash();
         if (!prompt) return;
 
         let toolImageClicked = false;
         let promptFilled = false;
+        let pastingGeminiImage = false;
+        let geminiImagePasteAttempted = false;
         let submitted = false;
 
         const tryClickImageToolButton = () => {
@@ -223,7 +217,7 @@
         };
 
         var retry = 30;
-        var ti = setInterval(() => {
+        var ti = setInterval(async () => {
             tryClickImageToolButton();
 
             var textarea = document.querySelector('chat-window .textarea');
@@ -240,8 +234,28 @@
                 promptFilled = true;
             }
 
+            if (textarea && pasteImage && !pastingGeminiImage && !geminiImagePasteAttempted) {
+                pastingGeminiImage = true;
+                geminiImagePasteAttempted = true;
+                if (debug) console.log('Gemini: 貼上圖片中');
+                await delay(300); // 等待 Gemini 網頁的圖片貼上事件被註冊才能開始
+                await fetchClipboardImageAndSimulatePaste(textarea);
+                if (debug) console.log('Gemini: 貼上圖片完成');
+                pastingGeminiImage = false;
+            }
+
             var button = document.querySelector('chat-window button.send-button');
-            if (button && promptFilled && autoSubmit && !submitted && (tool !== 'image' || toolImageClicked)) {
+            const canSubmit =
+                button &&
+                !button.disabled &&
+                promptFilled &&
+                autoSubmit &&
+                !submitted &&
+                !pastingGeminiImage &&
+                (!pasteImage || geminiImagePasteAttempted) &&
+                (tool !== 'image' || toolImageClicked);
+
+            if (canSubmit) {
                 submitted = true;
                 button.focus();
                 setTimeout(() => {
@@ -252,6 +266,7 @@
 
             const done =
                 promptFilled &&
+                (!pasteImage || geminiImagePasteAttempted) &&
                 (!autoSubmit || submitted) &&
                 (tool !== 'image' || toolImageClicked);
 
@@ -437,7 +452,7 @@
 
     // 抓取剪貼簿中的圖片並模擬貼上事件
     async function fetchClipboardImageAndSimulatePaste(targetElement) {
-        if (!targetElement) return;
+        if (!targetElement) return false;
 
         targetElement.focus();
 
@@ -466,14 +481,16 @@
                         targetElement.dispatchEvent(pasteEvent);
                         console.log('模擬貼上圖片成功');
 
-                        return;
+                        return true;
                     }
                 }
             }
 
             console.log('剪貼簿中沒有圖片');
+            return false;
         } catch (error) {
             console.error('抓取剪貼簿圖片失敗:', error);
+            return false;
         }
     }
 

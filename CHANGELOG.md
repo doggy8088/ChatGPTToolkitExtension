@@ -1,5 +1,19 @@
 # Changelog
 
+- 0.43.1 (2025/12/24)
+
+  - Chore
+    - Bump extension version to 0.43.1 for release.
+
+  - New features
+    - None
+
+  - Bug fixes
+    - Refactored `flexiblePromptDetection` function to handle URL parameters more flexibly. Now assumes `prompt` parameter is always last, making it easier to add new parameters in the future without code changes.
+
+  - Breaking changes
+    - None
+
 - 0.43.0 (2025/12/23)
 
   - Chore
