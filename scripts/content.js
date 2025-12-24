@@ -136,19 +136,20 @@
         if (debug) console.log('pasteImage: ', pasteImage);
         if (debug) console.log('tool: ', tool);
 
-        // 已經完成參數解析，移除 ChatGPT 萬能工具箱專屬的 hash 內容
-        if (!!prompt) {
-            if (history.replaceState) {
-                history.replaceState(null, document.title, window.location.pathname + window.location.search);
-            } else {
-                window.location.hash = '';
-            }
-        } else {
-            // 沒有 prompt 就不處理了
+        // 沒有 prompt 也沒有 tool 就不處理了
+        if (!prompt && !tool) {
             return [null, false, false];
         }
 
         return [prompt, autoSubmit, pasteImage];
+    };
+
+    const clearHash = () => {
+        if (history.replaceState) {
+            history.replaceState(null, document.title, window.location.pathname + window.location.search);
+        } else {
+            window.location.hash = '';
+        }
     };
 
     // ---------------------------------------------------------------------
@@ -156,8 +157,8 @@
     // - 支援: AutoFill / AutoSubmit / pasteImage / tool=image
     // ---------------------------------------------------------------------
     if (location.hostname === 'gemini.google.com') {
-        const [prompt, autoSubmit, pasteImage] = getParamsFromHash();
-        if (!prompt) return;
+        getParamsFromHash();
+        if (!prompt && !tool) return;
 
         let toolImageClicked = false;
         let promptFilled = false;
@@ -195,7 +196,7 @@
                 tryClickImageToolButton();
 
                 const textarea = document.querySelector('chat-window .textarea');
-                if (textarea && !promptFilled) {
+                if (textarea && prompt && !promptFilled) {
                     // Gemini 的輸入框是 contentEditable，因此用 <p> 逐行填入以保留換行
                     fillContentEditableWithParagraphs(textarea, prompt);
                     promptFilled = true;
@@ -232,10 +233,14 @@
                 }
 
                 const done =
-                    promptFilled &&
+                    (!prompt || promptFilled) &&
                     (!pasteImage || geminiImagePasteAttempted) &&
                     (!autoSubmit || submitted) &&
                     (tool !== 'image' || toolImageClicked);
+
+                if (done) {
+                    clearHash();
+                }
 
                 return done;
             }

@@ -1,5 +1,19 @@
 # Changelog
 
+- 0.43.2 (2025/12/24)
+
+  - Chore
+    - Bump extension version to 0.43.2 for release.
+
+  - New features
+    - None
+
+  - Bug fixes
+    - Fixed `tool=image` parameter detection for Gemini when used without `prompt` parameter. URLs like `#tool=image`, `#autoSubmit=false&tool=image`, and `#autoSubmit=false&tool=image&prompt=` now work correctly.
+
+  - Breaking changes
+    - None
+
 - 0.43.1 (2025/12/24)
 
   - Chore
