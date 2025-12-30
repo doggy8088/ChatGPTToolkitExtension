@@ -88,9 +88,14 @@
                 <div class="empty-state">
                     <div class="empty-state-icon">📝</div>
                     <div class="empty-state-text">尚未建立任何自訂提示</div>
-                    <button onclick="document.getElementById('addPromptBtn').click()">建立第一個提示</button>
+                    <button id="emptyStateAddBtn">建立第一個提示</button>
                 </div>
             `;
+            // Add event listener to the empty state button
+            const emptyStateBtn = document.getElementById('emptyStateAddBtn');
+            if (emptyStateBtn) {
+                emptyStateBtn.addEventListener('click', openAddModal);
+            }
             return;
         }
 
@@ -106,10 +111,10 @@
         const div = document.createElement('div');
         div.className = 'prompt-item';
 
-        const isInitial = prompt.hasOwnProperty('initial') ? prompt.initial : false;
-        const isEnabled = prompt.hasOwnProperty('enabled') ? prompt.enabled : true;
-        const hasAutoPaste = prompt.hasOwnProperty('autoPaste') ? prompt.autoPaste : false;
-        const hasAutoSubmit = prompt.hasOwnProperty('autoSubmit') ? prompt.autoSubmit : false;
+        const isInitial = Object.prototype.hasOwnProperty.call(prompt, 'initial') ? prompt.initial : false;
+        const isEnabled = Object.prototype.hasOwnProperty.call(prompt, 'enabled') ? prompt.enabled : true;
+        const hasAutoPaste = Object.prototype.hasOwnProperty.call(prompt, 'autoPaste') ? prompt.autoPaste : false;
+        const hasAutoSubmit = Object.prototype.hasOwnProperty.call(prompt, 'autoSubmit') ? prompt.autoSubmit : false;
 
         let badges = [];
         badges.push(`<span class="badge ${isEnabled ? 'enabled' : 'disabled'}">${isEnabled ? '已啟用' : '已停用'}</span>`);
@@ -138,15 +143,28 @@
                 </div>
             </div>
             <div class="prompt-actions">
-                <button onclick="optionsPage.editPrompt(${index})">✏️ 編輯</button>
-                <button onclick="optionsPage.togglePrompt(${index})" class="secondary">
+                <button class="btn-edit">✏️ 編輯</button>
+                <button class="btn-toggle secondary">
                     ${isEnabled ? '🚫 停用' : '✅ 啟用'}
                 </button>
-                <button onclick="optionsPage.moveUp(${index})" class="secondary" ${index === 0 ? 'disabled' : ''}>⬆️ 上移</button>
-                <button onclick="optionsPage.moveDown(${index})" class="secondary" ${index === customPrompts.length - 1 ? 'disabled' : ''}>⬇️ 下移</button>
-                <button onclick="optionsPage.deletePrompt(${index})" class="danger">🗑️ 刪除</button>
+                <button class="btn-move-up secondary" ${index === 0 ? 'disabled' : ''}>⬆️ 上移</button>
+                <button class="btn-move-down secondary" ${index === customPrompts.length - 1 ? 'disabled' : ''}>⬇️ 下移</button>
+                <button class="btn-delete danger">🗑️ 刪除</button>
             </div>
         `;
+
+        // Attach event listeners to buttons
+        const editBtn = div.querySelector('.btn-edit');
+        const toggleBtn = div.querySelector('.btn-toggle');
+        const moveUpBtn = div.querySelector('.btn-move-up');
+        const moveDownBtn = div.querySelector('.btn-move-down');
+        const deleteBtn = div.querySelector('.btn-delete');
+
+        editBtn.addEventListener('click', () => editPrompt(index));
+        toggleBtn.addEventListener('click', () => togglePrompt(index));
+        moveUpBtn.addEventListener('click', () => moveUp(index));
+        moveDownBtn.addEventListener('click', () => moveDown(index));
+        deleteBtn.addEventListener('click', () => deletePrompt(index));
 
         return div;
     }
@@ -172,14 +190,14 @@
         modalTitle.textContent = '編輯提示';
         const prompt = customPrompts[index];
 
-        promptEnabled.checked = prompt.hasOwnProperty('enabled') ? prompt.enabled : true;
-        promptInitial.checked = prompt.hasOwnProperty('initial') ? prompt.initial : false;
+        promptEnabled.checked = Object.prototype.hasOwnProperty.call(prompt, 'enabled') ? prompt.enabled : true;
+        promptInitial.checked = Object.prototype.hasOwnProperty.call(prompt, 'initial') ? prompt.initial : false;
         promptIcon.value = prompt.svgIcon || '';
         promptTitle.value = prompt.title || '';
         promptAltText.value = prompt.altText || '';
         promptText.value = prompt.prompt || '';
-        promptAutoPaste.checked = prompt.hasOwnProperty('autoPaste') ? prompt.autoPaste : false;
-        promptAutoSubmit.checked = prompt.hasOwnProperty('autoSubmit') ? prompt.autoSubmit : false;
+        promptAutoPaste.checked = Object.prototype.hasOwnProperty.call(prompt, 'autoPaste') ? prompt.autoPaste : false;
+        promptAutoSubmit.checked = Object.prototype.hasOwnProperty.call(prompt, 'autoSubmit') ? prompt.autoSubmit : false;
 
         promptModal.classList.add('active');
     }
@@ -247,7 +265,11 @@
     // Toggle prompt enabled/disabled
     function togglePrompt(index) {
         if (customPrompts[index]) {
-            customPrompts[index].enabled = !customPrompts[index].enabled;
+            // Get current enabled state or default to true
+            const currentEnabled = Object.prototype.hasOwnProperty.call(customPrompts[index], 'enabled') 
+                ? customPrompts[index].enabled 
+                : true;
+            customPrompts[index].enabled = !currentEnabled;
             savePrompts();
             renderPrompts();
         }
@@ -514,15 +536,6 @@
             }
         });
     }
-
-    // Expose functions to global scope for inline event handlers
-    window.optionsPage = {
-        editPrompt,
-        togglePrompt,
-        deletePrompt,
-        moveUp,
-        moveDown
-    };
 
     // Initialize when DOM is ready
     if (document.readyState === 'loading') {
