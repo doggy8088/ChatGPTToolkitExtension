@@ -30,5 +30,6 @@
           "https://chatgpt.com/*"
         ]
       }
-    ]
+    ],
+    "options_page": "options.html"
   }

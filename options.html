@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ChatGPT Toolkit - Options</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .actions {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: #10a37f;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #0d8f6f;
+        }
+
+        button.secondary {
+            background: #6c757d;
+        }
+
+        button.secondary:hover {
+            background: #5a6268;
+        }
+
+        button.danger {
+            background: #dc3545;
+        }
+
+        button.danger:hover {
+            background: #c82333;
+        }
+
+        .prompts-list {
+            margin-top: 20px;
+        }
+
+        .prompt-item {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: box-shadow 0.2s;
+        }
+
+        .prompt-item:hover {
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        .prompt-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .prompt-icon {
+            font-size: 24px;
+            width: 40px;
+            text-align: center;
+        }
+
+        .prompt-title {
+            flex: 1;
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .prompt-badges {
+            display: flex;
+            gap: 5px;
+        }
+
+        .badge {
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge.initial {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .badge.follow-up {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge.disabled {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .badge.enabled {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge.auto-submit {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .badge.auto-paste {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+
+        .prompt-content {
+            margin-top: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
+        }
+
+        .prompt-field {
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .prompt-field label {
+            font-weight: 600;
+            color: #495057;
+            margin-right: 5px;
+        }
+
+        .prompt-field-value {
+            color: #6c757d;
+            word-break: break-word;
+        }
+
+        .prompt-text {
+            white-space: pre-wrap;
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .prompt-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .prompt-actions button {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            overflow: auto;
+        }
+
+        .modal.active {
+            display: block;
+        }
+
+        .modal-content {
+            background: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 600px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            font-size: 22px;
+            color: #333;
+        }
+
+        .close-btn {
+            background: none;
+            color: #666;
+            font-size: 28px;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .close-btn:hover {
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .form-group input[type="text"],
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+            font-family: 'Courier New', monospace;
+        }
+
+        .form-group input[type="checkbox"] {
+            margin-right: 8px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        .form-help {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 25px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .empty-state-text {
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+
+        .status-message {
+            padding: 12px 20px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .status-message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status-message.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ChatGPT Toolkit - 自訂提示管理</h1>
+        <p class="subtitle">管理您的自訂提示按鈕，這些按鈕會顯示在 ChatGPT 對話中</p>
+
+        <div id="statusMessage" class="status-message"></div>
+
+        <div class="actions">
+            <button id="addPromptBtn">➕ 新增提示</button>
+            <button id="importBtn" class="secondary">📥 匯入</button>
+            <button id="exportBtn" class="secondary">📤 匯出</button>
+            <button id="resetBtn" class="danger">🔄 重置為預設值</button>
+        </div>
+
+        <div id="promptsList" class="prompts-list"></div>
+    </div>
+
+    <!-- Edit/Add Prompt Modal -->
+    <div id="promptModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">新增提示</h2>
+                <button class="close-btn" id="closeModalBtn">&times;</button>
+            </div>
+
+            <form id="promptForm">
+                <div class="form-group">
+                    <label for="promptEnabled">
+                        <div class="checkbox-label">
+                            <input type="checkbox" id="promptEnabled" checked>
+                            <span>啟用此提示</span>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label for="promptInitial">
+                        <div class="checkbox-label">
+                            <input type="checkbox" id="promptInitial">
+                            <span>初始按鈕（在對話開始前顯示）</span>
+                        </div>
+                    </label>
+                    <div class="form-help">未勾選時，按鈕會在 ChatGPT 回應後顯示</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="promptIcon">圖示 (Emoji 或 SVG)</label>
+                    <input type="text" id="promptIcon" placeholder="📝">
+                    <div class="form-help">建議使用 Emoji，例如：📝 🍥 👩‍🏫</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="promptTitle">標題 *</label>
+                    <input type="text" id="promptTitle" required placeholder="例如：總結">
+                </div>
+
+                <div class="form-group">
+                    <label for="promptAltText">提示文字（Tooltip）</label>
+                    <input type="text" id="promptAltText" placeholder="滑鼠移到按鈕上時顯示的說明文字">
+                </div>
+
+                <div class="form-group">
+                    <label for="promptText">提示內容 *</label>
+                    <textarea id="promptText" required placeholder="請輸入提示內容..."></textarea>
+                    <div class="form-help">這是按下按鈕後會填入的文字</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="promptAutoPaste">
+                        <div class="checkbox-label">
+                            <input type="checkbox" id="promptAutoPaste">
+                            <span>自動貼上剪貼簿內容</span>
+                        </div>
+                    </label>
+                    <div class="form-help">啟用後會自動在提示內容後面加上剪貼簿的文字</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="promptAutoSubmit">
+                        <div class="checkbox-label">
+                            <input type="checkbox" id="promptAutoSubmit">
+                            <span>自動送出</span>
+                        </div>
+                    </label>
+                    <div class="form-help">啟用後會自動點擊送出按鈕</div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="secondary" id="cancelBtn">取消</button>
+                    <button type="submit">儲存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div id="importModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>匯入提示</h2>
+                <button class="close-btn" id="closeImportModalBtn">&times;</button>
+            </div>
+
+            <div class="form-group">
+                <label for="importText">貼上 JSON 資料</label>
+                <textarea id="importText" style="min-height: 200px;" placeholder='[{"enabled": true, "title": "總結", ...}]'></textarea>
+                <div class="form-help">貼上從匯出功能取得的 JSON 資料</div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="secondary" id="cancelImportBtn">取消</button>
+                <button type="button" id="confirmImportBtn">匯入</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="options.js"></script>
+</body>
+</html>
