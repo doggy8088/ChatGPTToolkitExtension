@@ -111,10 +111,10 @@
         const div = document.createElement('div');
         div.className = 'prompt-item';
 
-        const isInitial = Object.prototype.hasOwnProperty.call(prompt, 'initial') ? prompt.initial : false;
-        const isEnabled = Object.prototype.hasOwnProperty.call(prompt, 'enabled') ? prompt.enabled : true;
-        const hasAutoPaste = Object.prototype.hasOwnProperty.call(prompt, 'autoPaste') ? prompt.autoPaste : false;
-        const hasAutoSubmit = Object.prototype.hasOwnProperty.call(prompt, 'autoSubmit') ? prompt.autoSubmit : false;
+        const isInitial = getProperty(prompt, 'initial', false);
+        const isEnabled = getProperty(prompt, 'enabled', true);
+        const hasAutoPaste = getProperty(prompt, 'autoPaste', false);
+        const hasAutoSubmit = getProperty(prompt, 'autoSubmit', false);
 
         let badges = [];
         badges.push(`<span class="badge ${isEnabled ? 'enabled' : 'disabled'}">${isEnabled ? '已啟用' : '已停用'}</span>`);
@@ -169,11 +169,21 @@
         return div;
     }
 
-    // Escape HTML to prevent XSS
+    // Helper function to safely get property with default value
+    function getProperty(obj, key, defaultValue) {
+        return Object.prototype.hasOwnProperty.call(obj, key) ? obj[key] : defaultValue;
+    }
+
+    // Escape HTML to prevent XSS (efficient character replacement)
     function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+        if (!text) return '';
+        return String(text).replace(/[&<>"']/g, char => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[char]));
     }
 
     // Open modal for adding new prompt
@@ -190,14 +200,14 @@
         modalTitle.textContent = '編輯提示';
         const prompt = customPrompts[index];
 
-        promptEnabled.checked = Object.prototype.hasOwnProperty.call(prompt, 'enabled') ? prompt.enabled : true;
-        promptInitial.checked = Object.prototype.hasOwnProperty.call(prompt, 'initial') ? prompt.initial : false;
+        promptEnabled.checked = getProperty(prompt, 'enabled', true);
+        promptInitial.checked = getProperty(prompt, 'initial', false);
         promptIcon.value = prompt.svgIcon || '';
         promptTitle.value = prompt.title || '';
         promptAltText.value = prompt.altText || '';
         promptText.value = prompt.prompt || '';
-        promptAutoPaste.checked = Object.prototype.hasOwnProperty.call(prompt, 'autoPaste') ? prompt.autoPaste : false;
-        promptAutoSubmit.checked = Object.prototype.hasOwnProperty.call(prompt, 'autoSubmit') ? prompt.autoSubmit : false;
+        promptAutoPaste.checked = getProperty(prompt, 'autoPaste', false);
+        promptAutoSubmit.checked = getProperty(prompt, 'autoSubmit', false);
 
         promptModal.classList.add('active');
     }
@@ -265,10 +275,7 @@
     // Toggle prompt enabled/disabled
     function togglePrompt(index) {
         if (customPrompts[index]) {
-            // Get current enabled state or default to true
-            const currentEnabled = Object.prototype.hasOwnProperty.call(customPrompts[index], 'enabled') 
-                ? customPrompts[index].enabled 
-                : true;
+            const currentEnabled = getProperty(customPrompts[index], 'enabled', true);
             customPrompts[index].enabled = !currentEnabled;
             savePrompts();
             renderPrompts();
