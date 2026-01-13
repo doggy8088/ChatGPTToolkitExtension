@@ -137,3 +137,4 @@ bun.lockb
 .pnp.*
 
 *.zip
+package-lock.json
