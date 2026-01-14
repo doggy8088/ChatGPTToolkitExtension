@@ -503,11 +503,12 @@
     }
 
     const StartMonitoringResponse = async () => {
-
+ 
         // 預設的回應按鈕
         let defaultManualSubmitText = [];
         let localeDefaultManualSubmitText = [];
-
+        let initialManualSubmitText = [];
+ 
         let lastBlock;
 
         const currentLocale = chrome.i18n?.getUILanguage();
@@ -543,7 +544,7 @@
         }
 
         localeDefaultManualSubmitText = [...defaultManualSubmitText];
-
+ 
         function buildFollowUpButtonsFromPrompts(prompts) {
             const results = [];
             (prompts || []).forEach((item) => {
@@ -561,16 +562,11 @@
         const customPrompts = await loadCustomPromptsFromExtensionStorageWithMigration();
         if (Array.isArray(customPrompts)) {
             defaultManualSubmitText = buildFollowUpButtonsFromPrompts(customPrompts);
+            initialManualSubmitText = buildInitialButtonsFromPrompts(customPrompts);
         }
 
         let mutationObserverTimer = undefined;
         const obs = new MutationObserver(() => {
-
-            // 尋找聊天記錄的最後一筆，用來插入按鈕
-            const talkBlocks = [...document.querySelectorAll('div[data-message-author-role="assistant"]')];
-            if (!talkBlocks || !talkBlocks.length) {
-                return;
-            }
 
             if (location.pathname.startsWith('/gpts/editor')) {
                 return;
@@ -584,6 +580,7 @@
                 stop();
 
                 // 重新建立回應按鈕
+                rebuild_initial_buttons();
                 rebuild_buttons();
 
                 const autoContinue = localStorage.getItem('chatgpttoolkit.featureToggle.autoContinue');
@@ -601,6 +598,108 @@
             }, 0);
 
         });
+
+        function buildInitialButtonsFromPrompts(prompts) {
+            const results = [];
+            (prompts || []).forEach((item) => {
+                const hasEnabled = Object.prototype.hasOwnProperty.call(item, 'enabled');
+                const isItemEnabled = !hasEnabled || item.enabled === true;
+                const isItemInitial = Object.prototype.hasOwnProperty.call(item, 'initial') ? item.initial === true : false;
+
+                if (isItemEnabled && isItemInitial && !!item.title && !!item.prompt) {
+                    results.push(item);
+                }
+            });
+            return results;
+        }
+
+        function rebuild_initial_buttons() {
+            const existing = document.getElementById('custom-chatgpt-initial-buttons');
+
+            // 如果正在回答問題中，就不要出現這些按鈕
+            const stopButton = document.querySelector('button[data-testid="stop-button"]');
+            if (stopButton) {
+                existing?.remove();
+                return;
+            }
+
+            // 如果還沒有輸入框，也不要顯示按鈕
+            const promptTextarea = document.getElementById("prompt-textarea");
+            if (!promptTextarea) {
+                existing?.remove();
+                return;
+            }
+
+            // 初始按鈕：只在「還沒開始聊天」的狀態顯示
+            const hasAnyMessages = Boolean(document.querySelector('div[data-message-author-role="assistant"], div[data-message-author-role="user"]'));
+            if (hasAnyMessages || !Array.isArray(initialManualSubmitText) || initialManualSubmitText.length === 0) {
+                existing?.remove();
+                return;
+            }
+
+            const form = promptTextarea.closest('form[data-type="unified-composer"]') || promptTextarea.closest('form');
+            if (!form) {
+                existing?.remove();
+                return;
+            }
+
+            const composerGrid =
+                form.querySelector('div[class*="bg-token-bg-primary"][class*="grid-template-areas"]') ||
+                form.querySelector('div[class*="grid-template-areas"]');
+
+            if (!composerGrid) {
+                existing?.remove();
+                return;
+            }
+
+            let bar = composerGrid.querySelector('#custom-chatgpt-initial-buttons');
+            if (!bar) {
+                bar = document.createElement('div');
+                bar.id = 'custom-chatgpt-initial-buttons';
+                bar.style.gridArea = 'header';
+                bar.style.display = 'flex';
+                bar.style.flexWrap = 'wrap';
+                bar.style.gap = '0.5rem';
+                bar.style.padding = '0.25rem 0.75rem 0.5rem 0.75rem';
+                bar.style.pointerEvents = 'auto';
+                composerGrid.prepend(bar);
+            } else {
+                bar.innerHTML = '';
+            }
+
+            initialManualSubmitText.forEach((item) => {
+                const autoPasteEnabled = item.autoPaste === true;
+                const autoSubmitEnabled = item.autoSubmit === true;
+
+                const btn = document.createElement("button");
+                btn.type = 'button';
+                btn.style.border = "1px solid #d1d5db";
+                btn.style.borderRadius = "999px";
+                btn.style.padding = "0.25rem 0.6rem";
+                btn.style.margin = "0";
+                btn.style.fontSize = "0.85rem";
+                btn.style.background = "transparent";
+                btn.style.cursor = "pointer";
+                btn.style.whiteSpace = "nowrap";
+                btn.textContent = item.title;
+                btn.addEventListener("click", () => {
+                    if (autoPasteEnabled) {
+                        navigator.clipboard.readText().then((text) => {
+                            text = text.trim();
+                            if (!!text) {
+                                fillPrompt(item.prompt + text, true);
+                            } else {
+                                fillPrompt(item.prompt, false);
+                            }
+                        });
+                    } else {
+                        fillPrompt(item.prompt, autoSubmitEnabled);
+                    }
+                });
+
+                bar.append(btn);
+            });
+        }
 
         function rebuild_buttons() {
 
@@ -635,6 +734,14 @@
 
             buttonsAreas = document.querySelectorAll('#custom-chatgpt-magic-box-buttons');
             if (buttonsAreas.length > 0) {
+                return;
+            }
+
+            // 沒有任何回應內容就不顯示 follow-up 按鈕（也避免切換對話時殘留）
+            if (!talkBlocks || talkBlocks.length === 0) {
+                buttonsAreas?.forEach((item) => {
+                    item.remove();
+                });
                 return;
             }
 
@@ -712,18 +819,25 @@
                 const change = changes?.[CUSTOM_PROMPTS_KEY];
                 if (!change) return;
 
-                const next = Array.isArray(change.newValue)
+                const nextFollowUp = Array.isArray(change.newValue)
                     ? buildFollowUpButtonsFromPrompts(change.newValue)
                     : [...localeDefaultManualSubmitText];
 
-                defaultManualSubmitText = next;
+                const nextInitial = Array.isArray(change.newValue)
+                    ? buildInitialButtonsFromPrompts(change.newValue)
+                    : [];
 
-                const buttonsAreas = document.querySelectorAll('#custom-chatgpt-magic-box-buttons');
-                buttonsAreas?.forEach((item) => item.remove());
+                defaultManualSubmitText = nextFollowUp;
+                initialManualSubmitText = nextInitial;
+
+                document.querySelectorAll('#custom-chatgpt-magic-box-buttons')?.forEach((item) => item.remove());
+                document.querySelectorAll('#custom-chatgpt-initial-buttons')?.forEach((item) => item.remove());
+                rebuild_initial_buttons();
                 rebuild_buttons();
             });
         }
 
+        rebuild_initial_buttons();
         rebuild_buttons();
 
         start();
