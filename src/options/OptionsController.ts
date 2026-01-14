@@ -31,8 +31,8 @@ export class OptionsController {
   private promptAutoSubmit!: HTMLInputElement;
   private importText!: HTMLTextAreaElement;
 
-  private groupInitial!: HTMLElement;
-  private groupFollowUp!: HTMLElement;
+  private panelInitial!: HTMLElement;
+  private panelFollowUp!: HTMLElement;
   private promptsListInitial!: HTMLElement;
   private promptsListFollowUp!: HTMLElement;
 
@@ -75,8 +75,8 @@ export class OptionsController {
     this.promptAutoSubmit = document.getElementById('promptAutoSubmit') as HTMLInputElement;
     this.importText = document.getElementById('importText') as HTMLTextAreaElement;
 
-    this.groupInitial = document.getElementById('groupInitial')!;
-    this.groupFollowUp = document.getElementById('groupFollowUp')!;
+    this.panelInitial = document.getElementById('panelInitial')!;
+    this.panelFollowUp = document.getElementById('panelFollowUp')!;
     this.promptsListInitial = document.getElementById('promptsListInitial')!;
     this.promptsListFollowUp = document.getElementById('promptsListFollowUp')!;
 
@@ -96,14 +96,20 @@ export class OptionsController {
     this.tabFollowUpBtn.classList.toggle('active', !isInitial);
     this.tabInitialBtn.setAttribute('aria-selected', isInitial ? 'true' : 'false');
     this.tabFollowUpBtn.setAttribute('aria-selected', !isInitial ? 'true' : 'false');
+    this.tabInitialBtn.tabIndex = isInitial ? 0 : -1;
+    this.tabFollowUpBtn.tabIndex = isInitial ? -1 : 0;
 
-    this.groupInitial.classList.toggle('inactive', !isInitial);
-    this.groupFollowUp.classList.toggle('inactive', isInitial);
-
-    this.promptsListInitial.style.display = isInitial ? 'block' : 'none';
-    this.promptsListFollowUp.style.display = isInitial ? 'none' : 'block';
-    this.promptsListInitial.setAttribute('aria-hidden', isInitial ? 'false' : 'true');
-    this.promptsListFollowUp.setAttribute('aria-hidden', isInitial ? 'true' : 'false');
+    if (isInitial) {
+      this.panelInitial.removeAttribute('hidden');
+      this.panelInitial.setAttribute('aria-hidden', 'false');
+      this.panelFollowUp.setAttribute('hidden', '');
+      this.panelFollowUp.setAttribute('aria-hidden', 'true');
+    } else {
+      this.panelFollowUp.removeAttribute('hidden');
+      this.panelFollowUp.setAttribute('aria-hidden', 'false');
+      this.panelInitial.setAttribute('hidden', '');
+      this.panelInitial.setAttribute('aria-hidden', 'true');
+    }
   }
 
   private updateTabCounts(): void {
@@ -449,6 +455,25 @@ export class OptionsController {
 
     this.tabInitialBtn.addEventListener('click', () => this.setActiveTab('initial'));
     this.tabFollowUpBtn.addEventListener('click', () => this.setActiveTab('followUp'));
+
+    const onTabKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight' && event.key !== 'Home' && event.key !== 'End') {
+        return;
+      }
+
+      event.preventDefault();
+
+      const nextTab =
+        event.key === 'Home' ? 'initial'
+        : event.key === 'End' ? 'followUp'
+        : this.activeTab === 'initial' ? 'followUp' : 'initial';
+
+      this.setActiveTab(nextTab);
+      (nextTab === 'initial' ? this.tabInitialBtn : this.tabFollowUpBtn).focus();
+    };
+
+    this.tabInitialBtn.addEventListener('keydown', onTabKeyDown);
+    this.tabFollowUpBtn.addEventListener('keydown', onTabKeyDown);
 
     // Prompt modal
     document.getElementById('closeModalBtn')?.addEventListener('click', () => this.closeModal());
