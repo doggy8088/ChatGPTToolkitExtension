@@ -13,6 +13,7 @@ export class OptionsController {
   private editingIndex: number = -1;
   private ui: OptionsUIController;
   private renderer: PromptRenderer;
+  private activeTab: 'initial' | 'followUp' = 'initial';
 
   // DOM Elements
   private promptForm!: HTMLFormElement;
@@ -30,19 +31,29 @@ export class OptionsController {
   private promptAutoSubmit!: HTMLInputElement;
   private importText!: HTMLTextAreaElement;
 
+  private groupInitial!: HTMLElement;
+  private groupFollowUp!: HTMLElement;
+  private promptsListInitial!: HTMLElement;
+  private promptsListFollowUp!: HTMLElement;
+
+  private tabInitialBtn!: HTMLButtonElement;
+  private tabFollowUpBtn!: HTMLButtonElement;
+  private tabInitialCount!: HTMLElement;
+  private tabFollowUpCount!: HTMLElement;
+
   constructor() {
-    this.ui = new OptionsUIController('statusMessage', 'promptsList');
+    this.ui = new OptionsUIController('statusMessage');
     this.renderer = new PromptRenderer();
   }
 
   /**
    * Initialize the controller
    */
-  init(): void {
+  async init(): Promise<void> {
     this.initializeDOM();
-    this.loadPrompts();
-    this.renderPrompts();
     this.attachEventListeners();
+    await this.loadPrompts();
+    this.renderPrompts();
   }
 
   /**
@@ -63,20 +74,62 @@ export class OptionsController {
     this.promptAutoPaste = document.getElementById('promptAutoPaste') as HTMLInputElement;
     this.promptAutoSubmit = document.getElementById('promptAutoSubmit') as HTMLInputElement;
     this.importText = document.getElementById('importText') as HTMLTextAreaElement;
+
+    this.groupInitial = document.getElementById('groupInitial')!;
+    this.groupFollowUp = document.getElementById('groupFollowUp')!;
+    this.promptsListInitial = document.getElementById('promptsListInitial')!;
+    this.promptsListFollowUp = document.getElementById('promptsListFollowUp')!;
+
+    this.tabInitialBtn = document.getElementById('tabInitialBtn') as HTMLButtonElement;
+    this.tabFollowUpBtn = document.getElementById('tabFollowUpBtn') as HTMLButtonElement;
+    this.tabInitialCount = document.getElementById('tabInitialCount')!;
+    this.tabFollowUpCount = document.getElementById('tabFollowUpCount')!;
+  }
+
+  private isPromptInitial(prompt: CustomPrompt): boolean {
+    return Boolean(getProperty(prompt, 'initial', false));
+  }
+
+  private updateTabsUI(): void {
+    const isInitial = this.activeTab === 'initial';
+    this.tabInitialBtn.classList.toggle('active', isInitial);
+    this.tabFollowUpBtn.classList.toggle('active', !isInitial);
+    this.tabInitialBtn.setAttribute('aria-selected', isInitial ? 'true' : 'false');
+    this.tabFollowUpBtn.setAttribute('aria-selected', !isInitial ? 'true' : 'false');
+
+    this.groupInitial.classList.toggle('inactive', !isInitial);
+    this.groupFollowUp.classList.toggle('inactive', isInitial);
+
+    this.promptsListInitial.style.display = isInitial ? 'block' : 'none';
+    this.promptsListFollowUp.style.display = isInitial ? 'none' : 'block';
+    this.promptsListInitial.setAttribute('aria-hidden', isInitial ? 'false' : 'true');
+    this.promptsListFollowUp.setAttribute('aria-hidden', isInitial ? 'true' : 'false');
+  }
+
+  private updateTabCounts(): void {
+    const initialCount = this.customPrompts.filter(p => this.isPromptInitial(p)).length;
+    const followUpCount = this.customPrompts.length - initialCount;
+    this.tabInitialCount.textContent = `(${initialCount})`;
+    this.tabFollowUpCount.textContent = `(${followUpCount})`;
+  }
+
+  private setActiveTab(tab: 'initial' | 'followUp'): void {
+    this.activeTab = tab;
+    this.renderPrompts();
   }
 
   /**
    * Load prompts from storage
    */
-  private loadPrompts(): void {
-    this.customPrompts = PromptsStorageService.loadPrompts();
+  private async loadPrompts(): Promise<void> {
+    this.customPrompts = await PromptsStorageService.loadPrompts();
   }
 
   /**
    * Save prompts to storage
    */
-  private savePrompts(): boolean {
-    const success = PromptsStorageService.savePrompts(this.customPrompts);
+  private async savePrompts(): Promise<boolean> {
+    const success = await PromptsStorageService.savePrompts(this.customPrompts);
     if (success) {
       this.ui.showStatus('儲存成功！', 'success');
     } else {
@@ -89,21 +142,62 @@ export class OptionsController {
    * Render all prompts
    */
   private renderPrompts(): void {
-    if (this.customPrompts.length === 0) {
-      this.ui.setPromptsListHTML(this.renderer.createEmptyStateHTML());
-      const emptyStateBtn = document.getElementById('emptyStateAddBtn');
-      if (emptyStateBtn) {
-        emptyStateBtn.addEventListener('click', () => this.openAddModal());
+    this.updateTabsUI();
+    this.updateTabCounts();
+
+    const initialItems = this.customPrompts
+      .map((prompt, index) => ({ prompt, index }))
+      .filter(({ prompt }) => this.isPromptInitial(prompt));
+
+    const followUpItems = this.customPrompts
+      .map((prompt, index) => ({ prompt, index }))
+      .filter(({ prompt }) => !this.isPromptInitial(prompt));
+
+    this.renderPromptsList(
+      this.promptsListInitial,
+      initialItems,
+      '尚未建立任何初始按鈕',
+      'emptyStateAddBtnInitial',
+      () => {
+        this.setActiveTab('initial');
+        this.openAddModal();
       }
+    );
+
+    this.renderPromptsList(
+      this.promptsListFollowUp,
+      followUpItems,
+      '尚未建立任何追問按鈕',
+      'emptyStateAddBtnFollowUp',
+      () => {
+        this.setActiveTab('followUp');
+        this.openAddModal();
+      }
+    );
+  }
+
+  private renderPromptsList(
+    container: HTMLElement,
+    items: Array<{ prompt: CustomPrompt; index: number }>,
+    emptyMessage: string,
+    emptyButtonId: string,
+    onEmptyAdd: () => void
+  ): void {
+    container.innerHTML = '';
+
+    if (items.length === 0) {
+      container.innerHTML = this.renderer.createEmptyStateHTML(emptyMessage, '新增提示', emptyButtonId);
+      const emptyBtn = document.getElementById(emptyButtonId);
+      emptyBtn?.addEventListener('click', onEmptyAdd);
       return;
     }
 
-    this.ui.clearPromptsList();
-    this.customPrompts.forEach((prompt, index) => {
+    items.forEach(({ prompt, index: indexInStorage }, indexInView) => {
       const element = this.renderer.createPromptElement(
         prompt,
-        index,
-        this.customPrompts.length,
+        indexInView,
+        items.length,
+        indexInStorage,
         {
           onEdit: (i) => this.editPrompt(i),
           onToggle: (i) => this.togglePrompt(i),
@@ -112,7 +206,7 @@ export class OptionsController {
           onDelete: (i) => this.deletePrompt(i)
         }
       );
-      this.ui.appendToPromptsList(element);
+      container.appendChild(element);
     });
   }
 
@@ -123,6 +217,7 @@ export class OptionsController {
     this.editingIndex = -1;
     this.modalTitle.textContent = '新增提示';
     this.resetForm();
+    this.promptInitial.checked = this.activeTab === 'initial';
     this.promptModal.classList.add('active');
   }
 
@@ -203,10 +298,12 @@ export class OptionsController {
       this.customPrompts[this.editingIndex] = newPrompt;
     }
 
-    if (this.savePrompts()) {
+    void (async () => {
+      if (!(await this.savePrompts())) return;
+      this.activeTab = this.isPromptInitial(newPrompt) ? 'initial' : 'followUp';
       this.renderPrompts();
       this.closeModal();
-    }
+    })();
   }
 
   /**
@@ -216,8 +313,10 @@ export class OptionsController {
     if (this.customPrompts[index]) {
       const currentEnabled = getProperty(this.customPrompts[index], 'enabled', true);
       this.customPrompts[index].enabled = !currentEnabled;
-      this.savePrompts();
-      this.renderPrompts();
+      void (async () => {
+        await this.savePrompts();
+        this.renderPrompts();
+      })();
     }
   }
 
@@ -227,8 +326,10 @@ export class OptionsController {
   private deletePrompt(index: number): void {
     if (this.ui.confirm('確定要刪除此提示嗎？')) {
       this.customPrompts.splice(index, 1);
-      this.savePrompts();
-      this.renderPrompts();
+      void (async () => {
+        await this.savePrompts();
+        this.renderPrompts();
+      })();
     }
   }
 
@@ -236,11 +337,20 @@ export class OptionsController {
    * Move prompt up
    */
   private moveUp(index: number): void {
-    if (index > 0) {
-      [this.customPrompts[index - 1], this.customPrompts[index]] = 
-        [this.customPrompts[index], this.customPrompts[index - 1]];
-      this.savePrompts();
-      this.renderPrompts();
+    const prompt = this.customPrompts[index];
+    if (!prompt) return;
+
+    const isInitial = this.isPromptInitial(prompt);
+    for (let i = index - 1; i >= 0; i--) {
+      if (this.isPromptInitial(this.customPrompts[i]) === isInitial) {
+        [this.customPrompts[i], this.customPrompts[index]] =
+          [this.customPrompts[index], this.customPrompts[i]];
+        void (async () => {
+          await this.savePrompts();
+          this.renderPrompts();
+        })();
+        return;
+      }
     }
   }
 
@@ -248,11 +358,20 @@ export class OptionsController {
    * Move prompt down
    */
   private moveDown(index: number): void {
-    if (index < this.customPrompts.length - 1) {
-      [this.customPrompts[index], this.customPrompts[index + 1]] = 
-        [this.customPrompts[index + 1], this.customPrompts[index]];
-      this.savePrompts();
-      this.renderPrompts();
+    const prompt = this.customPrompts[index];
+    if (!prompt) return;
+
+    const isInitial = this.isPromptInitial(prompt);
+    for (let i = index + 1; i < this.customPrompts.length; i++) {
+      if (this.isPromptInitial(this.customPrompts[i]) === isInitial) {
+        [this.customPrompts[index], this.customPrompts[i]] =
+          [this.customPrompts[i], this.customPrompts[index]];
+        void (async () => {
+          await this.savePrompts();
+          this.renderPrompts();
+        })();
+        return;
+      }
     }
   }
 
@@ -285,18 +404,20 @@ export class OptionsController {
    * Import prompts
    */
   private importPrompts(): void {
-    try {
-      const imported = PromptsStorageService.importPrompts(this.importText.value);
+    void (async () => {
+      try {
+        const imported = PromptsStorageService.importPrompts(this.importText.value);
 
-      if (this.ui.confirm(`確定要匯入 ${imported.length} 個提示嗎？這會覆蓋現有的設定。`)) {
-        this.customPrompts = imported;
-        this.savePrompts();
-        this.renderPrompts();
-        this.closeImportModal();
+        if (this.ui.confirm(`確定要匯入 ${imported.length} 個提示嗎？這會覆蓋現有的設定。`)) {
+          this.customPrompts = imported;
+          await this.savePrompts();
+          this.renderPrompts();
+          this.closeImportModal();
+        }
+      } catch (error) {
+        this.ui.showStatus('匯入失敗：' + (error as Error).message, 'error');
       }
-    } catch (error) {
-      this.ui.showStatus('匯入失敗：' + (error as Error).message, 'error');
-    }
+    })();
   }
 
   /**
@@ -308,9 +429,12 @@ export class OptionsController {
     }
 
     this.customPrompts = [...DEFAULT_PROMPTS];
-    this.savePrompts();
-    this.renderPrompts();
-    this.ui.showStatus('已重置為預設值', 'success');
+    this.activeTab = 'initial';
+    void (async () => {
+      await this.savePrompts();
+      this.renderPrompts();
+      this.ui.showStatus('已重置為預設值', 'success');
+    })();
   }
 
   /**
@@ -323,6 +447,9 @@ export class OptionsController {
     document.getElementById('exportBtn')?.addEventListener('click', () => this.exportPrompts());
     document.getElementById('resetBtn')?.addEventListener('click', () => this.resetToDefaults());
 
+    this.tabInitialBtn.addEventListener('click', () => this.setActiveTab('initial'));
+    this.tabFollowUpBtn.addEventListener('click', () => this.setActiveTab('followUp'));
+
     // Prompt modal
     document.getElementById('closeModalBtn')?.addEventListener('click', () => this.closeModal());
     document.getElementById('cancelBtn')?.addEventListener('click', () => this.closeModal());
@@ -332,6 +459,44 @@ export class OptionsController {
     document.getElementById('closeImportModalBtn')?.addEventListener('click', () => this.closeImportModal());
     document.getElementById('cancelImportBtn')?.addEventListener('click', () => this.closeImportModal());
     document.getElementById('confirmImportBtn')?.addEventListener('click', () => this.importPrompts());
+
+    // Drag & drop import file
+    const setDragOver = (isOver: boolean) => {
+      this.importText.classList.toggle('drag-over', isOver);
+    };
+
+    this.importText.addEventListener('dragenter', (e) => {
+      e.preventDefault();
+      setDragOver(true);
+    });
+
+    this.importText.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      setDragOver(true);
+    });
+
+    this.importText.addEventListener('dragleave', () => {
+      setDragOver(false);
+    });
+
+    this.importText.addEventListener('drop', (e) => {
+      e.preventDefault();
+      setDragOver(false);
+
+      const files = e.dataTransfer?.files;
+      if (!files || files.length === 0) return;
+
+      const file = files[0];
+      void (async () => {
+        try {
+          const text = await file.text();
+          this.importText.value = text;
+          this.importPrompts();
+        } catch (error) {
+          this.ui.showStatus('讀取檔案失敗：' + (error as Error).message, 'error');
+        }
+      })();
+    });
 
     // Close modals when clicking outside
     this.promptModal.addEventListener('click', (e) => {
@@ -352,9 +517,9 @@ export class OptionsController {
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     const controller = new OptionsController();
-    controller.init();
+    void controller.init();
   });
 } else {
   const controller = new OptionsController();
-  controller.init();
+  void controller.init();
 }

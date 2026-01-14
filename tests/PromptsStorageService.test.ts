@@ -1,58 +1,121 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import { PromptsStorageService } from '../src/options/services/PromptsStorageService';
-import type { CustomPrompt } from '../src/options/models/CustomPrompt';
+import { DEFAULT_PROMPTS, type CustomPrompt } from '../src/options/models/CustomPrompt';
 
 // Register DOM globals
 GlobalRegistrator.register();
 
+const STORAGE_KEY = 'chatgpttoolkit.customPrompts';
+
+function createChromeStorageMock() {
+  let store: Record<string, unknown> = {};
+
+  const storageArea = {
+    get(keys: string[] | string, callback: (items: Record<string, unknown>) => void) {
+      const keyList = Array.isArray(keys) ? keys : [keys];
+      const result: Record<string, unknown> = {};
+      for (const key of keyList) result[key] = store[key];
+      callback(result);
+    },
+    set(items: Record<string, unknown>, callback?: () => void) {
+      store = { ...store, ...items };
+      callback?.();
+    },
+    clear(callback?: () => void) {
+      store = {};
+      callback?.();
+    }
+  };
+
+  (globalThis as any).chrome = {
+    storage: {
+      local: storageArea
+    }
+  };
+
+  return {
+    clear: () => storageArea.clear(),
+    getRaw: () => store
+  };
+}
+
 describe('PromptsStorageService', () => {
+  const chromeStorage = createChromeStorageMock();
+
   beforeEach(() => {
     // Clear localStorage before each test
     localStorage.clear();
+    chromeStorage.clear();
   });
 
   describe('loadPrompts', () => {
-    test('should return empty array when localStorage is empty', () => {
-      const prompts = PromptsStorageService.loadPrompts();
-      expect(prompts).toEqual([]);
+    test('should return default prompts when localStorage is empty', () => {
+      return (async () => {
+        const prompts = await PromptsStorageService.loadPrompts();
+        expect(prompts).toEqual(DEFAULT_PROMPTS);
+
+        const raw = chromeStorage.getRaw()[STORAGE_KEY];
+        expect(raw).toEqual(DEFAULT_PROMPTS);
+      })();
     });
 
     test('should load prompts from localStorage', () => {
-      const testPrompts: CustomPrompt[] = [
-        { enabled: true, title: 'Test', prompt: 'Test prompt' }
-      ];
-      localStorage.setItem('chatgpttoolkit.customPrompts', JSON.stringify(testPrompts));
+      return (async () => {
+        const testPrompts: CustomPrompt[] = [
+          { enabled: true, title: 'Test', prompt: 'Test prompt' }
+        ];
+        await (globalThis as any).chrome.storage.local.set({ [STORAGE_KEY]: testPrompts });
 
-      const loaded = PromptsStorageService.loadPrompts();
-      expect(loaded).toEqual(testPrompts);
+        const loaded = await PromptsStorageService.loadPrompts();
+        expect(loaded).toEqual(testPrompts);
+      })();
     });
 
-    test('should return empty array for invalid JSON', () => {
-      localStorage.setItem('chatgpttoolkit.customPrompts', 'invalid json');
+    test('should migrate prompts from legacy localStorage', () => {
+      return (async () => {
+        const testPrompts: CustomPrompt[] = [
+          { enabled: true, title: 'Legacy', prompt: 'Legacy prompt' }
+        ];
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(testPrompts));
 
-      const prompts = PromptsStorageService.loadPrompts();
-      expect(prompts).toEqual([]);
+        const loaded = await PromptsStorageService.loadPrompts();
+        expect(loaded).toEqual(testPrompts);
+        expect(chromeStorage.getRaw()[STORAGE_KEY]).toEqual(testPrompts);
+      })();
+    });
+
+    test('should fallback to default prompts for invalid legacy JSON', () => {
+      return (async () => {
+        localStorage.setItem(STORAGE_KEY, 'invalid json');
+
+        const prompts = await PromptsStorageService.loadPrompts();
+        expect(prompts).toEqual(DEFAULT_PROMPTS);
+      })();
     });
   });
 
   describe('savePrompts', () => {
     test('should save prompts to localStorage', () => {
-      const testPrompts: CustomPrompt[] = [
-        { enabled: true, title: 'Test', prompt: 'Test prompt' }
-      ];
+      return (async () => {
+        const testPrompts: CustomPrompt[] = [
+          { enabled: true, title: 'Test', prompt: 'Test prompt' }
+        ];
 
-      const result = PromptsStorageService.savePrompts(testPrompts);
-      expect(result).toBe(true);
+        const result = await PromptsStorageService.savePrompts(testPrompts);
+        expect(result).toBe(true);
 
-      const stored = localStorage.getItem('chatgpttoolkit.customPrompts');
-      expect(stored).toBe(JSON.stringify(testPrompts));
+        expect(chromeStorage.getRaw()[STORAGE_KEY]).toEqual(testPrompts);
+        expect(localStorage.getItem(STORAGE_KEY)).toBe(JSON.stringify(testPrompts));
+      })();
     });
 
     test('should return true on successful save', () => {
-      const testPrompts: CustomPrompt[] = [];
-      const result = PromptsStorageService.savePrompts(testPrompts);
-      expect(result).toBe(true);
+      return (async () => {
+        const testPrompts: CustomPrompt[] = [];
+        const result = await PromptsStorageService.savePrompts(testPrompts);
+        expect(result).toBe(true);
+      })();
     });
   });
 

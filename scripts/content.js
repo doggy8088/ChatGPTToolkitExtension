@@ -459,10 +459,54 @@
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    const StartMonitoringResponse = () => {
+    const CUSTOM_PROMPTS_KEY = 'chatgpttoolkit.customPrompts';
+
+    function safeParseJsonArray(str) {
+        if (!str) return null;
+        try {
+            const parsed = JSON.parse(str);
+            return Array.isArray(parsed) ? parsed : null;
+        } catch {
+            return null;
+        }
+    }
+
+    function chromeStorageGet(key) {
+        try {
+            if (!chrome?.storage?.local) return Promise.resolve(undefined);
+            return new Promise((resolve) => chrome.storage.local.get([key], (result) => resolve(result?.[key])));
+        } catch {
+            return Promise.resolve(undefined);
+        }
+    }
+
+    function chromeStorageSet(key, value) {
+        try {
+            if (!chrome?.storage?.local) return Promise.resolve(false);
+            return new Promise((resolve) => chrome.storage.local.set({ [key]: value }, () => resolve(true)));
+        } catch {
+            return Promise.resolve(false);
+        }
+    }
+
+    async function loadCustomPromptsFromExtensionStorageWithMigration() {
+        const stored = await chromeStorageGet(CUSTOM_PROMPTS_KEY);
+        if (Array.isArray(stored)) return stored;
+
+        const legacy = safeParseJsonArray(localStorage.getItem(CUSTOM_PROMPTS_KEY));
+        if (legacy) {
+            await chromeStorageSet(CUSTOM_PROMPTS_KEY, legacy);
+            return legacy;
+        }
+
+        return null;
+    }
+
+    const StartMonitoringResponse = async () => {
 
         // 預設的回應按鈕
         let defaultManualSubmitText = [];
+        let localeDefaultManualSubmitText = [];
 
         let lastBlock;
 
@@ -498,16 +542,25 @@
             }
         }
 
-        const customPrompts = localStorage.getItem('chatgpttoolkit.customPrompts');
-        if (customPrompts) {
-            defaultManualSubmitText = [];
-            JSON.parse(customPrompts).forEach((item) => {
-                const isItemEnabled = !item.hasOwnProperty('enabled') || item.enabled;
-                const isItemInitial = !!item.hasOwnProperty('initial') || item.initial;
+        localeDefaultManualSubmitText = [...defaultManualSubmitText];
+
+        function buildFollowUpButtonsFromPrompts(prompts) {
+            const results = [];
+            (prompts || []).forEach((item) => {
+                const hasEnabled = Object.prototype.hasOwnProperty.call(item, 'enabled');
+                const isItemEnabled = !hasEnabled || item.enabled === true;
+                const isItemInitial = Object.prototype.hasOwnProperty.call(item, 'initial') ? item.initial === true : false;
+
                 if (isItemEnabled && !isItemInitial && !!item.title && !!item.prompt) {
-                    defaultManualSubmitText.push(item);
+                    results.push(item);
                 }
             });
+            return results;
+        }
+
+        const customPrompts = await loadCustomPromptsFromExtensionStorageWithMigration();
+        if (Array.isArray(customPrompts)) {
+            defaultManualSubmitText = buildFollowUpButtonsFromPrompts(customPrompts);
         }
 
         let mutationObserverTimer = undefined;
@@ -597,7 +650,8 @@
 
             // add buttons to buttonsArea
             defaultManualSubmitText.forEach((item) => {
-                const autoPasteEnabled = !!item.hasOwnProperty('autoPaste') || item.autoPaste;
+                const autoPasteEnabled = item.autoPaste === true;
+                const autoSubmitEnabled = item.autoSubmit === true;
 
                 const customButton = document.createElement("button");
                 customButton.style.border = "1px solid #d1d5db";
@@ -618,7 +672,7 @@
                             }
                         });
                     } else {
-                        fillPrompt(item.prompt, item.autoSubmit);
+                        fillPrompt(item.prompt, autoSubmitEnabled);
                     }
                 });
 
@@ -651,6 +705,24 @@
             // console.log('ChatGPT: Stop Monitoring')
             obs.disconnect();
         };
+
+        if (chrome?.storage?.onChanged) {
+            chrome.storage.onChanged.addListener((changes, areaName) => {
+                if (areaName !== 'local') return;
+                const change = changes?.[CUSTOM_PROMPTS_KEY];
+                if (!change) return;
+
+                const next = Array.isArray(change.newValue)
+                    ? buildFollowUpButtonsFromPrompts(change.newValue)
+                    : [...localeDefaultManualSubmitText];
+
+                defaultManualSubmitText = next;
+
+                const buttonsAreas = document.querySelectorAll('#custom-chatgpt-magic-box-buttons');
+                buttonsAreas?.forEach((item) => item.remove());
+                rebuild_buttons();
+            });
+        }
 
         rebuild_buttons();
 

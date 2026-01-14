@@ -46,6 +46,65 @@
             flex-wrap: wrap;
         }
 
+        .prompt-groups {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .prompt-group {
+            flex: 1;
+            min-width: 320px;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            background: #fff;
+            padding: 12px 16px 16px;
+        }
+
+        .prompt-group.inactive .prompts-list {
+            display: none;
+        }
+
+        .prompt-group legend {
+            padding: 0 8px;
+        }
+
+        button.legend-tab {
+            background: #e9ecef;
+            color: #333;
+            border: 1px solid #dee2e6;
+            padding: 8px 14px;
+            border-radius: 999px;
+            font-size: 13px;
+        }
+
+        button.legend-tab:hover {
+            background: #dee2e6;
+        }
+
+        button.legend-tab.active {
+            background: #10a37f;
+            border-color: #10a37f;
+            color: white;
+        }
+
+        .tab-count {
+            margin-left: 6px;
+            opacity: 0.85;
+            font-size: 12px;
+        }
+
+        .prompt-group .prompts-list {
+            margin-top: 12px;
+        }
+
+        #importText.drag-over {
+            outline: 2px dashed #10a37f;
+            outline-offset: 2px;
+            background: #f0fffa;
+        }
+
         button {
             background: #10a37f;
             color: white;
@@ -364,7 +423,25 @@
             <button id="resetBtn" class="danger">🔄 重置為預設值</button>
         </div>
 
-        <div id="promptsList" class="prompts-list"></div>
+        <div class="prompt-groups" aria-label="提示按鈕分類">
+            <fieldset id="groupInitial" class="prompt-group" aria-label="初始按鈕">
+                <legend>
+                    <button type="button" id="tabInitialBtn" class="legend-tab active" aria-selected="true">
+                        初始按鈕<span id="tabInitialCount" class="tab-count"></span>
+                    </button>
+                </legend>
+                <div id="promptsListInitial" class="prompts-list"></div>
+            </fieldset>
+
+            <fieldset id="groupFollowUp" class="prompt-group inactive" aria-label="追問按鈕">
+                <legend>
+                    <button type="button" id="tabFollowUpBtn" class="legend-tab" aria-selected="false">
+                        追問按鈕<span id="tabFollowUpCount" class="tab-count"></span>
+                    </button>
+                </legend>
+                <div id="promptsListFollowUp" class="prompts-list"></div>
+            </fieldset>
+        </div>
     </div>
 
     <!-- Edit/Add Prompt Modal -->

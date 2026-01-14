@@ -10,8 +10,9 @@ export class PromptRenderer {
    */
   createPromptElement(
     prompt: CustomPrompt,
-    index: number,
-    totalCount: number,
+    indexInView: number,
+    totalCountInView: number,
+    indexInStorage: number,
     callbacks: {
       onEdit: (index: number) => void;
       onToggle: (index: number) => void;
@@ -23,16 +24,14 @@ export class PromptRenderer {
     const div = document.createElement('div');
     div.className = 'prompt-item';
 
-    const isInitial = getProperty(prompt, 'initial', false);
     const isEnabled = getProperty(prompt, 'enabled', true);
     const hasAutoPaste = getProperty(prompt, 'autoPaste', false);
     const hasAutoSubmit = getProperty(prompt, 'autoSubmit', false);
 
     const badges: string[] = [];
-    badges.push(`<span class="badge ${isEnabled ? 'enabled' : 'disabled'}">${isEnabled ? '已啟用' : '已停用'}</span>`);
-    badges.push(`<span class="badge ${isInitial ? 'initial' : 'follow-up'}">${isInitial ? '初始按鈕' : '後續按鈕'}</span>`);
     if (hasAutoSubmit) badges.push(`<span class="badge auto-submit">自動送出</span>`);
     if (hasAutoPaste) badges.push(`<span class="badge auto-paste">自動貼上</span>`);
+    badges.push(`<span class="badge ${isEnabled ? 'enabled' : 'disabled'}">${isEnabled ? '已啟用' : '已停用'}</span>`);
 
     div.innerHTML = `
       <div class="prompt-header">
@@ -59,8 +58,8 @@ export class PromptRenderer {
         <button class="btn-toggle secondary">
           ${isEnabled ? '🚫 停用' : '✅ 啟用'}
         </button>
-        <button class="btn-move-up secondary" ${index === 0 ? 'disabled' : ''}>⬆️ 上移</button>
-        <button class="btn-move-down secondary" ${index === totalCount - 1 ? 'disabled' : ''}>⬇️ 下移</button>
+        <button class="btn-move-up secondary" ${indexInView === 0 ? 'disabled' : ''}>⬆️ 上移</button>
+        <button class="btn-move-down secondary" ${indexInView === totalCountInView - 1 ? 'disabled' : ''}>⬇️ 下移</button>
         <button class="btn-delete danger">🗑️ 刪除</button>
       </div>
     `;
@@ -72,11 +71,11 @@ export class PromptRenderer {
     const moveDownBtn = div.querySelector('.btn-move-down') as HTMLButtonElement;
     const deleteBtn = div.querySelector('.btn-delete') as HTMLButtonElement;
 
-    editBtn.addEventListener('click', () => callbacks.onEdit(index));
-    toggleBtn.addEventListener('click', () => callbacks.onToggle(index));
-    moveUpBtn.addEventListener('click', () => callbacks.onMoveUp(index));
-    moveDownBtn.addEventListener('click', () => callbacks.onMoveDown(index));
-    deleteBtn.addEventListener('click', () => callbacks.onDelete(index));
+    editBtn.addEventListener('click', () => callbacks.onEdit(indexInStorage));
+    toggleBtn.addEventListener('click', () => callbacks.onToggle(indexInStorage));
+    moveUpBtn.addEventListener('click', () => callbacks.onMoveUp(indexInStorage));
+    moveDownBtn.addEventListener('click', () => callbacks.onMoveDown(indexInStorage));
+    deleteBtn.addEventListener('click', () => callbacks.onDelete(indexInStorage));
 
     return div;
   }
@@ -84,12 +83,16 @@ export class PromptRenderer {
   /**
    * Create empty state HTML
    */
-  createEmptyStateHTML(): string {
+  createEmptyStateHTML(
+    message: string = '尚未建立任何自訂提示',
+    buttonText: string = '建立第一個提示',
+    buttonId: string = 'emptyStateAddBtn'
+  ): string {
     return `
       <div class="empty-state">
         <div class="empty-state-icon">📝</div>
-        <div class="empty-state-text">尚未建立任何自訂提示</div>
-        <button id="emptyStateAddBtn">建立第一個提示</button>
+        <div class="empty-state-text">${escapeHtml(message)}</div>
+        <button id="${escapeHtml(buttonId)}">${escapeHtml(buttonText)}</button>
       </div>
     `;
   }

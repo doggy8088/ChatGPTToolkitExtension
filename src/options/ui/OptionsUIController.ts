@@ -5,11 +5,11 @@ export type StatusType = 'success' | 'error';
  */
 export class OptionsUIController {
   private statusMessage: HTMLElement;
-  private promptsList: HTMLElement;
+  private promptsList: HTMLElement | null;
 
-  constructor(statusMessageId: string, promptsListId: string) {
+  constructor(statusMessageId: string, promptsListId?: string) {
     this.statusMessage = document.getElementById(statusMessageId)!;
-    this.promptsList = document.getElementById(promptsListId)!;
+    this.promptsList = promptsListId ? document.getElementById(promptsListId) : null;
   }
 
   /**
@@ -27,6 +27,7 @@ export class OptionsUIController {
    * Clear the prompts list
    */
   clearPromptsList(): void {
+    if (!this.promptsList) return;
     this.promptsList.innerHTML = '';
   }
 
@@ -34,6 +35,7 @@ export class OptionsUIController {
    * Append element to prompts list
    */
   appendToPromptsList(element: HTMLElement): void {
+    if (!this.promptsList) return;
     this.promptsList.appendChild(element);
   }
 
@@ -41,6 +43,7 @@ export class OptionsUIController {
    * Set prompts list innerHTML
    */
   setPromptsListHTML(html: string): void {
+    if (!this.promptsList) return;
     this.promptsList.innerHTML = html;
   }
 
