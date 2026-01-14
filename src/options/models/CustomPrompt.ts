@@ -48,6 +48,16 @@ export const DEFAULT_PROMPTS: CustomPrompt[] = [
   {
     enabled: true,
     initial: true,
+    svgIcon: "💬",
+    title: "評論",
+    altText: "評論剪貼簿內容並提出改進建議",
+    prompt: "請評論以下內容，指出優缺點並提供改進建議：\n\n",
+    autoPaste: true,
+    autoSubmit: true
+  },
+  {
+    enabled: true,
+    initial: true,
     svgIcon: "📚",
     title: "翻成中文",
     altText: "翻譯內容為中文",

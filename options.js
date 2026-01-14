@@ -387,21 +387,31 @@
                 "autoPaste": true,
                 "autoSubmit": true
             },
+             {
+                 "enabled": true,
+                 "initial": true,
+                 "svgIcon": "👩‍🏫",
+                 "title": "解釋",
+                 "altText": "解釋某個名詞、概念或程式碼",
+                 "prompt": "請詳加解釋以下內容:\r\n\r\n",
+                 "autoPaste": true,
+                 "autoSubmit": false
+             },
             {
                 "enabled": true,
                 "initial": true,
-                "svgIcon": "👩‍🏫",
-                "title": "解釋",
-                "altText": "解釋某個名詞、概念或程式碼",
-                "prompt": "請詳加解釋以下內容:\r\n\r\n",
+                "svgIcon": "💬",
+                "title": "評論",
+                "altText": "評論剪貼簿內容並提出改進建議",
+                "prompt": "請評論以下內容，指出優缺點並提供改進建議：\n\n",
                 "autoPaste": true,
-                "autoSubmit": false
+                "autoSubmit": true
             },
-            {
-                "enabled": true,
-                "initial": true,
-                "svgIcon": "📚",
-                "title": "翻成中文",
+             {
+                 "enabled": true,
+                 "initial": true,
+                 "svgIcon": "📚",
+                 "title": "翻成中文",
                 "altText": "翻譯內容為中文",
                 "prompt": "翻譯以下內容為正體中文:\r\n\r\n",
                 "autoPaste": true,

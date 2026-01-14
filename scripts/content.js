@@ -461,6 +461,34 @@
 
     const CUSTOM_PROMPTS_KEY = 'chatgpttoolkit.customPrompts';
 
+    function getDefaultReviewPrompt() {
+        return {
+            enabled: true,
+            initial: true,
+            svgIcon: "💬",
+            title: "評論",
+            altText: "評論剪貼簿內容並提出改進建議",
+            prompt: "請評論以下內容，指出優缺點並提供改進建議：\n\n",
+            autoPaste: true,
+            autoSubmit: true
+        };
+    }
+
+    function ensurePromptExists(prompts, promptToEnsure) {
+        if (!Array.isArray(prompts)) return { prompts, changed: false };
+        if (!promptToEnsure || !promptToEnsure.title) return { prompts, changed: false };
+
+        const title = String(promptToEnsure.title).trim();
+        const exists = prompts.some((p) => {
+            if (!p) return false;
+            const isInitial = Object.prototype.hasOwnProperty.call(p, 'initial') ? p.initial === true : false;
+            return isInitial === true && String(p.title || '').trim() === title;
+        });
+
+        if (exists) return { prompts, changed: false };
+        return { prompts: [...prompts, { ...promptToEnsure }], changed: true };
+    }
+
     function safeParseJsonArray(str) {
         if (!str) return null;
         try {
@@ -491,12 +519,17 @@
 
     async function loadCustomPromptsFromExtensionStorageWithMigration() {
         const stored = await chromeStorageGet(CUSTOM_PROMPTS_KEY);
-        if (Array.isArray(stored)) return stored;
+        if (Array.isArray(stored)) {
+            const migrated = ensurePromptExists(stored, getDefaultReviewPrompt());
+            if (migrated.changed) await chromeStorageSet(CUSTOM_PROMPTS_KEY, migrated.prompts);
+            return migrated.prompts;
+        }
 
         const legacy = safeParseJsonArray(localStorage.getItem(CUSTOM_PROMPTS_KEY));
         if (legacy) {
-            await chromeStorageSet(CUSTOM_PROMPTS_KEY, legacy);
-            return legacy;
+            const migrated = ensurePromptExists(legacy, getDefaultReviewPrompt());
+            await chromeStorageSet(CUSTOM_PROMPTS_KEY, migrated.prompts);
+            return migrated.prompts;
         }
 
         return null;
@@ -652,19 +685,59 @@
                 return;
             }
 
-            let bar = composerGrid.querySelector('#custom-chatgpt-initial-buttons');
+            // When an image/file is attached, ChatGPT renders its own `[grid-area:header]` container.
+            // If we also occupy `grid-area:header` as a separate grid item, the two header items will overlap and "deform".
+            // To avoid this, we prefer nesting our bar *inside* ChatGPT's header container when it exists.
+            let headerCandidates = [];
+            try {
+                headerCandidates = Array.from(
+                    composerGrid.querySelectorAll(':scope > div[class*="[grid-area:header]"], :scope > div[style*="grid-area: header"]')
+                );
+            } catch {
+                headerCandidates = Array.from(
+                    composerGrid.querySelectorAll('div[class*="[grid-area:header]"], div[style*="grid-area: header"]')
+                );
+            }
+            const headerContainer = headerCandidates.find((el) => el?.id !== 'custom-chatgpt-initial-buttons') || null;
+
+            let bar = document.getElementById('custom-chatgpt-initial-buttons');
             if (!bar) {
                 bar = document.createElement('div');
                 bar.id = 'custom-chatgpt-initial-buttons';
-                bar.style.gridArea = 'header';
-                bar.style.display = 'flex';
-                bar.style.flexWrap = 'wrap';
-                bar.style.gap = '0.5rem';
-                bar.style.padding = '0.25rem 0.75rem 0.5rem 0.75rem';
-                bar.style.pointerEvents = 'auto';
-                composerGrid.prepend(bar);
             } else {
                 bar.innerHTML = '';
+            }
+
+            // Always (re)apply layout styles in case the element was created by an older version or mutated by the page.
+            bar.style.display = 'flex';
+            bar.style.flexWrap = 'wrap';
+            bar.style.gap = '0.5rem';
+            bar.style.alignItems = 'flex-start';
+            bar.style.alignContent = 'flex-start';
+            bar.style.padding = '0.25rem 0.75rem 0.5rem 0.75rem';
+            bar.style.pointerEvents = 'auto';
+
+            if (headerContainer && headerContainer !== bar) {
+                // Keep attachments first, buttons below.
+                if (bar.parentElement !== headerContainer) headerContainer.append(bar);
+                bar.style.gridArea = '';
+            } else {
+                if (bar.parentElement !== composerGrid) composerGrid.prepend(bar);
+                bar.style.gridArea = 'header';
+            }
+
+            // Align initial buttons with the prompt text start (e.g. "提出任何問題")
+            try {
+                const baseEl = bar.parentElement || composerGrid;
+                const baseRect = baseEl.getBoundingClientRect();
+                const promptRect = promptTextarea.getBoundingClientRect();
+                const left = Math.max(0, Math.round(promptRect.left - baseRect.left));
+                if (Number.isFinite(left) && left > 0) {
+                    bar.style.paddingLeft = `${left}px`;
+                    bar.style.paddingRight = '0.75rem';
+                }
+            } catch {
+                // ignore
             }
 
             initialManualSubmitText.forEach((item) => {
@@ -673,6 +746,11 @@
 
                 const btn = document.createElement("button");
                 btn.type = 'button';
+                btn.style.display = 'inline-flex';
+                btn.style.alignItems = 'center';
+                btn.style.justifyContent = 'center';
+                btn.style.alignSelf = 'flex-start';
+                btn.style.flex = '0 0 auto';
                 btn.style.border = "1px solid #d1d5db";
                 btn.style.borderRadius = "999px";
                 btn.style.padding = "0.25rem 0.6rem";
@@ -680,6 +758,7 @@
                 btn.style.fontSize = "0.85rem";
                 btn.style.background = "transparent";
                 btn.style.cursor = "pointer";
+                btn.style.lineHeight = "1.2";
                 btn.style.whiteSpace = "nowrap";
                 btn.textContent = item.title;
                 btn.addEventListener("click", () => {
@@ -689,7 +768,7 @@
                             if (!!text) {
                                 fillPrompt(item.prompt + text, true);
                             } else {
-                                fillPrompt(item.prompt, false);
+                                fillPrompt(item.prompt, autoSubmitEnabled);
                             }
                         });
                     } else {
@@ -775,7 +854,7 @@
                             if (!!text) {
                                 fillPrompt(item.prompt + text, true);
                             } else {
-                                fillPrompt(item.prompt, false);
+                                fillPrompt(item.prompt, autoSubmitEnabled);
                             }
                         });
                     } else {

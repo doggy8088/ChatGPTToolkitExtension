@@ -11,6 +11,29 @@ const STORAGE_KEY = 'chatgpttoolkit.customPrompts';
  * - `chrome.storage.local` is shared between options pages and content scripts.
  */
 export class PromptsStorageService {
+  private static getDefaultReviewPrompt(): CustomPrompt {
+    return {
+      enabled: true,
+      initial: true,
+      svgIcon: "💬",
+      title: "評論",
+      altText: "評論剪貼簿內容並提出改進建議",
+      prompt: "請評論以下內容，指出優缺點並提供改進建議：\n\n",
+      autoPaste: true,
+      autoSubmit: true
+    };
+  }
+
+  private static migrateAddMissingPrompts(prompts: CustomPrompt[]): { prompts: CustomPrompt[]; changed: boolean } {
+    const review = this.getDefaultReviewPrompt();
+    const reviewTitle = review.title.trim();
+
+    const hasReview = prompts.some((p) => Boolean(p?.initial) && String(p?.title || '').trim() === reviewTitle);
+    if (hasReview) return { prompts, changed: false };
+
+    return { prompts: [...prompts, { ...review }], changed: true };
+  }
+
   private static cloneDefaultPrompts(): CustomPrompt[] {
     return DEFAULT_PROMPTS.map(prompt => ({ ...prompt }));
   }
@@ -78,13 +101,16 @@ export class PromptsStorageService {
   static async loadPrompts(): Promise<CustomPrompt[]> {
     const stored = await this.chromeGet(STORAGE_KEY);
     if (Array.isArray(stored)) {
-      return stored as CustomPrompt[];
+      const migrated = this.migrateAddMissingPrompts(stored as CustomPrompt[]);
+      if (migrated.changed) await this.savePrompts(migrated.prompts);
+      return migrated.prompts;
     }
 
     const legacy = this.readLegacyLocalStoragePrompts();
     if (legacy) {
-      await this.savePrompts(legacy);
-      return legacy;
+      const migrated = this.migrateAddMissingPrompts(legacy);
+      await this.savePrompts(migrated.prompts);
+      return migrated.prompts;
     }
 
     const defaults = this.cloneDefaultPrompts();
