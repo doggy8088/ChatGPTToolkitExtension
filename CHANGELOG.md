@@ -1,5 +1,29 @@
 # Changelog
 
+- 0.44.0 (2026/01/15)
+
+  - Chore
+    - Bump extension version to 0.44.0 for release.
+
+  - New features
+    - **Options Page**: Added a comprehensive options page to manage feature toggles. Users can now easily enable or disable individual features through a modern, user-friendly interface.
+    - **Feature Toggles**: All major features can now be toggled on/off from the options page:
+      - URL Auto-Fill: Automatically fill and submit prompts from URL hash parameters
+      - Custom Prompt Buttons: Show customizable quick prompt buttons after ChatGPT responses
+      - Double-Click Edit: Double-click sent user messages to edit them
+      - Auto-Continue: Automatically click 'Continue generating' button when ChatGPT response is truncated
+      - Markmap Support: Provide Markmap visualization support for Markdown code blocks
+      - Ctrl+Enter Shortcut: Use Ctrl+Enter to quickly submit
+    - **Multi-language Support**: Options page fully supports Chinese (Traditional), English, and Japanese locales.
+    - **Settings Persistence**: Settings are saved using `chrome.storage.sync` and synchronized across devices.
+    - **Backward Compatibility**: All features are enabled by default for existing users.
+
+  - Bug fixes
+    - None
+
+  - Breaking changes
+    - None
+
 - 0.43.2 (2025/12/24)
 
   - Chore

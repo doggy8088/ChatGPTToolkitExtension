@@ -110,6 +110,44 @@
         return ti;
     }
 
+    // ---------------------------------------------------------------------
+    // Feature Toggle Settings
+    // ---------------------------------------------------------------------
+    let featureToggles = {
+        autoFill: true,           // Default: enabled
+        customPrompts: true,      // Default: enabled
+        doubleClickEdit: true,    // Default: enabled
+        autoContinue: true,       // Default: enabled
+        markmap: true,            // Default: enabled
+        ctrlEnter: true           // Default: enabled
+    };
+
+    // Feature toggle mapping for storage keys
+    const FEATURE_TOGGLE_KEYS = {
+        autoFill: 'chatgpttoolkit.featureToggle.autoFill',
+        customPrompts: 'chatgpttoolkit.featureToggle.customPrompts',
+        doubleClickEdit: 'chatgpttoolkit.featureToggle.doubleClickEdit',
+        autoContinue: 'chatgpttoolkit.featureToggle.autoContinue',
+        markmap: 'chatgpttoolkit.featureToggle.markmap',
+        ctrlEnter: 'chatgpttoolkit.featureToggle.ctrlEnter'
+    };
+
+    // Load feature toggles from chrome.storage.sync
+    // This is async, but we set defaults first for immediate execution
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
+        const storageKeys = Object.values(FEATURE_TOGGLE_KEYS);
+        chrome.storage.sync.get(storageKeys, (items) => {
+            // Update feature toggles with stored values (if they exist)
+            Object.keys(FEATURE_TOGGLE_KEYS).forEach(feature => {
+                const storageKey = FEATURE_TOGGLE_KEYS[feature];
+                if (items.hasOwnProperty(storageKey)) {
+                    featureToggles[feature] = items[storageKey];
+                }
+            });
+            if (debug) console.log('[ChatGPTToolkit] Feature toggles loaded:', featureToggles);
+        });
+    }
+
     let prompt = '';
     let autoSubmit = false;
     let pasteImage = false;
@@ -157,8 +195,13 @@
     // - 支援: AutoFill / AutoSubmit / pasteImage / tool=image
     // ---------------------------------------------------------------------
     if (location.hostname === 'gemini.google.com') {
-        getParamsFromHash();
-        if (!prompt && !tool) return;
+        // Check if autoFill feature is enabled
+        if (!featureToggles.autoFill) {
+            if (debug) console.log('[ChatGPTToolkit] AutoFill feature is disabled for Gemini');
+            // Don't return here - continue to other features
+        } else {
+            getParamsFromHash();
+            if (!prompt && !tool) return;
 
         let toolImageClicked = false;
         let promptFilled = false;
@@ -245,6 +288,7 @@
                 return done;
             }
         });
+        } // end if featureToggles.autoFill
 
         return;
     }
@@ -254,6 +298,11 @@
     // - 支援: AutoFill / AutoSubmit
     // ---------------------------------------------------------------------
     if (location.hostname === 'claude.ai') {
+        if (!featureToggles.autoFill) {
+            if (debug) console.log('[ChatGPTToolkit] AutoFill feature is disabled for Claude');
+            return;
+        }
+        
         const [prompt, autoSubmit] = getParamsFromHash();
         if (!prompt) return;
 
@@ -289,6 +338,11 @@
     // - 支援: AutoFill / AutoSubmit
     // ---------------------------------------------------------------------
     if (location.hostname === 'www.phind.com') {
+        if (!featureToggles.autoFill) {
+            if (debug) console.log('[ChatGPTToolkit] AutoFill feature is disabled for Phind');
+            return;
+        }
+        
         const [prompt, autoSubmit] = getParamsFromHash();
         if (!prompt) return;
 
@@ -317,6 +371,11 @@
     // - 支援: AutoFill / AutoSubmit
     // ---------------------------------------------------------------------
     if (location.hostname === 'www.perplexity.ai') {
+        if (!featureToggles.autoFill) {
+            if (debug) console.log('[ChatGPTToolkit] AutoFill feature is disabled for Perplexity');
+            return;
+        }
+        
         const [prompt, autoSubmit] = getParamsFromHash();
         if (!prompt) return;
 
@@ -348,6 +407,11 @@
     // - 支援: AutoFill / AutoSubmit
     // ---------------------------------------------------------------------
     if (location.hostname === 'groq.com') {
+        if (!featureToggles.autoFill) {
+            if (debug) console.log('[ChatGPTToolkit] AutoFill feature is disabled for Groq');
+            return;
+        }
+        
         const [prompt, autoSubmit] = getParamsFromHash();
         if (!prompt) return;
 
@@ -460,6 +524,11 @@
     }
 
     const StartMonitoringResponse = () => {
+        // Check if customPrompts feature is enabled
+        if (!featureToggles.customPrompts) {
+            if (debug) console.log('[ChatGPTToolkit] Custom prompts feature is disabled');
+            return;
+        }
 
         // 預設的回應按鈕
         let defaultManualSubmitText = [];
@@ -533,8 +602,8 @@
                 // 重新建立回應按鈕
                 rebuild_buttons();
 
-                const autoContinue = localStorage.getItem('chatgpttoolkit.featureToggle.autoContinue');
-                if (autoContinue) {
+                // Check if autoContinue feature is enabled
+                if (featureToggles.autoContinue) {
                     // 找到繼續生成的按鈕，並點擊讓 ChatGPT 繼續生成回應
                     var btnContinue = [...document.querySelectorAll('button')].filter(e => e.innerText.trim() == '繼續生成' || e.innerText.trim() == 'Continue generating' || e.innerText.trim() == '生成を続ける')
                     if (btnContinue && btnContinue.length > 0) {
@@ -630,12 +699,15 @@
                 lastBlock.after(buttonsArea);
             }
 
-            const mdLabels = [...document.querySelectorAll('div')]
-                .filter(el => el.textContent.trim().toLowerCase() === 'markdown');
+            // Check if markmap feature is enabled
+            if (featureToggles.markmap) {
+                const mdLabels = [...document.querySelectorAll('div')]
+                    .filter(el => el.textContent.trim().toLowerCase() === 'markdown');
 
-            mdLabels.forEach((mdLabel) => {
-                add_markmap_button(mdLabel);
-            });
+                mdLabels.forEach((mdLabel) => {
+                    add_markmap_button(mdLabel);
+                });
+            }
         }
 
         const start = () => {
@@ -667,8 +739,11 @@
         let textarea = document.getElementById('prompt-textarea')
         if (!!textarea) {
 
-            // 自動從 URL 填入提詞(Prompt)
-            await AutoFillFromURI(textarea);
+            // Check if autoFill feature is enabled before auto-filling from URL
+            if (featureToggles.autoFill) {
+                // 自動從 URL 填入提詞(Prompt)
+                await AutoFillFromURI(textarea);
+            }
 
             clearInterval(checkForTextareaInput);
         };
@@ -750,45 +825,51 @@
     }
 
     // 由於在切換歷史紀錄時會重建 main 元素，所以要監聽 document.body 的事件
-    document.body.addEventListener('dblclick', (event) => {
-        if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
-            return;
-        }
-        // 找出最接近的對話列 DIV
-        let closestDIV = event.target.closest('div[data-message-author-role="user"]');
-        if (closestDIV) {
-            // console.log('closestDIV: ', closestDIV)
-            let btns = [...closestDIV.querySelectorAll('button')];
-            if (btns.length > 0) {
-                let btn = btns[0];
-                // console.log('btn: ', btn)
-                btn.click();
-                setTimeout(() => {
-                    let txt = closestDIV.querySelector('textarea')
-                    if (txt) {
-                        txt.selectionStart = txt.selectionEnd = txt.value.length;
-                        txt.focus();
-                    }
-                }, 0);
+    // Check if doubleClickEdit feature is enabled
+    if (featureToggles.doubleClickEdit) {
+        document.body.addEventListener('dblclick', (event) => {
+            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+                return;
             }
-        }
-    });
-
-    // Add an event listener for the Ctrl+Enter key combination on document.body
-    document.body.addEventListener('keyup', (event) => {
-        if (event.ctrlKey && event.key === 'Enter') {
-            // Check if the target element is a textarea
-            if (event.target.tagName === 'TEXTAREA') {
-                // Locate the send button based on the relative position of the button related to the textarea
-                const container = event.target?.parentElement?.parentElement;
-                const sibling = container?.nextElementSibling;
-                const sendButton = sibling?.querySelector('button.btn-primary');
-                if (sendButton) {
-                    sendButton.click();
+            // 找出最接近的對話列 DIV
+            let closestDIV = event.target.closest('div[data-message-author-role="user"]');
+            if (closestDIV) {
+                // console.log('closestDIV: ', closestDIV)
+                let btns = [...closestDIV.querySelectorAll('button')];
+                if (btns.length > 0) {
+                    let btn = btns[0];
+                    // console.log('btn: ', btn)
+                    btn.click();
+                    setTimeout(() => {
+                        let txt = closestDIV.querySelector('textarea')
+                        if (txt) {
+                            txt.selectionStart = txt.selectionEnd = txt.value.length;
+                            txt.focus();
+                        }
+                    }, 0);
                 }
             }
-        }
-    });
+        });
+    }
+
+    // Add an event listener for the Ctrl+Enter key combination on document.body
+    // Check if ctrlEnter feature is enabled
+    if (featureToggles.ctrlEnter) {
+        document.body.addEventListener('keyup', (event) => {
+            if (event.ctrlKey && event.key === 'Enter') {
+                // Check if the target element is a textarea
+                if (event.target.tagName === 'TEXTAREA') {
+                    // Locate the send button based on the relative position of the button related to the textarea
+                    const container = event.target?.parentElement?.parentElement;
+                    const sibling = container?.nextElementSibling;
+                    const sendButton = sibling?.querySelector('button.btn-primary');
+                    if (sendButton) {
+                        sendButton.click();
+                    }
+                }
+            }
+        });
+    }
 
     function add_markmap_button(mdLabel) {
         if (!mdLabel) return;

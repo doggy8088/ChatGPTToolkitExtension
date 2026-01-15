@@ -7,5 +7,62 @@
     },
     "chatgpttoolkit_author": {
         "message": "Will 保哥"
+    },
+    "optionsTitle": {
+        "message": "選項設定"
+    },
+    "optionsSave": {
+        "message": "儲存"
+    },
+    "optionsReset": {
+        "message": "重置為預設值"
+    },
+    "optionsSaveSuccess": {
+        "message": "設定已儲存"
+    },
+    "optionsFeatureSettings": {
+        "message": "功能設定"
+    },
+    "optionsEnableAll": {
+        "message": "啟用所有功能"
+    },
+    "optionsDisableAll": {
+        "message": "停用所有功能"
+    },
+    "featureAutoFillTitle": {
+        "message": "URL 自動填入提示詞"
+    },
+    "featureAutoFillDesc": {
+        "message": "從 URL hash 參數自動填入和提交提示詞"
+    },
+    "featureCustomPromptsTitle": {
+        "message": "自訂提示按鈕"
+    },
+    "featureCustomPromptsDesc": {
+        "message": "在 ChatGPT 回應後顯示可自訂的快捷提示按鈕"
+    },
+    "featureDoubleClickEditTitle": {
+        "message": "雙擊編輯提示詞"
+    },
+    "featureDoubleClickEditDesc": {
+        "message": "雙擊使用者已發送的提示詞進行編輯"
+    },
+    "featureAutoContinueTitle": {
+        "message": "自動繼續生成"
+    },
+    "featureAutoContinueDesc": {
+        "message": "當 ChatGPT 回應被截斷時，自動點擊「繼續生成」按鈕"
+    },
+    "featureMarkmapTitle": {
+        "message": "Markmap 支援"
+    },
+    "featureMarkmapDesc": {
+        "message": "為 Markdown 程式碼區塊提供 Markmap 視覺化支援"
+    },
+    "featureCtrlEnterTitle": {
+        "message": "Ctrl+Enter 快捷鍵"
+    },
+    "featureCtrlEnterDesc": {
+        "message": "使用 Ctrl+Enter 快速提交"
     }
 }

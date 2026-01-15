@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="pageTitle">ChatGPT Toolkit - Options</title>
+    <link rel="stylesheet" href="styles/options.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1 id="optionsTitle">Options</h1>
+        </header>
+
+        <main>
+            <section class="settings-section">
+                <div class="section-header">
+                    <h2 id="optionsFeatureSettings">Feature Settings</h2>
+                    <div class="bulk-actions">
+                        <button id="enableAllBtn" class="secondary-btn" title="Enable all features">Enable All</button>
+                        <button id="disableAllBtn" class="secondary-btn" title="Disable all features">Disable All</button>
+                    </div>
+                </div>
+
+                <div class="features-list">
+                    <div class="feature-item">
+                        <div class="feature-info">
+                            <h3 id="featureAutoFillTitle">URL Auto-Fill</h3>
+                            <p id="featureAutoFillDesc">Automatically fill and submit prompts from URL hash parameters</p>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="autoFillToggle" data-feature="autoFill">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="feature-item">
+                        <div class="feature-info">
+                            <h3 id="featureCustomPromptsTitle">Custom Prompt Buttons</h3>
+                            <p id="featureCustomPromptsDesc">Show customizable quick prompt buttons after ChatGPT responses</p>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="customPromptsToggle" data-feature="customPrompts">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="feature-item">
+                        <div class="feature-info">
+                            <h3 id="featureDoubleClickEditTitle">Double-Click Edit</h3>
+                            <p id="featureDoubleClickEditDesc">Double-click sent user messages to edit them</p>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="doubleClickEditToggle" data-feature="doubleClickEdit">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="feature-item">
+                        <div class="feature-info">
+                            <h3 id="featureAutoContinueTitle">Auto-Continue</h3>
+                            <p id="featureAutoContinueDesc">Automatically click 'Continue generating' button when ChatGPT response is truncated</p>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="autoContinueToggle" data-feature="autoContinue">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="feature-item">
+                        <div class="feature-info">
+                            <h3 id="featureMarkmapTitle">Markmap Support</h3>
+                            <p id="featureMarkmapDesc">Provide Markmap visualization support for Markdown code blocks</p>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="markmapToggle" data-feature="markmap">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="feature-item">
+                        <div class="feature-info">
+                            <h3 id="featureCtrlEnterTitle">Ctrl+Enter Shortcut</h3>
+                            <p id="featureCtrlEnterDesc">Use Ctrl+Enter to quickly submit</p>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="ctrlEnterToggle" data-feature="ctrlEnter">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <div class="action-buttons">
+                <button id="resetBtn" class="secondary-btn">Reset to Default</button>
+                <button id="saveBtn" class="primary-btn">Save</button>
+            </div>
+            <div id="statusMessage" class="status-message"></div>
+        </footer>
+    </div>
+
+    <script src="scripts/options.js"></script>
+</body>
+</html>

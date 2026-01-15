@@ -7,5 +7,62 @@
   },
   "chatgpttoolkit_author": {
     "message": "Will 保哥"
+  },
+  "optionsTitle": {
+    "message": "オプション"
+  },
+  "optionsSave": {
+    "message": "保存"
+  },
+  "optionsReset": {
+    "message": "デフォルトに戻す"
+  },
+  "optionsSaveSuccess": {
+    "message": "設定が保存されました"
+  },
+  "optionsFeatureSettings": {
+    "message": "機能設定"
+  },
+  "optionsEnableAll": {
+    "message": "すべて有効"
+  },
+  "optionsDisableAll": {
+    "message": "すべて無効"
+  },
+  "featureAutoFillTitle": {
+    "message": "URL自動入力"
+  },
+  "featureAutoFillDesc": {
+    "message": "URLハッシュパラメータからプロンプトを自動入力・送信"
+  },
+  "featureCustomPromptsTitle": {
+    "message": "カスタムプロンプトボタン"
+  },
+  "featureCustomPromptsDesc": {
+    "message": "ChatGPT応答後にカスタマイズ可能なクイックプロンプトボタンを表示"
+  },
+  "featureDoubleClickEditTitle": {
+    "message": "ダブルクリック編集"
+  },
+  "featureDoubleClickEditDesc": {
+    "message": "送信済みユーザーメッセージをダブルクリックして編集"
+  },
+  "featureAutoContinueTitle": {
+    "message": "自動継続"
+  },
+  "featureAutoContinueDesc": {
+    "message": "ChatGPT応答が切り捨てられた時に自動的に「生成を続ける」ボタンをクリック"
+  },
+  "featureMarkmapTitle": {
+    "message": "Markmapサポート"
+  },
+  "featureMarkmapDesc": {
+    "message": "Markdownコードブロックの Markmap 視覚化サポートを提供"
+  },
+  "featureCtrlEnterTitle": {
+    "message": "Ctrl+Enterショートカット"
+  },
+  "featureCtrlEnterDesc": {
+    "message": "Ctrl+Enterで素早く送信"
   }
 }

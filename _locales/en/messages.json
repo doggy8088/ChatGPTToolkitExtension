@@ -7,5 +7,62 @@
     },
     "chatgpttoolkit_author": {
         "message": "Will Huang"
+    },
+    "optionsTitle": {
+        "message": "Options"
+    },
+    "optionsSave": {
+        "message": "Save"
+    },
+    "optionsReset": {
+        "message": "Reset to Default"
+    },
+    "optionsSaveSuccess": {
+        "message": "Settings saved"
+    },
+    "optionsFeatureSettings": {
+        "message": "Feature Settings"
+    },
+    "optionsEnableAll": {
+        "message": "Enable All"
+    },
+    "optionsDisableAll": {
+        "message": "Disable All"
+    },
+    "featureAutoFillTitle": {
+        "message": "URL Auto-Fill"
+    },
+    "featureAutoFillDesc": {
+        "message": "Automatically fill and submit prompts from URL hash parameters"
+    },
+    "featureCustomPromptsTitle": {
+        "message": "Custom Prompt Buttons"
+    },
+    "featureCustomPromptsDesc": {
+        "message": "Show customizable quick prompt buttons after ChatGPT responses"
+    },
+    "featureDoubleClickEditTitle": {
+        "message": "Double-Click Edit"
+    },
+    "featureDoubleClickEditDesc": {
+        "message": "Double-click sent user messages to edit them"
+    },
+    "featureAutoContinueTitle": {
+        "message": "Auto-Continue"
+    },
+    "featureAutoContinueDesc": {
+        "message": "Automatically click 'Continue generating' button when ChatGPT response is truncated"
+    },
+    "featureMarkmapTitle": {
+        "message": "Markmap Support"
+    },
+    "featureMarkmapDesc": {
+        "message": "Provide Markmap visualization support for Markdown code blocks"
+    },
+    "featureCtrlEnterTitle": {
+        "message": "Ctrl+Enter Shortcut"
+    },
+    "featureCtrlEnterDesc": {
+        "message": "Use Ctrl+Enter to quickly submit"
     }
 }

@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "__MSG_chatgpttoolkit_name__",
     "description": "__MSG_chatgpttoolkit_description__",
-    "version": "0.43.2",
+    "version": "0.44.0",
     "default_locale": "zh_TW",
     "author": "__MSG_chatgpttoolkit_author__",
     "icons": {
@@ -11,6 +11,10 @@
       "48": "images/icon-48.png",
       "128": "images/icon-128.png"
     },
+    "options_page": "options.html",
+    "permissions": [
+      "storage"
+    ],
     "content_scripts": [
       {
         "js": [
