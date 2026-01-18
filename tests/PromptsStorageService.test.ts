@@ -1,10 +1,10 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
-import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import { PromptsStorageService } from '../src/options/services/PromptsStorageService';
 import { DEFAULT_PROMPTS, type CustomPrompt } from '../src/options/models/CustomPrompt';
+import { ensureHappyDom } from './utils/happyDom';
 
-// Register DOM globals
-GlobalRegistrator.register();
+// Register DOM globals once across the test suite.
+ensureHappyDom();
 
 const STORAGE_KEY = 'chatgpttoolkit.customPrompts';
 
