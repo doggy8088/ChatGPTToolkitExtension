@@ -40,6 +40,14 @@ function createChromeStorageMock() {
   };
 }
 
+function getReviewPrompt() {
+  const review = DEFAULT_PROMPTS.find((prompt) => prompt.initial === true && prompt.title === '評論');
+  if (!review) {
+    throw new Error('Missing default review prompt in DEFAULT_PROMPTS');
+  }
+  return review;
+}
+
 describe('PromptsStorageService', () => {
   const chromeStorage = createChromeStorageMock();
 
@@ -68,7 +76,7 @@ describe('PromptsStorageService', () => {
         await (globalThis as any).chrome.storage.local.set({ [STORAGE_KEY]: testPrompts });
 
         const loaded = await PromptsStorageService.loadPrompts();
-        expect(loaded).toEqual(testPrompts);
+        expect(loaded).toEqual([...testPrompts, getReviewPrompt()]);
       })();
     });
 
@@ -80,8 +88,8 @@ describe('PromptsStorageService', () => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(testPrompts));
 
         const loaded = await PromptsStorageService.loadPrompts();
-        expect(loaded).toEqual(testPrompts);
-        expect(chromeStorage.getRaw()[STORAGE_KEY]).toEqual(testPrompts);
+        expect(loaded).toEqual([...testPrompts, getReviewPrompt()]);
+        expect(chromeStorage.getRaw()[STORAGE_KEY]).toEqual([...testPrompts, getReviewPrompt()]);
       })();
     });
 
