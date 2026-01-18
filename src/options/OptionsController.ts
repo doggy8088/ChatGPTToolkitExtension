@@ -90,6 +90,14 @@ export class OptionsController {
     return Boolean(getProperty(prompt, 'initial', false));
   }
 
+  private getPromptTypeLabel(isInitial: boolean): string {
+    return isInitial ? '初始按鈕' : '追問按鈕';
+  }
+
+  private setModalTitle(action: '新增' | '編輯', isInitial: boolean): void {
+    this.modalTitle.textContent = `${action}${this.getPromptTypeLabel(isInitial)}`;
+  }
+
   private updateTabsUI(): void {
     const isInitial = this.activeTab === 'initial';
     this.tabInitialBtn.classList.toggle('active', isInitial);
@@ -221,9 +229,10 @@ export class OptionsController {
    */
   private openAddModal(): void {
     this.editingIndex = -1;
-    this.modalTitle.textContent = '新增提示';
     this.resetForm();
-    this.promptInitial.checked = this.activeTab === 'initial';
+    const isInitial = this.activeTab === 'initial';
+    this.promptInitial.checked = isInitial;
+    this.setModalTitle('新增', isInitial);
     this.promptModal.classList.add('active');
   }
 
@@ -232,11 +241,11 @@ export class OptionsController {
    */
   private editPrompt(index: number): void {
     this.editingIndex = index;
-    this.modalTitle.textContent = '編輯提示';
     const prompt = this.customPrompts[index];
+    const isInitial = this.isPromptInitial(prompt);
 
     this.promptEnabled.checked = getProperty(prompt, 'enabled', true) as boolean;
-    this.promptInitial.checked = getProperty(prompt, 'initial', false) as boolean;
+    this.promptInitial.checked = isInitial;
     this.promptIcon.value = prompt.svgIcon || '';
     this.promptTitle.value = prompt.title || '';
     this.promptAltText.value = prompt.altText || '';
@@ -244,6 +253,7 @@ export class OptionsController {
     this.promptAutoPaste.checked = getProperty(prompt, 'autoPaste', false) as boolean;
     this.promptAutoSubmit.checked = getProperty(prompt, 'autoSubmit', false) as boolean;
 
+    this.setModalTitle('編輯', isInitial);
     this.promptModal.classList.add('active');
   }
 
@@ -430,7 +440,7 @@ export class OptionsController {
    * Reset to default prompts
    */
   private resetToDefaults(): void {
-    if (!this.ui.confirm('確定要重置為預設值嗎？這會清除所有自訂提示。')) {
+    if (!this.ui.confirm('確定要重置設定嗎？這會清除所有自訂提示。')) {
       return;
     }
 
@@ -439,7 +449,7 @@ export class OptionsController {
     void (async () => {
       await this.savePrompts();
       this.renderPrompts();
-      this.ui.showStatus('已重置為預設值', 'success');
+      this.ui.showStatus('已重置設定', 'success');
     })();
   }
 
@@ -479,6 +489,11 @@ export class OptionsController {
     document.getElementById('closeModalBtn')?.addEventListener('click', () => this.closeModal());
     document.getElementById('cancelBtn')?.addEventListener('click', () => this.closeModal());
     this.promptForm.addEventListener('submit', (e) => this.savePromptFromForm(e));
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return;
+      if (!this.promptModal.classList.contains('active')) return;
+      this.closeModal();
+    });
 
     // Import modal
     document.getElementById('closeImportModalBtn')?.addEventListener('click', () => this.closeImportModal());

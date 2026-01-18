@@ -35,15 +35,24 @@
 
         .subtitle {
             color: #666;
-            margin-bottom: 30px;
+            margin-bottom: 0;
             font-size: 14px;
         }
 
-        .actions {
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
             margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .header-actions {
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
+            justify-content: flex-end;
         }
 
 	        .prompt-groups {
@@ -53,10 +62,18 @@
 	        .prompt-tabs {
 	            display: flex;
 	            align-items: flex-end;
-	            gap: 0;
-	            padding-left: 0;
+	            justify-content: space-between;
+	            gap: 12px;
 	            border-bottom: 1px solid #dee2e6;
+                flex-wrap: wrap;
 	        }
+
+            .prompt-tablist {
+                display: flex;
+                align-items: flex-end;
+                gap: 0;
+                padding-left: 0;
+            }
 
 	        button.prompt-tab {
 	            background: #e9ecef;
@@ -302,10 +319,11 @@
 
         .modal-content {
             background: white;
-            margin: 5% auto;
-            padding: 30px;
+            margin: 4% auto;
+            padding: 24px;
             border-radius: 8px;
-            max-width: 600px;
+            max-width: 760px;
+            width: min(92vw, 760px);
             box-shadow: 0 4px 16px rgba(0,0,0,0.2);
         }
 
@@ -313,18 +331,18 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
 
         .modal-header h2 {
-            font-size: 22px;
+            font-size: 20px;
             color: #333;
         }
 
         .close-btn {
             background: none;
             color: #666;
-            font-size: 28px;
+            font-size: 26px;
             padding: 0;
             width: 30px;
             height: 30px;
@@ -337,29 +355,29 @@
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 14px;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             font-weight: 600;
             color: #333;
-            font-size: 14px;
+            font-size: 13px;
         }
 
         .form-group input[type="text"],
         .form-group textarea {
             width: 100%;
-            padding: 10px;
+            padding: 8px;
             border: 1px solid #ced4da;
             border-radius: 4px;
-            font-size: 14px;
+            font-size: 13px;
             font-family: inherit;
         }
 
         .form-group textarea {
-            min-height: 100px;
+            min-height: 90px;
             resize: vertical;
             font-family: 'Courier New', monospace;
         }
@@ -375,20 +393,60 @@
             display: flex;
             align-items: center;
             cursor: pointer;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
         }
 
         .form-help {
-            font-size: 12px;
+            font-size: 11px;
             color: #6c757d;
-            margin-top: 5px;
+            margin-top: 4px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .form-row .form-group {
+            margin-bottom: 0;
         }
 
         .modal-actions {
             display: flex;
             gap: 10px;
             justify-content: flex-end;
-            margin-top: 25px;
+            margin-top: 16px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .modal-actions-right {
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
+            cursor: pointer;
+            margin-right: auto;
+        }
+
+        .modal-checkbox input[type="checkbox"] {
+            margin-right: 0;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .is-hidden {
+            display: none;
         }
 
         .empty-state {
@@ -430,30 +488,54 @@
         .status-message.active {
             display: block;
         }
+
+        @media (max-width: 720px) {
+            .header-actions {
+                justify-content: flex-start;
+            }
+
+            .prompt-tabs {
+                align-items: flex-start;
+            }
+
+            .modal-content {
+                margin: 6% auto;
+                width: 94vw;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>ChatGPT Toolkit - 自訂提示管理</h1>
-        <p class="subtitle">管理您的自訂提示按鈕，這些按鈕會顯示在 ChatGPT 對話中</p>
+        <div class="header">
+            <div>
+                <h1>ChatGPT Toolkit - 自訂提示管理</h1>
+                <p class="subtitle">管理您的自訂提示按鈕，這些按鈕會顯示在 ChatGPT 對話中</p>
+            </div>
+            <div class="header-actions">
+                <button id="importBtn" class="secondary">📥 匯入</button>
+                <button id="exportBtn" class="secondary">📤 匯出</button>
+                <button id="resetBtn" class="danger">🔄 重置設定</button>
+            </div>
+        </div>
 
         <div id="statusMessage" class="status-message"></div>
 
-        <div class="actions">
-            <button id="addPromptBtn">➕ 新增提示</button>
-            <button id="importBtn" class="secondary">📥 匯入</button>
-            <button id="exportBtn" class="secondary">📤 匯出</button>
-            <button id="resetBtn" class="danger">🔄 重置為預設值</button>
-        </div>
-
 	        <div class="prompt-groups" aria-label="提示按鈕分類">
-	            <div class="prompt-tabs" role="tablist" aria-label="提示按鈕分類">
-	                <button type="button" id="tabInitialBtn" class="prompt-tab active" role="tab" aria-selected="true" aria-controls="panelInitial" tabindex="0">
-	                    初始按鈕<span id="tabInitialCount" class="tab-count"></span>
-	                </button>
-	                <button type="button" id="tabFollowUpBtn" class="prompt-tab" role="tab" aria-selected="false" aria-controls="panelFollowUp" tabindex="-1">
-	                    追問按鈕<span id="tabFollowUpCount" class="tab-count"></span>
-	                </button>
+	            <div class="prompt-tabs">
+                    <div class="prompt-tablist" role="tablist" aria-label="提示按鈕分類">
+	                    <button type="button" id="tabInitialBtn" class="prompt-tab active" role="tab" aria-selected="true" aria-controls="panelInitial" tabindex="0">
+	                        初始按鈕<span id="tabInitialCount" class="tab-count"></span>
+	                    </button>
+	                    <button type="button" id="tabFollowUpBtn" class="prompt-tab" role="tab" aria-selected="false" aria-controls="panelFollowUp" tabindex="-1">
+	                        追問按鈕<span id="tabFollowUpCount" class="tab-count"></span>
+	                    </button>
+                    </div>
+                    <button id="addPromptBtn">➕ 新增提示</button>
 	            </div>
 
 	            <div class="prompt-panel">
@@ -476,16 +558,7 @@
             </div>
 
             <form id="promptForm">
-                <div class="form-group">
-                    <label for="promptEnabled">
-                        <div class="checkbox-label">
-                            <input type="checkbox" id="promptEnabled" checked>
-                            <span>啟用此提示</span>
-                        </div>
-                    </label>
-                </div>
-
-                <div class="form-group">
+                <div class="form-group is-hidden">
                     <label for="promptInitial">
                         <div class="checkbox-label">
                             <input type="checkbox" id="promptInitial">
@@ -495,15 +568,17 @@
                     <div class="form-help">未勾選時，按鈕會在 ChatGPT 回應後顯示</div>
                 </div>
 
-                <div class="form-group">
-                    <label for="promptIcon">圖示 (Emoji 或 SVG)</label>
-                    <input type="text" id="promptIcon" placeholder="📝">
-                    <div class="form-help">建議使用 Emoji，例如：📝 🍥 👩‍🏫</div>
-                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="promptIcon">圖示 (Emoji 或 SVG)</label>
+                        <input type="text" id="promptIcon" placeholder="📝">
+                        <div class="form-help">建議使用 Emoji，例如：📝 🍥 👩‍🏫</div>
+                    </div>
 
-                <div class="form-group">
-                    <label for="promptTitle">標題 *</label>
-                    <input type="text" id="promptTitle" required placeholder="例如：總結">
+                    <div class="form-group">
+                        <label for="promptTitle">標題 *</label>
+                        <input type="text" id="promptTitle" required placeholder="例如：總結">
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -517,29 +592,37 @@
                     <div class="form-help">這是按下按鈕後會填入的文字</div>
                 </div>
 
-                <div class="form-group">
-                    <label for="promptAutoPaste">
-                        <div class="checkbox-label">
-                            <input type="checkbox" id="promptAutoPaste">
-                            <span>自動貼上剪貼簿內容</span>
-                        </div>
-                    </label>
-                    <div class="form-help">啟用後會自動在提示內容後面加上剪貼簿的文字</div>
-                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="promptAutoPaste">
+                            <div class="checkbox-label">
+                                <input type="checkbox" id="promptAutoPaste">
+                                <span>自動貼上剪貼簿內容</span>
+                            </div>
+                        </label>
+                        <div class="form-help">啟用後會自動在提示內容後面加上剪貼簿的文字</div>
+                    </div>
 
-                <div class="form-group">
-                    <label for="promptAutoSubmit">
-                        <div class="checkbox-label">
-                            <input type="checkbox" id="promptAutoSubmit">
-                            <span>自動送出</span>
-                        </div>
-                    </label>
-                    <div class="form-help">啟用後會自動點擊送出按鈕</div>
+                    <div class="form-group">
+                        <label for="promptAutoSubmit">
+                            <div class="checkbox-label">
+                                <input type="checkbox" id="promptAutoSubmit">
+                                <span>自動送出</span>
+                            </div>
+                        </label>
+                        <div class="form-help">啟用後會自動點擊送出按鈕</div>
+                    </div>
                 </div>
 
                 <div class="modal-actions">
-                    <button type="button" class="secondary" id="cancelBtn">取消</button>
-                    <button type="submit">儲存</button>
+                    <label class="modal-checkbox" for="promptEnabled">
+                        <input type="checkbox" id="promptEnabled" checked>
+                        <span>啟用此提示</span>
+                    </label>
+                    <div class="modal-actions-right">
+                        <button type="button" class="secondary" id="cancelBtn">取消</button>
+                        <button type="submit">儲存</button>
+                    </div>
                 </div>
             </form>
         </div>
