@@ -325,12 +325,178 @@
       editorDiv.dispatchEvent(new Event("input", { bubbles: true }));
       editorDiv.focus();
     }
+    function describeElement(el) {
+      if (!el)
+        return "null";
+      const htmlEl = el;
+      const tag = el.tagName.toLowerCase();
+      const id = htmlEl.id ? `#${htmlEl.id}` : "";
+      const className = htmlEl.className ? `.${String(htmlEl.className).trim().split(/\s+/).slice(0, 2).join(".")}` : "";
+      return `${tag}${id}${className}`;
+    }
+    function logEditorState(editorDiv, label) {
+      if (!debug)
+        return;
+      const text = (editorDiv.textContent || "").replace(/\s+/g, " ").trim();
+      console.log(`[ChatGPTToolkit][chatgpt] ${label}`, {
+        activeElement: describeElement(document.activeElement),
+        textLength: text.length,
+        textPreview: text.slice(0, 120)
+      });
+    }
+    function placeCaretAtEnd(editorDiv) {
+      const selection = window.getSelection();
+      if (!selection)
+        return;
+      const range = document.createRange();
+      range.selectNodeContents(editorDiv);
+      range.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+    function guessKeyCode(key) {
+      if (key.length === 1) {
+        const lower = key.toLowerCase();
+        if (lower >= "a" && lower <= "z") {
+          return `Key${lower.toUpperCase()}`;
+        }
+        if (key === "/")
+          return "Slash";
+        if (key === " ")
+          return "Space";
+      }
+      return key;
+    }
+    function dispatchKeyEvent(editorDiv, type, key) {
+      const charCode = key.length === 1 ? key.charCodeAt(0) : undefined;
+      const eventInit = {
+        key,
+        code: guessKeyCode(key),
+        keyCode: charCode,
+        which: charCode,
+        bubbles: true,
+        cancelable: true
+      };
+      const event = new KeyboardEvent(type, eventInit);
+      const dispatched = editorDiv.dispatchEvent(event);
+      if (debug) {
+        console.log(`[ChatGPTToolkit][chatgpt] ${type} "${key}" dispatched=${dispatched}`);
+      }
+      return dispatched;
+    }
+    function dispatchInputEvent(editorDiv, data) {
+      try {
+        const event = new InputEvent("input", {
+          bubbles: true,
+          data,
+          inputType: "insertText"
+        });
+        const dispatched = editorDiv.dispatchEvent(event);
+        if (debug)
+          console.log("[ChatGPTToolkit][chatgpt] input event dispatched", { data, dispatched });
+        return dispatched;
+      } catch {
+        const dispatched = editorDiv.dispatchEvent(new Event("input", { bubbles: true }));
+        if (debug)
+          console.log("[ChatGPTToolkit][chatgpt] input event fallback dispatched", { data, dispatched });
+        return dispatched;
+      }
+    }
+    function insertTextAtCursor(editorDiv, text) {
+      editorDiv.focus();
+      try {
+        const inserted = document.execCommand("insertText", false, text);
+        if (debug)
+          console.log("[ChatGPTToolkit][chatgpt] execCommand insertText", { text, inserted });
+        return inserted;
+      } catch {
+        if (debug)
+          console.log("[ChatGPTToolkit][chatgpt] execCommand insertText failed", { text });
+        return false;
+      }
+    }
+    async function typePromptCommand(editorDiv, text, delayMs) {
+      editorDiv.focus();
+      placeCaretAtEnd(editorDiv);
+      if (debug) {
+        console.log("[ChatGPTToolkit][chatgpt] typing command", { text, delayMs });
+      }
+      for (let i = 0;i < text.length; i += 1) {
+        const char = text[i];
+        if (debug) {
+          console.log(`[ChatGPTToolkit][chatgpt] typing char ${i + 1}/${text.length}: "${char}"`);
+        }
+        dispatchKeyEvent(editorDiv, "keydown", char);
+        dispatchKeyEvent(editorDiv, "keypress", char);
+        const inserted = insertTextAtCursor(editorDiv, char);
+        if (!inserted) {
+          editorDiv.textContent = (editorDiv.textContent || "") + char;
+          editorDiv.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+        dispatchInputEvent(editorDiv, char);
+        dispatchKeyEvent(editorDiv, "keyup", char);
+        logEditorState(editorDiv, `after char ${i + 1}`);
+        await ctx.delay(delayMs);
+      }
+      if (debug)
+        console.log("[ChatGPTToolkit][chatgpt] typing command complete");
+    }
+    function pressTabKey(editorDiv) {
+      const eventInit = {
+        key: "Tab",
+        code: "Tab",
+        keyCode: 9,
+        which: 9,
+        bubbles: true,
+        cancelable: true
+      };
+      const downDispatched = editorDiv.dispatchEvent(new KeyboardEvent("keydown", eventInit));
+      const upDispatched = editorDiv.dispatchEvent(new KeyboardEvent("keyup", eventInit));
+      if (debug) {
+        console.log("[ChatGPTToolkit][chatgpt] tab key dispatched", {
+          downDispatched,
+          upDispatched
+        });
+      }
+    }
+    async function selectImageTool(editorDiv) {
+      if (debug)
+        console.log("[ChatGPTToolkit][chatgpt] selectImageTool start");
+      logEditorState(editorDiv, "before selectImageTool");
+      setChatGPTPromptEditor(editorDiv, "");
+      logEditorState(editorDiv, "after clear");
+      placeCaretAtEnd(editorDiv);
+      await typePromptCommand(editorDiv, "/image", 60);
+      logEditorState(editorDiv, "after typing /image");
+      pressTabKey(editorDiv);
+      if (debug)
+        console.log("[ChatGPTToolkit][chatgpt] waiting after tab");
+      await ctx.delay(500);
+      logEditorState(editorDiv, "after tab wait");
+    }
     const AutoFillFromURI = async (textarea) => {
       ctx.refreshParamsFromHash();
-      if (state.prompt && textarea) {
-        setChatGPTPromptEditor(textarea, state.prompt);
-        history.replaceState({}, document.title, window.location.pathname + window.location.search);
+      if (!textarea)
+        return;
+      if (!state.prompt && !state.tool)
+        return;
+      if (debug) {
+        console.log("[ChatGPTToolkit][chatgpt] AutoFillFromURI start", {
+          tool: state.tool,
+          promptLength: state.prompt.length
+        });
       }
+      if (state.tool === "image") {
+        await selectImageTool(textarea);
+      }
+      if (state.prompt) {
+        logEditorState(textarea, "before prompt fill");
+        setChatGPTPromptEditor(textarea, state.prompt);
+        logEditorState(textarea, "after prompt fill");
+      }
+      history.replaceState({}, document.title, window.location.pathname + window.location.search);
+      if (debug)
+        console.log("[ChatGPTToolkit][chatgpt] AutoFillFromURI done");
     };
     const CUSTOM_PROMPTS_KEY = "chatgpttoolkit.customPrompts";
     function getDefaultReviewPrompt() {
@@ -718,11 +884,13 @@
     setTimeout(() => {
       StartMonitoringResponse();
     }, 1000);
+    let autoFillInProgress = false;
     const checkForTextareaInput = setInterval(async () => {
       const textarea = document.getElementById("prompt-textarea");
-      if (textarea) {
-        await AutoFillFromURI(textarea);
+      if (textarea && !autoFillInProgress) {
+        autoFillInProgress = true;
         clearInterval(checkForTextareaInput);
+        await AutoFillFromURI(textarea);
       }
     }, 60);
     async function maybePasteImageIntoChatGPT() {
@@ -925,4 +1093,4 @@
   runContentScript();
 })();
 
-//# debugId=7F68E5635B595F8E64756E2164756E21
+//# debugId=78D5B760E70C9CCA64756E2164756E21
