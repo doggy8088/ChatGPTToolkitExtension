@@ -29,9 +29,13 @@ export class PromptRenderer {
     const hasAutoSubmit = getProperty(prompt, 'autoSubmit', false);
 
     const badges: string[] = [];
-    if (hasAutoSubmit) badges.push(`<span class="badge auto-submit">自動送出</span>`);
-    if (hasAutoPaste) badges.push(`<span class="badge auto-paste">自動貼上</span>`);
-    badges.push(`<span class="badge ${isEnabled ? 'enabled' : 'disabled'}">${isEnabled ? '已啟用' : '已停用'}</span>`);
+    const autoSubmitState = hasAutoSubmit ? 'is-on' : 'is-off';
+    const autoPasteState = hasAutoPaste ? 'is-on' : 'is-off';
+    const enabledState = isEnabled ? 'is-on' : 'is-off';
+
+    badges.push(`<span class="badge auto-submit ${autoSubmitState}">自動送出</span>`);
+    badges.push(`<span class="badge auto-paste ${autoPasteState}">自動貼上</span>`);
+    badges.push(`<span class="badge status ${enabledState}">${isEnabled ? '已啟用' : '已停用'}</span>`);
 
     div.innerHTML = `
       <div class="prompt-header">
