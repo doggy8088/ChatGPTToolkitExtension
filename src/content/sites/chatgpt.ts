@@ -352,6 +352,9 @@ export function initChatGPT(ctx: ContentContext) {
         btn.style.lineHeight = '1.2';
         btn.style.whiteSpace = 'nowrap';
         btn.textContent = item.title;
+        if (item.altText) {
+          btn.title = String(item.altText);
+        }
         btn.addEventListener('click', () => {
           if (autoPasteEnabled) {
             navigator.clipboard.readText().then((text) => {

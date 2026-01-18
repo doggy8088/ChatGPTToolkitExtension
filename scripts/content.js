@@ -589,6 +589,9 @@
           btn.style.lineHeight = "1.2";
           btn.style.whiteSpace = "nowrap";
           btn.textContent = item.title;
+          if (item.altText) {
+            btn.title = String(item.altText);
+          }
           btn.addEventListener("click", () => {
             if (autoPasteEnabled) {
               navigator.clipboard.readText().then((text) => {
@@ -922,4 +925,4 @@
   runContentScript();
 })();
 
-//# debugId=E23E1906FDB3588864756E2164756E21
+//# debugId=7F68E5635B595F8E64756E2164756E21
