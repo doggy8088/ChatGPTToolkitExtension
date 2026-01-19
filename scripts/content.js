@@ -325,6 +325,68 @@
       editorDiv.dispatchEvent(new Event("input", { bubbles: true }));
       editorDiv.focus();
     }
+    function readClipboardTextSafely() {
+      if (!navigator.clipboard?.readText)
+        return Promise.resolve("");
+      return navigator.clipboard.readText().catch((error) => {
+        if (debug)
+          console.warn("[ChatGPTToolkit][chatgpt] clipboard read failed", error);
+        return "";
+      });
+    }
+    function bindPromptButton(button, item, autoPasteEnabled, autoSubmitEnabled, label) {
+      let lastTriggerAt = 0;
+      const trigger = (source) => {
+        const now = Date.now();
+        if (now - lastTriggerAt < 250) {
+          if (debug) {
+            console.log(`[ChatGPTToolkit][chatgpt] ${label} button trigger ignored`, {
+              source,
+              title: item.title,
+              deltaMs: now - lastTriggerAt
+            });
+          }
+          return;
+        }
+        lastTriggerAt = now;
+        if (debug) {
+          console.log(`[ChatGPTToolkit][chatgpt] ${label} button trigger`, {
+            source,
+            title: item.title,
+            autoPasteEnabled,
+            autoSubmitEnabled,
+            promptLength: item.prompt?.length || 0
+          });
+        }
+        if (autoPasteEnabled) {
+          readClipboardTextSafely().then((text) => {
+            const trimmed = text.trim();
+            const nextPrompt = trimmed ? item.prompt + trimmed : item.prompt;
+            if (debug) {
+              console.log(`[ChatGPTToolkit][chatgpt] ${label} button clipboard resolved`, {
+                title: item.title,
+                clipboardLength: text.length,
+                trimmedLength: trimmed.length,
+                nextPromptLength: nextPrompt.length
+              });
+            }
+            fillPrompt(nextPrompt, autoSubmitEnabled);
+          });
+        } else {
+          fillPrompt(item.prompt, autoSubmitEnabled);
+        }
+      };
+      button.addEventListener("pointerdown", (event) => {
+        if (event.button !== 0)
+          return;
+        trigger("pointerdown");
+      });
+      button.addEventListener("click", (event) => {
+        if (event.detail !== 0)
+          return;
+        trigger("click");
+      });
+    }
     function describeElement(el) {
       if (!el)
         return "null";
@@ -758,20 +820,7 @@
           if (item.altText) {
             btn.title = String(item.altText);
           }
-          btn.addEventListener("click", () => {
-            if (autoPasteEnabled) {
-              navigator.clipboard.readText().then((text) => {
-                text = text.trim();
-                if (!!text) {
-                  fillPrompt(item.prompt + text, true);
-                } else {
-                  fillPrompt(item.prompt, autoSubmitEnabled);
-                }
-              });
-            } else {
-              fillPrompt(item.prompt, autoSubmitEnabled);
-            }
-          });
+          bindPromptButton(btn, item, autoPasteEnabled, autoSubmitEnabled, "initial");
           barEl.append(btn);
         });
       }
@@ -825,20 +874,7 @@
           customButton.style.margin = "0.5rem";
           customButton.title = String(item.altText);
           customButton.innerText = item.title;
-          customButton.addEventListener("click", () => {
-            if (autoPasteEnabled) {
-              navigator.clipboard.readText().then((text) => {
-                text = text.trim();
-                if (!!text) {
-                  fillPrompt(item.prompt + text, true);
-                } else {
-                  fillPrompt(item.prompt, autoSubmitEnabled);
-                }
-              });
-            } else {
-              fillPrompt(item.prompt, autoSubmitEnabled);
-            }
-          });
+          bindPromptButton(customButton, item, autoPasteEnabled, autoSubmitEnabled, "follow-up");
           buttonsArea.append(customButton);
         });
         if (talkBlocks.length > 0) {
@@ -913,7 +949,7 @@
       if (!state.autoSubmit || state.pasteImage)
         return;
       const sendButton = document.querySelector('button[data-testid*="send-button"]');
-      if (sendButton && !sendButton.disabled) {
+      if (isSendButtonEnabled(sendButton)) {
         if (debug)
           console.log("自動提交按鈕被點擊");
         sendButton.click();
@@ -924,24 +960,96 @@
       await maybePasteImageIntoChatGPT();
       maybeAutoSubmitChatGPT();
     }, 60);
-    function fillPrompt(prompt, autoSubmit = true) {
-      const div = document.getElementById("prompt-textarea");
-      if (div) {
-        setChatGPTPromptEditor(div, prompt);
-        const range = document.createRange();
-        const sel = window.getSelection();
-        range.setStart(div, 1);
-        range.collapse(true);
-        sel.removeAllRanges();
-        sel.addRange(range);
-        div.focus();
-        setTimeout(() => {
+    function isSendButtonEnabled(sendButton) {
+      if (!sendButton)
+        return false;
+      if (sendButton.disabled)
+        return false;
+      if (sendButton.getAttribute("aria-disabled") === "true")
+        return false;
+      return true;
+    }
+    function autoSubmitWhenReady() {
+      if (debug)
+        console.log("[ChatGPTToolkit][chatgpt] autoSubmitWhenReady start");
+      ctx.startRetryInterval({
+        intervalMs: 80,
+        retries: 25,
+        tick: () => {
           const sendButton = document.querySelector('button[data-testid*="send-button"]');
-          if (sendButton && autoSubmit) {
-            sendButton.click();
+          if (debug) {
+            console.log("[ChatGPTToolkit][chatgpt] autoSubmitWhenReady tick", {
+              hasSendButton: Boolean(sendButton),
+              enabled: isSendButtonEnabled(sendButton)
+            });
           }
-        }, 50);
+          if (!isSendButtonEnabled(sendButton))
+            return false;
+          if (debug)
+            console.log("[ChatGPTToolkit][chatgpt] autoSubmitWhenReady click send");
+          sendButton.click();
+          return true;
+        }
+      });
+    }
+    function normalizeEditorText(text) {
+      return text.replace(/\s+/g, " ").trim();
+    }
+    let promptFillRunId = 0;
+    function fillPrompt(prompt, autoSubmit = true) {
+      const runId = ++promptFillRunId;
+      const expected = normalizeEditorText(prompt);
+      let autoSubmitScheduled = false;
+      if (debug) {
+        console.log("[ChatGPTToolkit][chatgpt] fillPrompt start", {
+          runId,
+          autoSubmit,
+          promptLength: prompt.length,
+          expectedLength: expected.length
+        });
       }
+      ctx.startRetryInterval({
+        intervalMs: 80,
+        retries: 15,
+        tick: () => {
+          if (runId !== promptFillRunId)
+            return true;
+          const div = document.getElementById("prompt-textarea");
+          if (debug && !div) {
+            console.log("[ChatGPTToolkit][chatgpt] fillPrompt tick: textarea missing", { runId });
+          }
+          if (!div)
+            return false;
+          const current = normalizeEditorText(div.textContent || "");
+          const hasPrompt = expected.length > 0 ? current.includes(expected) : current.length > 0;
+          if (debug) {
+            console.log("[ChatGPTToolkit][chatgpt] fillPrompt tick", {
+              runId,
+              currentLength: current.length,
+              expectedLength: expected.length,
+              hasPrompt
+            });
+          }
+          if (hasPrompt) {
+            div.focus();
+            placeCaretAtEnd(div);
+            if (autoSubmit && !autoSubmitScheduled) {
+              autoSubmitScheduled = true;
+              autoSubmitWhenReady();
+            }
+            return true;
+          }
+          setChatGPTPromptEditor(div, prompt);
+          placeCaretAtEnd(div);
+          if (debug) {
+            console.log("[ChatGPTToolkit][chatgpt] fillPrompt wrote prompt", {
+              runId,
+              promptLength: prompt.length
+            });
+          }
+          return false;
+        }
+      });
     }
     document.body.addEventListener("dblclick", (event) => {
       const target = event.target;
@@ -1093,4 +1201,4 @@
   runContentScript();
 })();
 
-//# debugId=78D5B760E70C9CCA64756E2164756E21
+//# debugId=39FBA731B667C30764756E2164756E21
