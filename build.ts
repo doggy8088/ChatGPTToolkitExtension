@@ -2,6 +2,9 @@ import { build } from 'bun';
 
 console.log('Building TypeScript files...');
 
+const debugEnv = (process.env.CHATGPT_TOOLKIT_DEBUG || '').toLowerCase();
+const debugDefine = debugEnv === '0' || debugEnv === 'false' ? 'false' : 'true';
+
 const targets = [
   {
     name: 'options',
@@ -27,6 +30,9 @@ for (const target of targets) {
     outdir: target.outdir,
     target: 'browser',
     format: target.format as 'esm' | 'iife',
+    define: {
+      __CHATGPT_TOOLKIT_DEBUG__: debugDefine,
+    },
     minify: false,
     sourcemap: 'external',
     naming: target.naming,

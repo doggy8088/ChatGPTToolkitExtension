@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "bun run build.ts",
+    "pack:release": "node tools/pack-release.mjs",
     "coverage": "bun test --coverage --coverage-reporter=lcov --coverage-dir=coverage/bun && node --test --experimental-test-coverage --test-coverage-include=scripts/content-utils.js tests/content-utils.test.js",
     "test": "bun test",
     "test:js": "node --test tests/content-utils.test.js",

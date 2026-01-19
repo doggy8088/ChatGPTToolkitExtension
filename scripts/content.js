@@ -1,7 +1,7 @@
 (() => {
   // src/content/context.ts
   function createContentContext() {
-    const debug = true;
+    const debug = false;
     const contentUtils = window.ChatGPTToolkitContentUtils;
     if (!contentUtils) {
       console.error("[ChatGPTToolkit] Missing ChatGPTToolkitContentUtils; check manifest.json script order.");
@@ -1201,4 +1201,4 @@
   runContentScript();
 })();
 
-//# debugId=39FBA731B667C30764756E2164756E21
+//# debugId=BEAEC60B4E48088464756E2164756E21

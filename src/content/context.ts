@@ -4,6 +4,8 @@ interface RetryIntervalOptions {
   tick: () => boolean | Promise<boolean>;
 }
 
+declare const __CHATGPT_TOOLKIT_DEBUG__: boolean;
+
 interface ParsedToolkitHash {
   prompt: string | null;
   autoSubmit: boolean;
@@ -36,7 +38,8 @@ export interface ContentContext {
 }
 
 export function createContentContext(): ContentContext | null {
-  const debug = true;
+  const debug =
+    typeof __CHATGPT_TOOLKIT_DEBUG__ === 'boolean' ? __CHATGPT_TOOLKIT_DEBUG__ : true;
 
   const contentUtils = window.ChatGPTToolkitContentUtils as ContentUtilsApi | undefined;
   if (!contentUtils) {

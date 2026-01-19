@@ -21,6 +21,16 @@ jobs:
         with:
           node-version: '20'
 
+      - name: 設定 Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: 'latest'
+
+      - name: 建置（關閉 debug）
+        run: bun run build
+        env:
+          CHATGPT_TOOLKIT_DEBUG: 'false'
+
       - name: 取得版本號
         id: get_version
         run: |
@@ -39,7 +49,7 @@ jobs:
       - name: 建立 ZIP 封裝檔
         run: |
           $filePath = "ChatGPTToolkitExtension_v${{ steps.get_version.outputs.version }}.zip"
-          7z a $filePath _locales images scripts CHANGELOG.md manifest.json README.md
+          7z a $filePath _locales images scripts dist options.html CHANGELOG.md manifest.json README.md
 
       - name: 上傳 Release 附件
         uses: softprops/action-gh-release@v1
