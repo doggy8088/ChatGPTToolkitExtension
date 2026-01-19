@@ -2,9 +2,18 @@
     "manifest_version": 3,
     "name": "__MSG_chatgpttoolkit_name__",
     "description": "__MSG_chatgpttoolkit_description__",
-    "version": "0.43.2",
+    "version": "0.43.3",
     "default_locale": "zh_TW",
     "author": "__MSG_chatgpttoolkit_author__",
+    "background": {
+      "service_worker": "scripts/background.js"
+    },
+    "action": {
+      "default_title": "__MSG_chatgpttoolkit_name__"
+    },
+    "permissions": [
+      "storage"
+    ],
     "icons": {
       "16": "images/icon-16.png",
       "32": "images/icon-32.png",
@@ -30,5 +39,6 @@
           "https://chatgpt.com/*"
         ]
       }
-    ]
+    ],
+    "options_page": "options.html"
   }

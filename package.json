@@ -2,12 +2,24 @@
   "name": "chatgpttoolkitextension",
   "private": true,
   "description": "Developer tooling for ChatGPTToolkitExtension (unit tests for content script helpers).",
-  "type": "commonjs",
+  "type": "module",
   "scripts": {
-    "test": "node --test tests/content-utils.test.js"
+    "build": "bun run build.ts",
+    "pack:release": "node tools/pack-release.mjs",
+    "coverage": "bun test --coverage --coverage-reporter=lcov --coverage-dir=coverage/bun && node --test --experimental-test-coverage --test-coverage-include=scripts/content-utils.js tests/content-utils.test.js",
+    "test": "bun test",
+    "test:js": "node --test tests/content-utils.test.js",
+    "typecheck": "tsc --noEmit",
+    "validate": "bun run typecheck && bun run test && bun run build"
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "@happy-dom/global-registrator": "^20.0.11",
+    "@types/bun": "^1.3.5",
+    "@types/chrome": "^0.1.32",
+    "typescript": "^5.9.3"
   }
 }
 

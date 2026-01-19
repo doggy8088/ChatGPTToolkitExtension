@@ -1,11 +1,18 @@
-const test = require("node:test");
-const assert = require("node:assert/strict");
+import test from "node:test";
+import assert from "node:assert/strict";
+import * as contentUtilsModule from "../scripts/content-utils.js";
 
-const {
-  parseToolkitHash,
-  flexiblePromptDetection,
-  b64EncodeUnicode,
-} = require("../scripts/content-utils.js");
+// content-utils is a UMD bundle; prefer the global when available, else default export.
+const contentUtils =
+  globalThis.ChatGPTToolkitContentUtils ??
+  contentUtilsModule.default ??
+  contentUtilsModule;
+
+if (!contentUtils || typeof contentUtils.parseToolkitHash !== "function") {
+  throw new Error("Missing ChatGPTToolkitContentUtils exports from scripts/content-utils.js");
+}
+
+const { parseToolkitHash, flexiblePromptDetection, b64EncodeUnicode } = contentUtils;
 
 test("parseToolkitHash: phind-style encoding decodes to expected prompt", () => {
   const hash = "autoSubmit=false&prompt=I%2BB+%3D+C%26D";
