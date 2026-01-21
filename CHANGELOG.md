@@ -1,5 +1,20 @@
 # Changelog
 
+- 0.43.5 (2026/01/21)
+
+  - Chore
+    - Bump extension version to 0.43.5 for release.
+
+  - New features
+    - Localize the options page app name using Chrome i18n.
+    - Show the manifest version in the options page footer during build.
+
+  - Bug fixes
+    - None
+
+  - Breaking changes
+    - None
+
 - 0.43.4 (2026/01/21)
 
   - Chore

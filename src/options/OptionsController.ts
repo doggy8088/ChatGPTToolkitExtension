@@ -41,6 +41,8 @@ export class OptionsController {
   private tabInitialCount!: HTMLElement;
   private tabFollowUpCount!: HTMLElement;
 
+  private appName!: HTMLElement;
+
   constructor() {
     this.ui = new OptionsUIController('statusMessage');
     this.renderer = new PromptRenderer();
@@ -51,6 +53,7 @@ export class OptionsController {
    */
   async init(): Promise<void> {
     this.initializeDOM();
+    this.applyLocalizedAppName();
     this.attachEventListeners();
     await this.loadPrompts();
     this.renderPrompts();
@@ -84,6 +87,20 @@ export class OptionsController {
     this.tabFollowUpBtn = document.getElementById('tabFollowUpBtn') as HTMLButtonElement;
     this.tabInitialCount = document.getElementById('tabInitialCount')!;
     this.tabFollowUpCount = document.getElementById('tabFollowUpCount')!;
+
+    this.appName = document.getElementById('appName')!;
+  }
+
+  private applyLocalizedAppName(): void {
+    const fallback = 'ChatGPT Toolkit';
+    const localized =
+      typeof chrome !== 'undefined' && chrome.i18n?.getMessage
+        ? chrome.i18n.getMessage('chatgpttoolkit_name')
+        : '';
+    const appName = localized || fallback;
+
+    this.appName.textContent = appName;
+    document.title = `${appName} - Options`;
   }
 
   private isPromptInitial(prompt: CustomPrompt): boolean {

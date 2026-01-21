@@ -1,7 +1,7 @@
 (() => {
   // src/content/context.ts
   function createContentContext() {
-    const debug = false;
+    const debug = true;
     const contentUtils = window.ChatGPTToolkitContentUtils;
     if (!contentUtils) {
       console.error("[ChatGPTToolkit] Missing ChatGPTToolkitContentUtils; check manifest.json script order.");
@@ -478,6 +478,12 @@
       }
     }
     async function typePromptCommand(editorDiv, text, delayMs) {
+      if (window.location.href.startsWith("https://chatgpt.com/images")) {
+        if (debug) {
+          console.log("[ChatGPTToolkit][chatgpt] skip typing prompt command on images page", { text });
+        }
+        return;
+      }
       editorDiv.focus();
       placeCaretAtEnd(editorDiv);
       if (debug) {
@@ -1201,4 +1207,4 @@
   runContentScript();
 })();
 
-//# debugId=BEAEC60B4E48088464756E2164756E21
+//# debugId=F80B0EE86D15E59464756E2164756E21

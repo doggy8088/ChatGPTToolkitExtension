@@ -489,6 +489,13 @@
             display: block;
         }
 
+        .page-footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #8a8a8a;
+            font-size: 12px;
+        }
+
         @media (max-width: 720px) {
             .header-actions {
                 justify-content: flex-start;
@@ -513,7 +520,7 @@
     <div class="container">
         <div class="header">
             <div>
-                <h1>ChatGPT Toolkit - 自訂提示管理</h1>
+                <h1><span id="appName">ChatGPT Toolkit</span> - 自訂提示管理</h1>
                 <p class="subtitle">管理您的自訂提示按鈕，這些按鈕會顯示在 ChatGPT 對話中</p>
             </div>
             <div class="header-actions">
@@ -547,6 +554,10 @@
 	                </div>
 	            </div>
 	        </div>
+
+            <footer class="page-footer">
+                版本：<span id="appVersion">0.43.5</span>
+            </footer>
 	    </div>
 
     <!-- Edit/Add Prompt Modal -->
