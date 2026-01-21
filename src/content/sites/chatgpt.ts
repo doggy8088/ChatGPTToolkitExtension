@@ -615,10 +615,26 @@ export function initChatGPT(ctx: ContentContext) {
       });
     }
 
-    function rebuild_buttons() {
-      const talkBlocks = Array.from(
+    function getAssistantTurnBlocks() {
+      const turnArticles = Array.from(
+        document.querySelectorAll<HTMLElement>(
+          'article[data-testid^="conversation-turn-"][data-turn="assistant"]'
+        )
+      );
+      if (turnArticles.length > 0) return turnArticles;
+
+      const genericArticles = Array.from(
+        document.querySelectorAll<HTMLElement>('article[data-turn="assistant"]')
+      );
+      if (genericArticles.length > 0) return genericArticles;
+
+      return Array.from(
         document.querySelectorAll<HTMLElement>('div[data-message-author-role="assistant"]')
       );
+    }
+
+    function rebuild_buttons() {
+      const talkBlocks = getAssistantTurnBlocks();
 
       let buttonsAreas = document.querySelectorAll('#custom-chatgpt-magic-box-buttons');
 

@@ -1,5 +1,19 @@
 # Changelog
 
+- 0.43.8 (2026/01/21)
+
+  - Chore
+    - Bump extension version to 0.43.8 for release.
+
+  - New features
+    - None
+
+  - Bug fixes
+    - Fix follow-up buttons missing after image-generation responses on ChatGPT.
+
+  - Breaking changes
+    - None
+
 - 0.43.7 (2026/01/21)
 
   - Chore

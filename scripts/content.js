@@ -833,8 +833,17 @@
           barEl.append(btn);
         });
       }
+      function getAssistantTurnBlocks() {
+        const turnArticles = Array.from(document.querySelectorAll('article[data-testid^="conversation-turn-"][data-turn="assistant"]'));
+        if (turnArticles.length > 0)
+          return turnArticles;
+        const genericArticles = Array.from(document.querySelectorAll('article[data-turn="assistant"]'));
+        if (genericArticles.length > 0)
+          return genericArticles;
+        return Array.from(document.querySelectorAll('div[data-message-author-role="assistant"]'));
+      }
       function rebuild_buttons() {
-        const talkBlocks = Array.from(document.querySelectorAll('div[data-message-author-role="assistant"]'));
+        const talkBlocks = getAssistantTurnBlocks();
         let buttonsAreas = document.querySelectorAll("#custom-chatgpt-magic-box-buttons");
         const stopButton = document.querySelector('button[data-testid="stop-button"]');
         if (stopButton) {
@@ -1210,4 +1219,4 @@
   runContentScript();
 })();
 
-//# debugId=DF58B469C16E6B6F64756E2164756E21
+//# debugId=6079CFCA6D3E74AC64756E2164756E21
