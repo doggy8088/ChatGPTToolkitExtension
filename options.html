@@ -366,6 +366,51 @@
             font-size: 13px;
         }
 
+        .form-group-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 6px;
+            flex-wrap: wrap;
+        }
+
+        .form-group-header label {
+            margin-bottom: 0;
+        }
+
+        .form-inline-hint {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: #6c757d;
+            white-space: nowrap;
+        }
+
+        .form-inline-code {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            color: #364152;
+            background: #f1f3f5;
+            border: 1px solid #e1e6eb;
+            border-radius: 999px;
+            padding: 1px 8px;
+        }
+
+        button.form-inline-code {
+            cursor: pointer;
+            line-height: 1.4;
+        }
+
+        button.form-inline-code:hover {
+            background: #e9ecef;
+        }
+
+        button.form-inline-code:focus-visible {
+            outline: 2px solid #10a37f;
+            outline-offset: 2px;
+        }
         .form-group input[type="text"],
         .form-group textarea {
             width: 100%;
@@ -556,7 +601,7 @@
 	        </div>
 
             <footer class="page-footer">
-                <span data-i18n="options_footer_version_label"></span><span id="appVersion">0.43.6</span>
+                <span data-i18n="options_footer_version_label"></span><span id="appVersion">0.43.7</span>
             </footer>
 	    </div>
 
@@ -598,7 +643,13 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="promptText" data-i18n="options_modal_prompt_label"></label>
+                    <div class="form-group-header">
+                        <label for="promptText" data-i18n="options_modal_prompt_label"></label>
+                        <span id="promptArgsHint" class="form-inline-hint is-hidden" aria-hidden="true">
+                            <span data-i18n="options_modal_prompt_args_label"></span>
+                            <button type="button" id="promptArgsInsert" class="form-inline-code">{{args}}</button>
+                        </span>
+                    </div>
                     <textarea id="promptText" required data-i18n-placeholder="options_modal_prompt_placeholder"></textarea>
                     <div class="form-help" data-i18n="options_modal_prompt_help"></div>
                 </div>

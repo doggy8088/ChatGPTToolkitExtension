@@ -92,11 +92,14 @@
     "options_modal_prompt_help": {
         "message": "This text will be inserted when the button is clicked."
     },
+    "options_modal_prompt_args_label": {
+        "message": "Variable:"
+    },
     "options_modal_auto_paste_label": {
         "message": "Auto paste clipboard content"
     },
     "options_modal_auto_paste_help": {
-        "message": "When enabled, clipboard text is appended to the prompt."
+        "message": "When enabled, clipboard text is appended to the prompt. If the prompt includes {{args}}, it is replaced with clipboard content."
     },
     "options_modal_auto_submit_label": {
         "message": "Auto submit"

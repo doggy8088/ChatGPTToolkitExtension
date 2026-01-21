@@ -318,6 +318,7 @@
   // src/content/sites/chatgpt.ts
   function initChatGPT(ctx) {
     const { state, debug } = ctx;
+    const CLIPBOARD_ARGS_PLACEHOLDER = "{{args}}";
     function setChatGPTPromptEditor(editorDiv, promptText) {
       if (!editorDiv)
         return;
@@ -361,12 +362,14 @@
         if (autoPasteEnabled) {
           readClipboardTextSafely().then((text) => {
             const trimmed = text.trim();
-            const nextPrompt = trimmed ? item.prompt + trimmed : item.prompt;
+            const hasArgsPlaceholder = item.prompt.includes(CLIPBOARD_ARGS_PLACEHOLDER);
+            const nextPrompt = hasArgsPlaceholder ? item.prompt.split(CLIPBOARD_ARGS_PLACEHOLDER).join(trimmed) : trimmed ? item.prompt + trimmed : item.prompt;
             if (debug) {
               console.log(`[ChatGPTToolkit][chatgpt] ${label} button clipboard resolved`, {
                 title: item.title,
                 clipboardLength: text.length,
                 trimmedLength: trimmed.length,
+                hasArgsPlaceholder,
                 nextPromptLength: nextPrompt.length
               });
             }
@@ -1207,4 +1210,4 @@
   runContentScript();
 })();
 
-//# debugId=F80B0EE86D15E59464756E2164756E21
+//# debugId=DF58B469C16E6B6F64756E2164756E21

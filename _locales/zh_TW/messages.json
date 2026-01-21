@@ -92,11 +92,14 @@
     "options_modal_prompt_help": {
         "message": "這是按下按鈕後會填入的文字"
     },
+    "options_modal_prompt_args_label": {
+        "message": "可用變數："
+    },
     "options_modal_auto_paste_label": {
         "message": "自動貼上剪貼簿內容"
     },
     "options_modal_auto_paste_help": {
-        "message": "啟用後會自動在提示內容後面加上剪貼簿的文字"
+        "message": "啟用後會自動在提示內容後面加上剪貼簿的文字；若提示內容包含 {{args}}，會以剪貼簿內容取代該字串。"
     },
     "options_modal_auto_submit_label": {
         "message": "自動送出"

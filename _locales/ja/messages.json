@@ -92,11 +92,14 @@
   "options_modal_prompt_help": {
     "message": "ボタン押下時に入力されるテキストです"
   },
+  "options_modal_prompt_args_label": {
+    "message": "使用可能な変数："
+  },
   "options_modal_auto_paste_label": {
     "message": "クリップボード内容を自動貼り付け"
   },
   "options_modal_auto_paste_help": {
-    "message": "有効にすると、プロンプトの末尾にクリップボードの文字を追加します。"
+    "message": "有効にすると、プロンプトの末尾にクリップボードの文字を追加します。プロンプトに {{args}} が含まれる場合は、その部分をクリップボード内容で置換します。"
   },
   "options_modal_auto_submit_label": {
     "message": "自動送信"

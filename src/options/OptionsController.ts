@@ -30,6 +30,8 @@ export class OptionsController {
   private promptText!: HTMLTextAreaElement;
   private promptAutoPaste!: HTMLInputElement;
   private promptAutoSubmit!: HTMLInputElement;
+  private promptArgsHint!: HTMLElement;
+  private promptArgsInsert!: HTMLButtonElement;
   private importText!: HTMLTextAreaElement;
 
   private panelInitial!: HTMLElement;
@@ -75,6 +77,8 @@ export class OptionsController {
     this.promptText = document.getElementById('promptText') as HTMLTextAreaElement;
     this.promptAutoPaste = document.getElementById('promptAutoPaste') as HTMLInputElement;
     this.promptAutoSubmit = document.getElementById('promptAutoSubmit') as HTMLInputElement;
+    this.promptArgsHint = document.getElementById('promptArgsHint') as HTMLElement;
+    this.promptArgsInsert = document.getElementById('promptArgsInsert') as HTMLButtonElement;
     this.importText = document.getElementById('importText') as HTMLTextAreaElement;
 
     this.panelInitial = document.getElementById('panelInitial')!;
@@ -141,6 +145,27 @@ export class OptionsController {
 
   private setModalTitle(action: 'add' | 'edit', isInitial: boolean): void {
     this.modalTitle.textContent = getMessage(this.getModalTitleKey(action, isInitial));
+  }
+
+  private updatePromptArgsHintVisibility(): void {
+    const shouldShow = this.promptAutoPaste.checked;
+    this.promptArgsHint.classList.toggle('is-hidden', !shouldShow);
+    this.promptArgsHint.setAttribute('aria-hidden', shouldShow ? 'false' : 'true');
+  }
+
+  private insertPromptArgsAtCursor(): void {
+    if (!this.promptAutoPaste.checked) return;
+
+    const token = '{{args}}';
+    const start = this.promptText.selectionStart;
+    const end = this.promptText.selectionEnd;
+    const value = this.promptText.value;
+
+    this.promptText.value = value.slice(0, start) + token + value.slice(end);
+    const nextCursor = start + token.length;
+    this.promptText.selectionStart = nextCursor;
+    this.promptText.selectionEnd = nextCursor;
+    this.promptText.focus();
   }
 
   private updateTabsUI(): void {
@@ -301,6 +326,7 @@ export class OptionsController {
     this.promptText.value = prompt.prompt || '';
     this.promptAutoPaste.checked = getProperty(prompt, 'autoPaste', false) as boolean;
     this.promptAutoSubmit.checked = getProperty(prompt, 'autoSubmit', false) as boolean;
+    this.updatePromptArgsHintVisibility();
 
     this.setModalTitle('edit', isInitial);
     this.promptModal.classList.add('active');
@@ -315,6 +341,7 @@ export class OptionsController {
     this.promptInitial.checked = false;
     this.promptAutoPaste.checked = false;
     this.promptAutoSubmit.checked = false;
+    this.updatePromptArgsHintVisibility();
   }
 
   /**
@@ -541,6 +568,9 @@ export class OptionsController {
     document.getElementById('closeModalBtn')?.addEventListener('click', () => this.closeModal());
     document.getElementById('cancelBtn')?.addEventListener('click', () => this.closeModal());
     this.promptForm.addEventListener('submit', (e) => this.savePromptFromForm(e));
+    this.promptAutoPaste.addEventListener('change', () => this.updatePromptArgsHintVisibility());
+    this.promptArgsInsert.addEventListener('pointerdown', (event) => event.preventDefault());
+    this.promptArgsInsert.addEventListener('click', () => this.insertPromptArgsAtCursor());
     document.addEventListener('keydown', (event) => {
       if (event.key !== 'Escape') return;
       if (!this.promptModal.classList.contains('active')) return;

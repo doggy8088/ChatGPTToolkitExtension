@@ -23,6 +23,7 @@ type MarkmapInstanceHandle = {
 
 export function initChatGPT(ctx: ContentContext) {
   const { state, debug } = ctx;
+  const CLIPBOARD_ARGS_PLACEHOLDER = '{{args}}';
 
   function setChatGPTPromptEditor(editorDiv: HTMLElement | null, promptText: string) {
     if (!editorDiv) return;
@@ -75,12 +76,18 @@ export function initChatGPT(ctx: ContentContext) {
       if (autoPasteEnabled) {
         readClipboardTextSafely().then((text) => {
           const trimmed = text.trim();
-          const nextPrompt = trimmed ? item.prompt + trimmed : item.prompt;
+          const hasArgsPlaceholder = item.prompt.includes(CLIPBOARD_ARGS_PLACEHOLDER);
+          const nextPrompt = hasArgsPlaceholder
+            ? item.prompt.split(CLIPBOARD_ARGS_PLACEHOLDER).join(trimmed)
+            : trimmed
+              ? item.prompt + trimmed
+              : item.prompt;
           if (debug) {
             console.log(`[ChatGPTToolkit][chatgpt] ${label} button clipboard resolved`, {
               title: item.title,
               clipboardLength: text.length,
               trimmedLength: trimmed.length,
+              hasArgsPlaceholder,
               nextPromptLength: nextPrompt.length,
             });
           }

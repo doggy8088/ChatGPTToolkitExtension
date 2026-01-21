@@ -1,5 +1,20 @@
 # Changelog
 
+- 0.43.7 (2026/01/21)
+
+  - Chore
+    - Bump extension version to 0.43.7 for release.
+
+  - New features
+    - Allow auto paste prompts to replace `{{args}}` with clipboard content.
+    - Show a `{{args}}` hint in the prompt editor when auto paste is enabled, with click-to-insert.
+
+  - Bug fixes
+    - None
+
+  - Breaking changes
+    - None
+
 - 0.43.6 (2026/01/21)
 
   - Chore
