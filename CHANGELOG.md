@@ -1,5 +1,19 @@
 # Changelog
 
+- 0.43.4 (2026/01/21)
+
+  - Chore
+    - Bump extension version to 0.43.4 for release.
+
+  - New features
+    - None
+
+  - Bug fixes
+    - Skip typing prompt commands on ChatGPT images pages.
+
+  - Breaking changes
+    - None
+
 - 0.43.2 (2025/12/24)
 
   - Chore

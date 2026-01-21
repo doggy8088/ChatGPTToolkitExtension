@@ -193,6 +193,13 @@ export function initChatGPT(ctx: ContentContext) {
   }
 
   async function typePromptCommand(editorDiv: HTMLElement, text: string, delayMs: number) {
+    if (window.location.href.startsWith('https://chatgpt.com/images')) {
+      if (debug) {
+        console.log('[ChatGPTToolkit][chatgpt] skip typing prompt command on images page', { text });
+      }
+      return;
+    }
+
     editorDiv.focus();
     placeCaretAtEnd(editorDiv);
 
