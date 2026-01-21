@@ -16,6 +16,7 @@ This is a Chrome extension (MV3) with TypeScript sources.
 - `bun test`: Run Bun tests in `tests/`.
 - `bun run test:js`: Run Node tests for `scripts/content-utils.js` only (CommonJS).
 - `bun run validate`: Typecheck + tests + build.
+Always run `bun run build` after any code change.
 For manual testing, load the repository root as an unpacked extension in Chrome.
 
 ## Coding Style and Naming Conventions
