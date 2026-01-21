@@ -7,5 +7,212 @@
     },
     "chatgpttoolkit_author": {
         "message": "Will 保哥"
+    },
+    "options_page_title": {
+        "message": "$1 - 選項"
+    },
+    "options_header_title": {
+        "message": "$1 - 自訂提示管理"
+    },
+    "options_header_subtitle": {
+        "message": "管理您的自訂提示按鈕，這些按鈕會顯示在 ChatGPT 對話中"
+    },
+    "options_button_import": {
+        "message": "📥 匯入"
+    },
+    "options_button_export": {
+        "message": "📤 匯出"
+    },
+    "options_button_reset": {
+        "message": "🔄 重置設定"
+    },
+    "options_prompt_groups_label": {
+        "message": "提示按鈕分類"
+    },
+    "options_prompt_tablist_label": {
+        "message": "提示按鈕分類"
+    },
+    "options_tab_initial": {
+        "message": "初始按鈕"
+    },
+    "options_tab_followup": {
+        "message": "追問按鈕"
+    },
+    "options_button_add_prompt": {
+        "message": "➕ 新增提示"
+    },
+    "options_modal_title_add_prompt": {
+        "message": "新增提示"
+    },
+    "options_modal_title_add_initial": {
+        "message": "新增初始按鈕"
+    },
+    "options_modal_title_add_followup": {
+        "message": "新增追問按鈕"
+    },
+    "options_modal_title_edit_initial": {
+        "message": "編輯初始按鈕"
+    },
+    "options_modal_title_edit_followup": {
+        "message": "編輯追問按鈕"
+    },
+    "options_modal_initial_label": {
+        "message": "初始按鈕（在對話開始前顯示）"
+    },
+    "options_modal_initial_help": {
+        "message": "未勾選時，按鈕會在 ChatGPT 回應後顯示"
+    },
+    "options_modal_icon_label": {
+        "message": "圖示 (Emoji 或 SVG)"
+    },
+    "options_modal_icon_placeholder": {
+        "message": "📝"
+    },
+    "options_modal_icon_help": {
+        "message": "建議使用 Emoji，例如：📝 🍥 👩‍🏫"
+    },
+    "options_modal_title_label": {
+        "message": "標題 *"
+    },
+    "options_modal_title_placeholder": {
+        "message": "例如：總結"
+    },
+    "options_modal_alt_label": {
+        "message": "提示文字（Tooltip）"
+    },
+    "options_modal_alt_placeholder": {
+        "message": "滑鼠移到按鈕上時顯示的說明文字"
+    },
+    "options_modal_prompt_label": {
+        "message": "提示內容 *"
+    },
+    "options_modal_prompt_placeholder": {
+        "message": "請輸入提示內容..."
+    },
+    "options_modal_prompt_help": {
+        "message": "這是按下按鈕後會填入的文字"
+    },
+    "options_modal_auto_paste_label": {
+        "message": "自動貼上剪貼簿內容"
+    },
+    "options_modal_auto_paste_help": {
+        "message": "啟用後會自動在提示內容後面加上剪貼簿的文字"
+    },
+    "options_modal_auto_submit_label": {
+        "message": "自動送出"
+    },
+    "options_modal_auto_submit_help": {
+        "message": "啟用後會自動點擊送出按鈕"
+    },
+    "options_modal_enabled_label": {
+        "message": "啟用此提示"
+    },
+    "options_modal_cancel_button": {
+        "message": "取消"
+    },
+    "options_modal_save_button": {
+        "message": "儲存"
+    },
+    "options_import_title": {
+        "message": "匯入提示"
+    },
+    "options_import_label": {
+        "message": "貼上 JSON 資料"
+    },
+    "options_import_placeholder": {
+        "message": "[{\"enabled\": true, \"title\": \"總結\", ...}]"
+    },
+    "options_import_help": {
+        "message": "貼上從匯出功能取得的 JSON 資料"
+    },
+    "options_import_cancel_button": {
+        "message": "取消"
+    },
+    "options_import_confirm_button": {
+        "message": "匯入"
+    },
+    "options_footer_version_label": {
+        "message": "版本："
+    },
+    "options_status_save_success": {
+        "message": "儲存成功！"
+    },
+    "options_status_save_error": {
+        "message": "儲存失敗"
+    },
+    "options_empty_initial": {
+        "message": "尚未建立任何初始按鈕"
+    },
+    "options_empty_followup": {
+        "message": "尚未建立任何追問按鈕"
+    },
+    "options_empty_add_button": {
+        "message": "新增提示"
+    },
+    "options_confirm_delete_prompt": {
+        "message": "確定要刪除此提示嗎？"
+    },
+    "options_status_export_success": {
+        "message": "匯出成功！"
+    },
+    "options_confirm_import": {
+        "message": "確定要匯入 $1 個提示嗎？這會覆蓋現有的設定。"
+    },
+    "options_status_import_error": {
+        "message": "匯入失敗：$1"
+    },
+    "options_confirm_reset": {
+        "message": "確定要重置設定嗎？這會清除所有自訂提示。"
+    },
+    "options_status_reset_success": {
+        "message": "已重置設定"
+    },
+    "options_status_file_read_error": {
+        "message": "讀取檔案失敗：$1"
+    },
+    "options_badge_auto_submit": {
+        "message": "自動送出"
+    },
+    "options_badge_auto_paste": {
+        "message": "自動貼上"
+    },
+    "options_badge_enabled": {
+        "message": "已啟用"
+    },
+    "options_badge_disabled": {
+        "message": "已停用"
+    },
+    "options_prompt_title_fallback": {
+        "message": "(無標題)"
+    },
+    "options_prompt_alt_label": {
+        "message": "提示文字:"
+    },
+    "options_prompt_content_label": {
+        "message": "提示內容:"
+    },
+    "options_action_edit": {
+        "message": "✏️ 編輯"
+    },
+    "options_action_disable": {
+        "message": "🚫 停用"
+    },
+    "options_action_enable": {
+        "message": "✅ 啟用"
+    },
+    "options_action_move_up": {
+        "message": "⬆️ 上移"
+    },
+    "options_action_move_down": {
+        "message": "⬇️ 下移"
+    },
+    "options_action_delete": {
+        "message": "🗑️ 刪除"
+    },
+    "options_import_error_not_array": {
+        "message": "匯入的資料必須是陣列格式"
+    },
+    "options_import_error_missing_fields": {
+        "message": "每個提示必須包含 title 和 prompt 欄位"
     }
 }

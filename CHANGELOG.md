@@ -1,5 +1,19 @@
 # Changelog
 
+- 0.43.6 (2026/01/21)
+
+  - Chore
+    - Bump extension version to 0.43.6 for release.
+
+  - New features
+    - Localize all options page UI strings using Chrome i18n with updated translations.
+
+  - Bug fixes
+    - None
+
+  - Breaking changes
+    - None
+
 - 0.43.5 (2026/01/21)
 
   - Chore

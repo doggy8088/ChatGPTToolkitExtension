@@ -1,5 +1,6 @@
 import type { CustomPrompt } from '../models/CustomPrompt';
 import { getProperty, escapeHtml } from '../utils/helpers';
+import { getMessage } from '../utils/i18n';
 
 /**
  * Renders prompt list items
@@ -33,14 +34,32 @@ export class PromptRenderer {
     const autoPasteState = hasAutoPaste ? 'is-on' : 'is-off';
     const enabledState = isEnabled ? 'is-on' : 'is-off';
 
-    badges.push(`<span class="badge auto-submit ${autoSubmitState}">自動送出</span>`);
-    badges.push(`<span class="badge auto-paste ${autoPasteState}">自動貼上</span>`);
-    badges.push(`<span class="badge status ${enabledState}">${isEnabled ? '已啟用' : '已停用'}</span>`);
+    const badgeAutoSubmit = getMessage('options_badge_auto_submit');
+    const badgeAutoPaste = getMessage('options_badge_auto_paste');
+    const badgeStatus = isEnabled
+      ? getMessage('options_badge_enabled')
+      : getMessage('options_badge_disabled');
+
+    badges.push(`<span class="badge auto-submit ${autoSubmitState}">${escapeHtml(badgeAutoSubmit)}</span>`);
+    badges.push(`<span class="badge auto-paste ${autoPasteState}">${escapeHtml(badgeAutoPaste)}</span>`);
+    badges.push(`<span class="badge status ${enabledState}">${escapeHtml(badgeStatus)}</span>`);
+
+    const promptTitleFallback = getMessage('options_prompt_title_fallback');
+    const promptAltLabel = getMessage('options_prompt_alt_label');
+    const promptContentLabel = getMessage('options_prompt_content_label');
+
+    const actionEdit = getMessage('options_action_edit');
+    const actionToggle = isEnabled
+      ? getMessage('options_action_disable')
+      : getMessage('options_action_enable');
+    const actionMoveUp = getMessage('options_action_move_up');
+    const actionMoveDown = getMessage('options_action_move_down');
+    const actionDelete = getMessage('options_action_delete');
 
     div.innerHTML = `
       <div class="prompt-header">
         <div class="prompt-icon">${prompt.svgIcon || '📝'}</div>
-        <div class="prompt-title">${escapeHtml(prompt.title || '(無標題)')}</div>
+        <div class="prompt-title">${escapeHtml(prompt.title || promptTitleFallback)}</div>
         <div class="prompt-badges">
           ${badges.join('')}
         </div>
@@ -48,23 +67,23 @@ export class PromptRenderer {
       <div class="prompt-content">
         ${prompt.altText ? `
           <div class="prompt-field">
-            <label>提示文字:</label>
+            <label>${escapeHtml(promptAltLabel)}</label>
             <span class="prompt-field-value">${escapeHtml(prompt.altText)}</span>
           </div>
         ` : ''}
         <div class="prompt-field">
-          <label>提示內容:</label>
+          <label>${escapeHtml(promptContentLabel)}</label>
           <div class="prompt-text">${escapeHtml(prompt.prompt || '')}</div>
         </div>
       </div>
       <div class="prompt-actions">
-        <button class="btn-edit">✏️ 編輯</button>
+        <button class="btn-edit">${escapeHtml(actionEdit)}</button>
         <button class="btn-toggle secondary">
-          ${isEnabled ? '🚫 停用' : '✅ 啟用'}
+          ${escapeHtml(actionToggle)}
         </button>
-        <button class="btn-move-up secondary" ${indexInView === 0 ? 'disabled' : ''}>⬆️ 上移</button>
-        <button class="btn-move-down secondary" ${indexInView === totalCountInView - 1 ? 'disabled' : ''}>⬇️ 下移</button>
-        <button class="btn-delete danger">🗑️ 刪除</button>
+        <button class="btn-move-up secondary" ${indexInView === 0 ? 'disabled' : ''}>${escapeHtml(actionMoveUp)}</button>
+        <button class="btn-move-down secondary" ${indexInView === totalCountInView - 1 ? 'disabled' : ''}>${escapeHtml(actionMoveDown)}</button>
+        <button class="btn-delete danger">${escapeHtml(actionDelete)}</button>
       </div>
     `;
 
@@ -88,8 +107,8 @@ export class PromptRenderer {
    * Create empty state HTML
    */
   createEmptyStateHTML(
-    message: string = '尚未建立任何自訂提示',
-    buttonText: string = '建立第一個提示',
+    message: string,
+    buttonText: string,
     buttonId: string = 'emptyStateAddBtn'
   ): string {
     return `

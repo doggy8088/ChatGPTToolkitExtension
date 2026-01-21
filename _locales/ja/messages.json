@@ -7,5 +7,212 @@
   },
   "chatgpttoolkit_author": {
     "message": "Will 保哥"
+  },
+  "options_page_title": {
+    "message": "$1 - オプション"
+  },
+  "options_header_title": {
+    "message": "$1 - カスタムプロンプト管理"
+  },
+  "options_header_subtitle": {
+    "message": "ChatGPT の会話に表示されるカスタムプロンプトボタンを管理します。"
+  },
+  "options_button_import": {
+    "message": "📥 インポート"
+  },
+  "options_button_export": {
+    "message": "📤 エクスポート"
+  },
+  "options_button_reset": {
+    "message": "🔄 設定をリセット"
+  },
+  "options_prompt_groups_label": {
+    "message": "プロンプトボタンのカテゴリ"
+  },
+  "options_prompt_tablist_label": {
+    "message": "プロンプトボタンのカテゴリ"
+  },
+  "options_tab_initial": {
+    "message": "初期ボタン"
+  },
+  "options_tab_followup": {
+    "message": "追問ボタン"
+  },
+  "options_button_add_prompt": {
+    "message": "➕ プロンプトを追加"
+  },
+  "options_modal_title_add_prompt": {
+    "message": "プロンプトを追加"
+  },
+  "options_modal_title_add_initial": {
+    "message": "初期ボタンを追加"
+  },
+  "options_modal_title_add_followup": {
+    "message": "追問ボタンを追加"
+  },
+  "options_modal_title_edit_initial": {
+    "message": "初期ボタンを編集"
+  },
+  "options_modal_title_edit_followup": {
+    "message": "追問ボタンを編集"
+  },
+  "options_modal_initial_label": {
+    "message": "初期ボタン（会話開始前に表示）"
+  },
+  "options_modal_initial_help": {
+    "message": "未チェックの場合、ChatGPT の応答後にボタンが表示されます。"
+  },
+  "options_modal_icon_label": {
+    "message": "アイコン（絵文字または SVG）"
+  },
+  "options_modal_icon_placeholder": {
+    "message": "📝"
+  },
+  "options_modal_icon_help": {
+    "message": "絵文字の利用を推奨します（例：📝 🍥 👩‍🏫）"
+  },
+  "options_modal_title_label": {
+    "message": "タイトル *"
+  },
+  "options_modal_title_placeholder": {
+    "message": "例：要約"
+  },
+  "options_modal_alt_label": {
+    "message": "ツールチップ文言"
+  },
+  "options_modal_alt_placeholder": {
+    "message": "ボタンにカーソルを合わせたときの説明"
+  },
+  "options_modal_prompt_label": {
+    "message": "プロンプト内容 *"
+  },
+  "options_modal_prompt_placeholder": {
+    "message": "プロンプト内容を入力..."
+  },
+  "options_modal_prompt_help": {
+    "message": "ボタン押下時に入力されるテキストです"
+  },
+  "options_modal_auto_paste_label": {
+    "message": "クリップボード内容を自動貼り付け"
+  },
+  "options_modal_auto_paste_help": {
+    "message": "有効にすると、プロンプトの末尾にクリップボードの文字を追加します。"
+  },
+  "options_modal_auto_submit_label": {
+    "message": "自動送信"
+  },
+  "options_modal_auto_submit_help": {
+    "message": "有効にすると、送信ボタンを自動でクリックします。"
+  },
+  "options_modal_enabled_label": {
+    "message": "このプロンプトを有効化"
+  },
+  "options_modal_cancel_button": {
+    "message": "キャンセル"
+  },
+  "options_modal_save_button": {
+    "message": "保存"
+  },
+  "options_import_title": {
+    "message": "プロンプトをインポート"
+  },
+  "options_import_label": {
+    "message": "JSON データを貼り付け"
+  },
+  "options_import_placeholder": {
+    "message": "[{\"enabled\": true, \"title\": \"要約\", ...}]"
+  },
+  "options_import_help": {
+    "message": "エクスポート機能から取得した JSON を貼り付けてください"
+  },
+  "options_import_cancel_button": {
+    "message": "キャンセル"
+  },
+  "options_import_confirm_button": {
+    "message": "インポート"
+  },
+  "options_footer_version_label": {
+    "message": "バージョン："
+  },
+  "options_status_save_success": {
+    "message": "保存しました！"
+  },
+  "options_status_save_error": {
+    "message": "保存に失敗しました。"
+  },
+  "options_empty_initial": {
+    "message": "初期ボタンがまだありません"
+  },
+  "options_empty_followup": {
+    "message": "追問ボタンがまだありません"
+  },
+  "options_empty_add_button": {
+    "message": "プロンプトを追加"
+  },
+  "options_confirm_delete_prompt": {
+    "message": "このプロンプトを削除しますか？"
+  },
+  "options_status_export_success": {
+    "message": "エクスポートしました！"
+  },
+  "options_confirm_import": {
+    "message": "$1 件のプロンプトをインポートしますか？既存の設定は上書きされます。"
+  },
+  "options_status_import_error": {
+    "message": "インポートに失敗しました：$1"
+  },
+  "options_confirm_reset": {
+    "message": "設定をリセットしますか？すべてのカスタムプロンプトが削除されます。"
+  },
+  "options_status_reset_success": {
+    "message": "設定をリセットしました。"
+  },
+  "options_status_file_read_error": {
+    "message": "ファイルの読み込みに失敗しました：$1"
+  },
+  "options_badge_auto_submit": {
+    "message": "自動送信"
+  },
+  "options_badge_auto_paste": {
+    "message": "自動貼り付け"
+  },
+  "options_badge_enabled": {
+    "message": "有効"
+  },
+  "options_badge_disabled": {
+    "message": "無効"
+  },
+  "options_prompt_title_fallback": {
+    "message": "(無題)"
+  },
+  "options_prompt_alt_label": {
+    "message": "ツールチップ："
+  },
+  "options_prompt_content_label": {
+    "message": "プロンプト："
+  },
+  "options_action_edit": {
+    "message": "✏️ 編集"
+  },
+  "options_action_disable": {
+    "message": "🚫 無効化"
+  },
+  "options_action_enable": {
+    "message": "✅ 有効化"
+  },
+  "options_action_move_up": {
+    "message": "⬆️ 上へ"
+  },
+  "options_action_move_down": {
+    "message": "⬇️ 下へ"
+  },
+  "options_action_delete": {
+    "message": "🗑️ 削除"
+  },
+  "options_import_error_not_array": {
+    "message": "インポートしたデータは配列形式である必要があります。"
+  },
+  "options_import_error_missing_fields": {
+    "message": "各プロンプトには title と prompt が必要です。"
   }
 }

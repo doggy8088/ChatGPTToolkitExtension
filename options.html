@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>ChatGPT Toolkit - Options</title>
+    <title data-i18n="options_page_title" data-i18n-args="chatgpttoolkit_name"></title>
     <style>
         * {
             box-sizing: border-box;
@@ -520,29 +520,29 @@
     <div class="container">
         <div class="header">
             <div>
-                <h1><span id="appName">ChatGPT Toolkit</span> - 自訂提示管理</h1>
-                <p class="subtitle">管理您的自訂提示按鈕，這些按鈕會顯示在 ChatGPT 對話中</p>
+                <h1 id="optionsHeaderTitle" data-i18n="options_header_title" data-i18n-args="chatgpttoolkit_name"></h1>
+                <p class="subtitle" data-i18n="options_header_subtitle"></p>
             </div>
             <div class="header-actions">
-                <button id="importBtn" class="secondary">📥 匯入</button>
-                <button id="exportBtn" class="secondary">📤 匯出</button>
-                <button id="resetBtn" class="danger">🔄 重置設定</button>
+                <button id="importBtn" class="secondary" data-i18n="options_button_import"></button>
+                <button id="exportBtn" class="secondary" data-i18n="options_button_export"></button>
+                <button id="resetBtn" class="danger" data-i18n="options_button_reset"></button>
             </div>
         </div>
 
         <div id="statusMessage" class="status-message"></div>
 
-	        <div class="prompt-groups" aria-label="提示按鈕分類">
+	        <div class="prompt-groups" data-i18n-aria-label="options_prompt_groups_label">
 	            <div class="prompt-tabs">
-                    <div class="prompt-tablist" role="tablist" aria-label="提示按鈕分類">
+                    <div class="prompt-tablist" role="tablist" data-i18n-aria-label="options_prompt_tablist_label">
 	                    <button type="button" id="tabInitialBtn" class="prompt-tab active" role="tab" aria-selected="true" aria-controls="panelInitial" tabindex="0">
-	                        初始按鈕<span id="tabInitialCount" class="tab-count"></span>
+	                        <span data-i18n="options_tab_initial"></span><span id="tabInitialCount" class="tab-count"></span>
 	                    </button>
 	                    <button type="button" id="tabFollowUpBtn" class="prompt-tab" role="tab" aria-selected="false" aria-controls="panelFollowUp" tabindex="-1">
-	                        追問按鈕<span id="tabFollowUpCount" class="tab-count"></span>
+	                        <span data-i18n="options_tab_followup"></span><span id="tabFollowUpCount" class="tab-count"></span>
 	                    </button>
                     </div>
-                    <button id="addPromptBtn">➕ 新增提示</button>
+                    <button id="addPromptBtn" data-i18n="options_button_add_prompt"></button>
 	            </div>
 
 	            <div class="prompt-panel">
@@ -556,7 +556,7 @@
 	        </div>
 
             <footer class="page-footer">
-                版本：<span id="appVersion">0.43.5</span>
+                <span data-i18n="options_footer_version_label"></span><span id="appVersion">0.43.6</span>
             </footer>
 	    </div>
 
@@ -564,7 +564,7 @@
     <div id="promptModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 id="modalTitle">新增提示</h2>
+                <h2 id="modalTitle" data-i18n="options_modal_title_add_prompt"></h2>
                 <button class="close-btn" id="closeModalBtn">&times;</button>
             </div>
 
@@ -573,34 +573,34 @@
                     <label for="promptInitial">
                         <div class="checkbox-label">
                             <input type="checkbox" id="promptInitial">
-                            <span>初始按鈕（在對話開始前顯示）</span>
+                            <span data-i18n="options_modal_initial_label"></span>
                         </div>
                     </label>
-                    <div class="form-help">未勾選時，按鈕會在 ChatGPT 回應後顯示</div>
+                    <div class="form-help" data-i18n="options_modal_initial_help"></div>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="promptIcon">圖示 (Emoji 或 SVG)</label>
-                        <input type="text" id="promptIcon" placeholder="📝">
-                        <div class="form-help">建議使用 Emoji，例如：📝 🍥 👩‍🏫</div>
+                        <label for="promptIcon" data-i18n="options_modal_icon_label"></label>
+                        <input type="text" id="promptIcon" data-i18n-placeholder="options_modal_icon_placeholder">
+                        <div class="form-help" data-i18n="options_modal_icon_help"></div>
                     </div>
 
                     <div class="form-group">
-                        <label for="promptTitle">標題 *</label>
-                        <input type="text" id="promptTitle" required placeholder="例如：總結">
+                        <label for="promptTitle" data-i18n="options_modal_title_label"></label>
+                        <input type="text" id="promptTitle" required data-i18n-placeholder="options_modal_title_placeholder">
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label for="promptAltText">提示文字（Tooltip）</label>
-                    <input type="text" id="promptAltText" placeholder="滑鼠移到按鈕上時顯示的說明文字">
+                    <label for="promptAltText" data-i18n="options_modal_alt_label"></label>
+                    <input type="text" id="promptAltText" data-i18n-placeholder="options_modal_alt_placeholder">
                 </div>
 
                 <div class="form-group">
-                    <label for="promptText">提示內容 *</label>
-                    <textarea id="promptText" required placeholder="請輸入提示內容..."></textarea>
-                    <div class="form-help">這是按下按鈕後會填入的文字</div>
+                    <label for="promptText" data-i18n="options_modal_prompt_label"></label>
+                    <textarea id="promptText" required data-i18n-placeholder="options_modal_prompt_placeholder"></textarea>
+                    <div class="form-help" data-i18n="options_modal_prompt_help"></div>
                 </div>
 
                 <div class="form-row">
@@ -608,31 +608,31 @@
                         <label for="promptAutoPaste">
                             <div class="checkbox-label">
                                 <input type="checkbox" id="promptAutoPaste">
-                                <span>自動貼上剪貼簿內容</span>
+                                <span data-i18n="options_modal_auto_paste_label"></span>
                             </div>
                         </label>
-                        <div class="form-help">啟用後會自動在提示內容後面加上剪貼簿的文字</div>
+                        <div class="form-help" data-i18n="options_modal_auto_paste_help"></div>
                     </div>
 
                     <div class="form-group">
                         <label for="promptAutoSubmit">
                             <div class="checkbox-label">
                                 <input type="checkbox" id="promptAutoSubmit">
-                                <span>自動送出</span>
+                                <span data-i18n="options_modal_auto_submit_label"></span>
                             </div>
                         </label>
-                        <div class="form-help">啟用後會自動點擊送出按鈕</div>
+                        <div class="form-help" data-i18n="options_modal_auto_submit_help"></div>
                     </div>
                 </div>
 
                 <div class="modal-actions">
                     <label class="modal-checkbox" for="promptEnabled">
                         <input type="checkbox" id="promptEnabled" checked>
-                        <span>啟用此提示</span>
+                        <span data-i18n="options_modal_enabled_label"></span>
                     </label>
                     <div class="modal-actions-right">
-                        <button type="button" class="secondary" id="cancelBtn">取消</button>
-                        <button type="submit">儲存</button>
+                        <button type="button" class="secondary" id="cancelBtn" data-i18n="options_modal_cancel_button"></button>
+                        <button type="submit" data-i18n="options_modal_save_button"></button>
                     </div>
                 </div>
             </form>
@@ -643,19 +643,19 @@
     <div id="importModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>匯入提示</h2>
+                <h2 data-i18n="options_import_title"></h2>
                 <button class="close-btn" id="closeImportModalBtn">&times;</button>
             </div>
 
             <div class="form-group">
-                <label for="importText">貼上 JSON 資料</label>
-                <textarea id="importText" style="min-height: 200px;" placeholder='[{"enabled": true, "title": "總結", ...}]'></textarea>
-                <div class="form-help">貼上從匯出功能取得的 JSON 資料</div>
+                <label for="importText" data-i18n="options_import_label"></label>
+                <textarea id="importText" style="min-height: 200px;" data-i18n-placeholder="options_import_placeholder"></textarea>
+                <div class="form-help" data-i18n="options_import_help"></div>
             </div>
 
             <div class="modal-actions">
-                <button type="button" class="secondary" id="cancelImportBtn">取消</button>
-                <button type="button" id="confirmImportBtn">匯入</button>
+                <button type="button" class="secondary" id="cancelImportBtn" data-i18n="options_import_cancel_button"></button>
+                <button type="button" id="confirmImportBtn" data-i18n="options_import_confirm_button"></button>
             </div>
         </div>
     </div>

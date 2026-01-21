@@ -4,6 +4,7 @@ import { PromptsStorageService } from './services/PromptsStorageService';
 import { OptionsUIController } from './ui/OptionsUIController';
 import { PromptRenderer } from './ui/PromptRenderer';
 import { getProperty, downloadFile } from './utils/helpers';
+import { getMessage } from './utils/i18n';
 
 /**
  * Main controller for the options page
@@ -41,8 +42,6 @@ export class OptionsController {
   private tabInitialCount!: HTMLElement;
   private tabFollowUpCount!: HTMLElement;
 
-  private appName!: HTMLElement;
-
   constructor() {
     this.ui = new OptionsUIController('statusMessage');
     this.renderer = new PromptRenderer();
@@ -53,7 +52,7 @@ export class OptionsController {
    */
   async init(): Promise<void> {
     this.initializeDOM();
-    this.applyLocalizedAppName();
+    this.applyI18n();
     this.attachEventListeners();
     await this.loadPrompts();
     this.renderPrompts();
@@ -87,32 +86,61 @@ export class OptionsController {
     this.tabFollowUpBtn = document.getElementById('tabFollowUpBtn') as HTMLButtonElement;
     this.tabInitialCount = document.getElementById('tabInitialCount')!;
     this.tabFollowUpCount = document.getElementById('tabFollowUpCount')!;
-
-    this.appName = document.getElementById('appName')!;
   }
 
-  private applyLocalizedAppName(): void {
-    const fallback = 'ChatGPT Toolkit';
-    const localized =
-      typeof chrome !== 'undefined' && chrome.i18n?.getMessage
-        ? chrome.i18n.getMessage('chatgpttoolkit_name')
-        : '';
-    const appName = localized || fallback;
+  private applyI18n(): void {
+    this.applyI18nText();
+    this.applyI18nPlaceholders();
+    this.applyI18nAriaLabels();
+  }
 
-    this.appName.textContent = appName;
-    document.title = `${appName} - Options`;
+  private applyI18nText(): void {
+    const elements = document.querySelectorAll<HTMLElement>('[data-i18n]');
+    elements.forEach((element) => {
+      const key = element.dataset.i18n;
+      if (!key) return;
+      element.textContent = getMessage(key, this.resolveI18nArgs(element.dataset.i18nArgs));
+    });
+  }
+
+  private applyI18nPlaceholders(): void {
+    const elements = document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('[data-i18n-placeholder]');
+    elements.forEach((element) => {
+      const key = element.dataset.i18nPlaceholder;
+      if (!key) return;
+      element.placeholder = getMessage(key, this.resolveI18nArgs(element.dataset.i18nArgs));
+    });
+  }
+
+  private applyI18nAriaLabels(): void {
+    const elements = document.querySelectorAll<HTMLElement>('[data-i18n-aria-label]');
+    elements.forEach((element) => {
+      const key = element.dataset.i18nAriaLabel;
+      if (!key) return;
+      element.setAttribute('aria-label', getMessage(key, this.resolveI18nArgs(element.dataset.i18nArgs)));
+    });
+  }
+
+  private resolveI18nArgs(rawArgs?: string): string[] | undefined {
+    if (!rawArgs) return undefined;
+    const parts = rawArgs.split(',').map((part) => part.trim()).filter(Boolean);
+    if (parts.length === 0) return undefined;
+    return parts.map((part) => getMessage(part));
   }
 
   private isPromptInitial(prompt: CustomPrompt): boolean {
     return Boolean(getProperty(prompt, 'initial', false));
   }
 
-  private getPromptTypeLabel(isInitial: boolean): string {
-    return isInitial ? '初始按鈕' : '追問按鈕';
+  private getModalTitleKey(action: 'add' | 'edit', isInitial: boolean): string {
+    if (action === 'add') {
+      return isInitial ? 'options_modal_title_add_initial' : 'options_modal_title_add_followup';
+    }
+    return isInitial ? 'options_modal_title_edit_initial' : 'options_modal_title_edit_followup';
   }
 
-  private setModalTitle(action: '新增' | '編輯', isInitial: boolean): void {
-    this.modalTitle.textContent = `${action}${this.getPromptTypeLabel(isInitial)}`;
+  private setModalTitle(action: 'add' | 'edit', isInitial: boolean): void {
+    this.modalTitle.textContent = getMessage(this.getModalTitleKey(action, isInitial));
   }
 
   private updateTabsUI(): void {
@@ -162,9 +190,9 @@ export class OptionsController {
   private async savePrompts(): Promise<boolean> {
     const success = await PromptsStorageService.savePrompts(this.customPrompts);
     if (success) {
-      this.ui.showStatus('儲存成功！', 'success');
+      this.ui.showStatus(getMessage('options_status_save_success'), 'success');
     } else {
-      this.ui.showStatus('儲存失敗', 'error');
+      this.ui.showStatus(getMessage('options_status_save_error'), 'error');
     }
     return success;
   }
@@ -187,7 +215,7 @@ export class OptionsController {
     this.renderPromptsList(
       this.promptsListInitial,
       initialItems,
-      '尚未建立任何初始按鈕',
+      getMessage('options_empty_initial'),
       'emptyStateAddBtnInitial',
       () => {
         this.setActiveTab('initial');
@@ -198,7 +226,7 @@ export class OptionsController {
     this.renderPromptsList(
       this.promptsListFollowUp,
       followUpItems,
-      '尚未建立任何追問按鈕',
+      getMessage('options_empty_followup'),
       'emptyStateAddBtnFollowUp',
       () => {
         this.setActiveTab('followUp');
@@ -217,7 +245,11 @@ export class OptionsController {
     container.innerHTML = '';
 
     if (items.length === 0) {
-      container.innerHTML = this.renderer.createEmptyStateHTML(emptyMessage, '新增提示', emptyButtonId);
+      container.innerHTML = this.renderer.createEmptyStateHTML(
+        emptyMessage,
+        getMessage('options_empty_add_button'),
+        emptyButtonId
+      );
       const emptyBtn = document.getElementById(emptyButtonId);
       emptyBtn?.addEventListener('click', onEmptyAdd);
       return;
@@ -249,7 +281,7 @@ export class OptionsController {
     this.resetForm();
     const isInitial = this.activeTab === 'initial';
     this.promptInitial.checked = isInitial;
-    this.setModalTitle('新增', isInitial);
+    this.setModalTitle('add', isInitial);
     this.promptModal.classList.add('active');
   }
 
@@ -270,7 +302,7 @@ export class OptionsController {
     this.promptAutoPaste.checked = getProperty(prompt, 'autoPaste', false) as boolean;
     this.promptAutoSubmit.checked = getProperty(prompt, 'autoSubmit', false) as boolean;
 
-    this.setModalTitle('編輯', isInitial);
+    this.setModalTitle('edit', isInitial);
     this.promptModal.classList.add('active');
   }
 
@@ -357,7 +389,7 @@ export class OptionsController {
    * Delete prompt
    */
   private deletePrompt(index: number): void {
-    if (this.ui.confirm('確定要刪除此提示嗎？')) {
+    if (this.ui.confirm(getMessage('options_confirm_delete_prompt'))) {
       this.customPrompts.splice(index, 1);
       void (async () => {
         await this.savePrompts();
@@ -414,7 +446,7 @@ export class OptionsController {
   private exportPrompts(): void {
     const dataStr = PromptsStorageService.exportPrompts(this.customPrompts);
     downloadFile(dataStr, 'chatgpt-toolkit-prompts.json', 'application/json');
-    this.ui.showStatus('匯出成功！', 'success');
+    this.ui.showStatus(getMessage('options_status_export_success'), 'success');
   }
 
   /**
@@ -441,14 +473,17 @@ export class OptionsController {
       try {
         const imported = PromptsStorageService.importPrompts(this.importText.value);
 
-        if (this.ui.confirm(`確定要匯入 ${imported.length} 個提示嗎？這會覆蓋現有的設定。`)) {
+        if (this.ui.confirm(getMessage('options_confirm_import', String(imported.length)))) {
           this.customPrompts = imported;
           await this.savePrompts();
           this.renderPrompts();
           this.closeImportModal();
         }
       } catch (error) {
-        this.ui.showStatus('匯入失敗：' + (error as Error).message, 'error');
+        this.ui.showStatus(
+          getMessage('options_status_import_error', (error as Error).message),
+          'error'
+        );
       }
     })();
   }
@@ -457,7 +492,7 @@ export class OptionsController {
    * Reset to default prompts
    */
   private resetToDefaults(): void {
-    if (!this.ui.confirm('確定要重置設定嗎？這會清除所有自訂提示。')) {
+    if (!this.ui.confirm(getMessage('options_confirm_reset'))) {
       return;
     }
 
@@ -466,7 +501,7 @@ export class OptionsController {
     void (async () => {
       await this.savePrompts();
       this.renderPrompts();
-      this.ui.showStatus('已重置設定', 'success');
+      this.ui.showStatus(getMessage('options_status_reset_success'), 'success');
     })();
   }
 
@@ -550,7 +585,10 @@ export class OptionsController {
           this.importText.value = text;
           this.importPrompts();
         } catch (error) {
-          this.ui.showStatus('讀取檔案失敗：' + (error as Error).message, 'error');
+          this.ui.showStatus(
+            getMessage('options_status_file_read_error', (error as Error).message),
+            'error'
+          );
         }
       })();
     });

@@ -7,5 +7,212 @@
     },
     "chatgpttoolkit_author": {
         "message": "Will Huang"
+    },
+    "options_page_title": {
+        "message": "$1 - Options"
+    },
+    "options_header_title": {
+        "message": "$1 - Custom Prompt Manager"
+    },
+    "options_header_subtitle": {
+        "message": "Manage your custom prompt buttons shown in ChatGPT conversations."
+    },
+    "options_button_import": {
+        "message": "📥 Import"
+    },
+    "options_button_export": {
+        "message": "📤 Export"
+    },
+    "options_button_reset": {
+        "message": "🔄 Reset settings"
+    },
+    "options_prompt_groups_label": {
+        "message": "Prompt button categories"
+    },
+    "options_prompt_tablist_label": {
+        "message": "Prompt button categories"
+    },
+    "options_tab_initial": {
+        "message": "Initial buttons"
+    },
+    "options_tab_followup": {
+        "message": "Follow-up buttons"
+    },
+    "options_button_add_prompt": {
+        "message": "➕ Add prompt"
+    },
+    "options_modal_title_add_prompt": {
+        "message": "Add prompt"
+    },
+    "options_modal_title_add_initial": {
+        "message": "Add initial button"
+    },
+    "options_modal_title_add_followup": {
+        "message": "Add follow-up button"
+    },
+    "options_modal_title_edit_initial": {
+        "message": "Edit initial button"
+    },
+    "options_modal_title_edit_followup": {
+        "message": "Edit follow-up button"
+    },
+    "options_modal_initial_label": {
+        "message": "Initial button (shown before a conversation starts)"
+    },
+    "options_modal_initial_help": {
+        "message": "When unchecked, the button appears after ChatGPT responds."
+    },
+    "options_modal_icon_label": {
+        "message": "Icon (Emoji or SVG)"
+    },
+    "options_modal_icon_placeholder": {
+        "message": "📝"
+    },
+    "options_modal_icon_help": {
+        "message": "We recommend Emoji, e.g., 📝 🍥 👩‍🏫"
+    },
+    "options_modal_title_label": {
+        "message": "Title *"
+    },
+    "options_modal_title_placeholder": {
+        "message": "e.g., Summary"
+    },
+    "options_modal_alt_label": {
+        "message": "Tooltip text"
+    },
+    "options_modal_alt_placeholder": {
+        "message": "Shown when hovering over the button"
+    },
+    "options_modal_prompt_label": {
+        "message": "Prompt content *"
+    },
+    "options_modal_prompt_placeholder": {
+        "message": "Enter prompt content..."
+    },
+    "options_modal_prompt_help": {
+        "message": "This text will be inserted when the button is clicked."
+    },
+    "options_modal_auto_paste_label": {
+        "message": "Auto paste clipboard content"
+    },
+    "options_modal_auto_paste_help": {
+        "message": "When enabled, clipboard text is appended to the prompt."
+    },
+    "options_modal_auto_submit_label": {
+        "message": "Auto submit"
+    },
+    "options_modal_auto_submit_help": {
+        "message": "When enabled, the submit button is clicked automatically."
+    },
+    "options_modal_enabled_label": {
+        "message": "Enable this prompt"
+    },
+    "options_modal_cancel_button": {
+        "message": "Cancel"
+    },
+    "options_modal_save_button": {
+        "message": "Save"
+    },
+    "options_import_title": {
+        "message": "Import prompts"
+    },
+    "options_import_label": {
+        "message": "Paste JSON data"
+    },
+    "options_import_placeholder": {
+        "message": "[{\"enabled\": true, \"title\": \"Summary\", ...}]"
+    },
+    "options_import_help": {
+        "message": "Paste the JSON exported from the export feature."
+    },
+    "options_import_cancel_button": {
+        "message": "Cancel"
+    },
+    "options_import_confirm_button": {
+        "message": "Import"
+    },
+    "options_footer_version_label": {
+        "message": "Version: "
+    },
+    "options_status_save_success": {
+        "message": "Saved successfully!"
+    },
+    "options_status_save_error": {
+        "message": "Save failed."
+    },
+    "options_empty_initial": {
+        "message": "No initial buttons yet."
+    },
+    "options_empty_followup": {
+        "message": "No follow-up buttons yet."
+    },
+    "options_empty_add_button": {
+        "message": "Add prompt"
+    },
+    "options_confirm_delete_prompt": {
+        "message": "Are you sure you want to delete this prompt?"
+    },
+    "options_status_export_success": {
+        "message": "Export successful!"
+    },
+    "options_confirm_import": {
+        "message": "Are you sure you want to import $1 prompts? This will overwrite your existing settings."
+    },
+    "options_status_import_error": {
+        "message": "Import failed: $1"
+    },
+    "options_confirm_reset": {
+        "message": "Are you sure you want to reset settings? This will remove all custom prompts."
+    },
+    "options_status_reset_success": {
+        "message": "Settings reset."
+    },
+    "options_status_file_read_error": {
+        "message": "Failed to read file: $1"
+    },
+    "options_badge_auto_submit": {
+        "message": "Auto submit"
+    },
+    "options_badge_auto_paste": {
+        "message": "Auto paste"
+    },
+    "options_badge_enabled": {
+        "message": "Enabled"
+    },
+    "options_badge_disabled": {
+        "message": "Disabled"
+    },
+    "options_prompt_title_fallback": {
+        "message": "(Untitled)"
+    },
+    "options_prompt_alt_label": {
+        "message": "Tooltip:"
+    },
+    "options_prompt_content_label": {
+        "message": "Prompt:"
+    },
+    "options_action_edit": {
+        "message": "✏️ Edit"
+    },
+    "options_action_disable": {
+        "message": "🚫 Disable"
+    },
+    "options_action_enable": {
+        "message": "✅ Enable"
+    },
+    "options_action_move_up": {
+        "message": "⬆️ Move up"
+    },
+    "options_action_move_down": {
+        "message": "⬇️ Move down"
+    },
+    "options_action_delete": {
+        "message": "🗑️ Delete"
+    },
+    "options_import_error_not_array": {
+        "message": "Imported data must be an array."
+    },
+    "options_import_error_missing_fields": {
+        "message": "Each prompt must include title and prompt fields."
     }
 }

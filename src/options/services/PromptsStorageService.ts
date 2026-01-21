@@ -1,5 +1,6 @@
 import type { CustomPrompt } from '../models/CustomPrompt';
 import { DEFAULT_PROMPTS } from '../models/CustomPrompt';
+import { getMessage } from '../utils/i18n';
 
 const STORAGE_KEY = 'chatgpttoolkit.customPrompts';
 
@@ -150,12 +151,12 @@ export class PromptsStorageService {
     const imported = JSON.parse(jsonString);
 
     if (!Array.isArray(imported)) {
-      throw new Error('匯入的資料必須是陣列格式');
+      throw new Error(getMessage('options_import_error_not_array'));
     }
 
     for (const item of imported) {
       if (!item.title || !item.prompt) {
-        throw new Error('每個提示必須包含 title 和 prompt 欄位');
+        throw new Error(getMessage('options_import_error_missing_fields'));
       }
     }
 
