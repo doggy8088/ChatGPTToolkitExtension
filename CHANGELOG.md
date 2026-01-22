@@ -1,5 +1,33 @@
 # Changelog
 
+- 0.43.10 (2026/01/22)
+
+  - Chore
+    - Bump extension version to 0.43.10 for release.
+
+  - New features
+    - None
+
+  - Bug fixes
+    - Wait for Gemini image uploads to complete before auto-submitting prompts when `pasteImage=true`.
+
+  - Breaking changes
+    - None
+
+- 0.43.9 (2026/01/22)
+
+  - Chore
+    - Bump extension version to 0.43.9 for release.
+
+  - New features
+    - Add Gemini initial and follow-up prompt buttons on `gemini.google.com/app`.
+
+  - Bug fixes
+    - Hide Gemini follow-up buttons while responses are streaming by checking the send button state.
+
+  - Breaking changes
+    - None
+
 - 0.43.8 (2026/01/21)
 
   - Chore

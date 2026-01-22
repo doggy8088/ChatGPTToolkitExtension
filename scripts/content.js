@@ -195,13 +195,28 @@
         return false;
       return true;
     }
+    function getSendButton() {
+      return document.querySelector("chat-window button.send-button");
+    }
+    function isSendButtonStopState(button) {
+      if (!button)
+        return false;
+      const ariaLabel = (button.getAttribute("aria-label") || "").toLowerCase();
+      const icon = button.querySelector("mat-icon");
+      const iconName = (icon?.getAttribute("fonticon") || icon?.getAttribute("data-mat-icon-name") || icon?.textContent || "").toLowerCase();
+      return ariaLabel.includes("stop") || ariaLabel.includes("停止") || ariaLabel.includes("中止") || ariaLabel.includes("取消") || iconName.includes("stop") || iconName.includes("close") || iconName.includes("cancel");
+    }
     function autoSubmitWhenReady() {
       ctx.startRetryInterval({
         intervalMs: 120,
         retries: 20,
         tick: () => {
-          const button = document.querySelector("chat-window button.send-button");
+          const button = getSendButton();
           if (!isSendButtonEnabled(button))
+            return false;
+          if (isSendButtonStopState(button))
+            return false;
+          if (state.pasteImage && !isImageUploadComplete())
             return false;
           button.focus();
           button.click();
@@ -537,16 +552,12 @@
           lastResponse = undefined;
           return;
         }
-        const sendButton = document.querySelector("chat-window button.send-button");
+        const sendButton = getSendButton();
         if (!sendButton) {
           existing?.remove();
           return;
         }
-        const ariaLabel = (sendButton.getAttribute("aria-label") || "").toLowerCase();
-        const icon = sendButton.querySelector("mat-icon");
-        const iconName = (icon?.getAttribute("fonticon") || icon?.getAttribute("data-mat-icon-name") || icon?.textContent || "").toLowerCase();
-        const isStopState = ariaLabel.includes("stop") || ariaLabel.includes("停止") || ariaLabel.includes("中止") || ariaLabel.includes("取消") || iconName.includes("stop") || iconName.includes("close") || iconName.includes("cancel");
-        if (isStopState) {
+        if (isSendButtonStopState(sendButton)) {
           existing?.remove();
           return;
         }
@@ -630,6 +641,63 @@
     let pastingGeminiImage = false;
     let geminiImagePasteAttempted = false;
     let submitted = false;
+    function getComposerRoot() {
+      const sendButton = getSendButton();
+      if (sendButton) {
+        const root = sendButton.closest("form, .input-area, .chat-input, .composer, chat-window");
+        if (root)
+          return root;
+        if (sendButton.parentElement)
+          return sendButton.parentElement;
+      }
+      const editor = document.querySelector("chat-window .textarea");
+      if (editor) {
+        const root = editor.closest("form, .input-area, .chat-input, .composer, chat-window");
+        if (root)
+          return root;
+        if (editor.parentElement)
+          return editor.parentElement;
+      }
+      return document.querySelector("chat-window");
+    }
+    function hasUploadInProgress(root) {
+      const previewRoot = root.querySelector(".uploader-file-preview-container") || root;
+      const progressSelector = [
+        "mat-progress-bar",
+        "mat-progress-spinner",
+        '[role="progressbar"]',
+        '[aria-busy="true"]',
+        ".uploading",
+        ".loading",
+        ".progress"
+      ].join(",");
+      return Boolean(previewRoot.querySelector(progressSelector));
+    }
+    function hasImageAttachment(root) {
+      const previewSelector = [
+        ".file-preview-container",
+        '[data-test-id*="file"]',
+        '[data-test-id*="attachment"]',
+        '[data-test-id*="upload"]',
+        'img[src^="blob:"]',
+        'img[src^="data:"]'
+      ].join(",");
+      return Boolean(root.querySelector(previewSelector));
+    }
+    function isImageUploadComplete() {
+      if (!state.pasteImage)
+        return true;
+      if (pastingGeminiImage || !geminiImagePasteAttempted)
+        return false;
+      const root = getComposerRoot();
+      if (!root)
+        return false;
+      if (!hasImageAttachment(root))
+        return false;
+      if (hasUploadInProgress(root))
+        return false;
+      return true;
+    }
     const tryClickImageToolButton = () => {
       if (toolImageClicked)
         return;
@@ -653,7 +721,7 @@
     };
     ctx.startRetryInterval({
       intervalMs: 500,
-      retries: 30,
+      retries: state.pasteImage ? 120 : 30,
       tick: async () => {
         tryClickImageToolButton();
         const textarea = document.querySelector("chat-window .textarea");
@@ -672,8 +740,9 @@
             console.log("Gemini: 貼上圖片完成");
           pastingGeminiImage = false;
         }
-        const button = document.querySelector("chat-window button.send-button");
-        const canSubmit = isSendButtonEnabled(button) && promptFilled && state.autoSubmit && !submitted && !pastingGeminiImage && (!state.pasteImage || geminiImagePasteAttempted) && (state.tool !== "image" || toolImageClicked);
+        const button = getSendButton();
+        const uploadReady = isImageUploadComplete();
+        const canSubmit = isSendButtonEnabled(button) && !isSendButtonStopState(button) && promptFilled && state.autoSubmit && !submitted && !pastingGeminiImage && uploadReady && (state.tool !== "image" || toolImageClicked);
         if (canSubmit) {
           submitted = true;
           button.focus();
@@ -681,7 +750,7 @@
             button.click();
           }, 500);
         }
-        const done = (!state.prompt || promptFilled) && (!state.pasteImage || geminiImagePasteAttempted) && (!state.autoSubmit || submitted) && (state.tool !== "image" || toolImageClicked);
+        const done = (!state.prompt || promptFilled) && (!state.pasteImage || isImageUploadComplete()) && (!state.autoSubmit || submitted) && (state.tool !== "image" || toolImageClicked);
         if (done) {
           ctx.clearHash();
         }
@@ -1674,4 +1743,4 @@
   runContentScript();
 })();
 
-//# debugId=00F420EFB7B472A164756E2164756E21
+//# debugId=C78483C2FA96EE3A64756E2164756E21
