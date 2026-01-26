@@ -352,6 +352,20 @@ export class OptionsController {
     this.resetForm();
   }
 
+  private insertPromptAtTop(newPrompt: CustomPrompt): void {
+    const isInitial = this.isPromptInitial(newPrompt);
+    const insertIndex = this.customPrompts.findIndex(
+      (prompt) => this.isPromptInitial(prompt) === isInitial
+    );
+
+    if (insertIndex === -1) {
+      this.customPrompts.push(newPrompt);
+      return;
+    }
+
+    this.customPrompts.splice(insertIndex, 0, newPrompt);
+  }
+
   /**
    * Save prompt from form
    */
@@ -385,7 +399,7 @@ export class OptionsController {
     }
 
     if (this.editingIndex === -1) {
-      this.customPrompts.push(newPrompt);
+      this.insertPromptAtTop(newPrompt);
     } else {
       this.customPrompts[this.editingIndex] = newPrompt;
     }
@@ -565,17 +579,11 @@ export class OptionsController {
     this.tabFollowUpBtn.addEventListener('keydown', onTabKeyDown);
 
     // Prompt modal
-    document.getElementById('closeModalBtn')?.addEventListener('click', () => this.closeModal());
     document.getElementById('cancelBtn')?.addEventListener('click', () => this.closeModal());
     this.promptForm.addEventListener('submit', (e) => this.savePromptFromForm(e));
     this.promptAutoPaste.addEventListener('change', () => this.updatePromptArgsHintVisibility());
     this.promptArgsInsert.addEventListener('pointerdown', (event) => event.preventDefault());
     this.promptArgsInsert.addEventListener('click', () => this.insertPromptArgsAtCursor());
-    document.addEventListener('keydown', (event) => {
-      if (event.key !== 'Escape') return;
-      if (!this.promptModal.classList.contains('active')) return;
-      this.closeModal();
-    });
 
     // Import modal
     document.getElementById('closeImportModalBtn')?.addEventListener('click', () => this.closeImportModal());
@@ -623,13 +631,7 @@ export class OptionsController {
       })();
     });
 
-    // Close modals when clicking outside
-    this.promptModal.addEventListener('click', (e) => {
-      if (e.target === this.promptModal) {
-        this.closeModal();
-      }
-    });
-
+    // Close import modal when clicking outside
     this.importModal.addEventListener('click', (e) => {
       if (e.target === this.importModal) {
         this.closeImportModal();

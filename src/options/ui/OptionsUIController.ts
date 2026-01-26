@@ -16,11 +16,32 @@ export class OptionsUIController {
    * Show status message
    */
   showStatus(message: string, type: StatusType = 'success'): void {
-    this.statusMessage.textContent = message;
-    this.statusMessage.className = `status-message active ${type}`;
-    setTimeout(() => {
-      this.statusMessage.classList.remove('active');
-    }, 3000);
+    const toast = document.createElement('div');
+    toast.className = `toast-message ${type}`;
+    toast.textContent = message;
+    toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+
+    this.statusMessage.appendChild(toast);
+
+    while (this.statusMessage.children.length > 3) {
+      this.statusMessage.firstElementChild?.remove();
+    }
+
+    window.requestAnimationFrame(() => {
+      toast.classList.add('show');
+    });
+
+    const displayDurationMs = 2800;
+    const transitionMs = 200;
+
+    window.setTimeout(() => {
+      toast.classList.remove('show');
+      toast.classList.add('hide');
+    }, displayDurationMs);
+
+    window.setTimeout(() => {
+      toast.remove();
+    }, displayDurationMs + transitionMs);
   }
 
   /**
