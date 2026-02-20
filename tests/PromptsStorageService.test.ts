@@ -154,21 +154,21 @@ describe('PromptsStorageService', () => {
     test('should throw error for non-array JSON', () => {
       const jsonString = '{"not": "an array"}';
 
-      expect(() => PromptsStorageService.importPrompts(jsonString)).toThrow('必須是陣列格式');
+      expect(() => PromptsStorageService.importPrompts(jsonString)).toThrow('options_import_error_not_array');
     });
 
     test('should throw error for prompts without title', () => {
       const invalidPrompts = [{ prompt: 'Test' }];
       const jsonString = JSON.stringify(invalidPrompts);
 
-      expect(() => PromptsStorageService.importPrompts(jsonString)).toThrow('必須包含 title 和 prompt');
+      expect(() => PromptsStorageService.importPrompts(jsonString)).toThrow('options_import_error_missing_fields');
     });
 
     test('should throw error for prompts without prompt field', () => {
       const invalidPrompts = [{ title: 'Test' }];
       const jsonString = JSON.stringify(invalidPrompts);
 
-      expect(() => PromptsStorageService.importPrompts(jsonString)).toThrow('必須包含 title 和 prompt');
+      expect(() => PromptsStorageService.importPrompts(jsonString)).toThrow('options_import_error_missing_fields');
     });
 
     test('should accept prompts with optional fields', () => {
