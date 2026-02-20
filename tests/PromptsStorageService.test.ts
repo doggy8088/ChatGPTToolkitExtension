@@ -31,6 +31,15 @@ function createChromeStorageMock() {
   (globalThis as any).chrome = {
     storage: {
       local: storageArea
+    },
+    i18n: {
+      getMessage: (key: string) => {
+        const messages: Record<string, string> = {
+          "options_import_error_not_array": "必須是陣列格式",
+          "options_import_error_missing_fields": "必須包含 title 和 prompt"
+        };
+        return messages[key] || key;
+      }
     }
   };
 
