@@ -12,7 +12,31 @@ if (!contentUtils || typeof contentUtils.parseToolkitHash !== "function") {
   throw new Error("Missing ChatGPTToolkitContentUtils exports from scripts/content-utils.js");
 }
 
-const { parseToolkitHash, flexiblePromptDetection, b64EncodeUnicode } = contentUtils;
+const { parseToolkitHash, flexiblePromptDetection, b64EncodeUnicode, getUriComponent } = contentUtils;
+
+test("getUriComponent: extracts value when key matches", () => {
+  assert.equal(getUriComponent("foo=bar", "foo"), "bar");
+});
+
+test("getUriComponent: returns undefined when key does not match", () => {
+  assert.equal(getUriComponent("foo=bar", "baz"), undefined);
+});
+
+test("getUriComponent: returns undefined when no equals sign is present", () => {
+  assert.equal(getUriComponent("foobar", "foo"), undefined);
+});
+
+test("getUriComponent: returns undefined when key is empty", () => {
+  assert.equal(getUriComponent("=bar", ""), undefined);
+});
+
+test("getUriComponent: returns undefined when value is empty", () => {
+  assert.equal(getUriComponent("foo=", "foo"), undefined);
+});
+
+test("getUriComponent: handles multiple equals signs (first one is delimiter)", () => {
+  assert.equal(getUriComponent("foo=bar=baz", "foo"), "bar=baz");
+});
 
 test("parseToolkitHash: phind-style encoding decodes to expected prompt", () => {
   const hash = "autoSubmit=false&prompt=I%2BB+%3D+C%26D";
