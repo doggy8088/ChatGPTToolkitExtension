@@ -12,7 +12,8 @@ if (!contentUtils || typeof contentUtils.parseToolkitHash !== "function") {
   throw new Error("Missing ChatGPTToolkitContentUtils exports from scripts/content-utils.js");
 }
 
-const { parseToolkitHash, flexiblePromptDetection, b64EncodeUnicode } = contentUtils;
+const { parseToolkitHash, flexiblePromptDetection, b64EncodeUnicode, getUriComponent } =
+  contentUtils;
 
 test("parseToolkitHash: phind-style encoding decodes to expected prompt", () => {
   const hash = "autoSubmit=false&prompt=I%2BB+%3D+C%26D";
@@ -51,3 +52,32 @@ test("parseToolkitHash: decodes Base64Unicode prompt after URI decoding", () => 
   assert.equal(result.autoSubmit, true);
 });
 
+
+test("getUriComponent: happy path", () => {
+  assert.equal(getUriComponent("foo=bar", "foo"), "bar");
+});
+
+test("getUriComponent: key mismatch", () => {
+  assert.equal(getUriComponent("foo=bar", "baz"), undefined);
+});
+
+test("getUriComponent: missing equals sign", () => {
+  assert.equal(getUriComponent("foobar", "foo"), undefined);
+});
+
+test("getUriComponent: missing key", () => {
+  assert.equal(getUriComponent("=bar", ""), undefined);
+  assert.equal(getUriComponent("=bar", "bar"), undefined);
+});
+
+test("getUriComponent: missing value", () => {
+  assert.equal(getUriComponent("foo=", "foo"), undefined);
+});
+
+test("getUriComponent: multiple equals signs", () => {
+  assert.equal(getUriComponent("foo=bar=baz", "foo"), "bar=baz");
+});
+
+test("getUriComponent: empty segment", () => {
+  assert.equal(getUriComponent("", "foo"), undefined);
+});
