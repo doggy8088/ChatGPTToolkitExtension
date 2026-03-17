@@ -169,7 +169,26 @@
     const { state, debug } = ctx;
     const CUSTOM_PROMPTS_KEY = "chatgpttoolkit.customPrompts";
     const CLIPBOARD_ARGS_PLACEHOLDER = "{{args}}";
+    const GEMINI_EDITOR_SELECTORS = [
+      "chat-window .textarea",
+      "input-container rich-textarea .ql-editor",
+      "rich-textarea .ql-editor",
+      'input-container [contenteditable="true"][role="textbox"]',
+      'chat-window [contenteditable="true"][role="textbox"]'
+    ];
+    const GEMINI_SEND_BUTTON_SELECTORS = [
+      "chat-window button.send-button",
+      "button.send-button"
+    ];
     let promptFillRunId = 0;
+    function getPromptEditor() {
+      for (const selector of GEMINI_EDITOR_SELECTORS) {
+        const editor = document.querySelector(selector);
+        if (editor)
+          return editor;
+      }
+      return null;
+    }
     function setGeminiPromptEditor(editorDiv, promptText) {
       if (!editorDiv)
         return;
@@ -196,7 +215,12 @@
       return true;
     }
     function getSendButton() {
-      return document.querySelector("chat-window button.send-button");
+      for (const selector of GEMINI_SEND_BUTTON_SELECTORS) {
+        const button = document.querySelector(selector);
+        if (button)
+          return button;
+    }
+      return null;
     }
     function isSendButtonStopState(button) {
       if (!button)
@@ -237,7 +261,7 @@
         tick: () => {
           if (runId !== promptFillRunId)
             return true;
-          const editorDiv = document.querySelector("chat-window .textarea");
+          const editorDiv = getPromptEditor();
           if (!editorDiv)
             return false;
           const current = normalizeEditorText(editorDiv.textContent || "");
@@ -469,9 +493,53 @@
           rebuildFollowUpButtons();
         }, 0);
       });
+      function getInitialButtonsZeroStateRoot() {
+        const modularZeroState = document.querySelector("modular-zero-state");
+        if (modularZeroState)
+          return modularZeroState;
+        const zeroStateCandidates = Array.from(document.querySelectorAll(".zero-state-container, .bot-info-card-container"));
+        for (const candidate of zeroStateCandidates) {
+          if (!candidate.querySelector("bot-info-card"))
+            continue;
+          const hasComposer = Boolean(getPromptEditor());
+          if (!hasComposer)
+            continue;
+          return candidate;
+        }
+        return null;
+      }
+      function getInitialButtonsMountTarget(zeroState) {
+        if (zeroState.matches("modular-zero-state")) {
+          const bottomSection = zeroState.querySelector(".bottom-section-container") || zeroState.querySelector(".modular-zero-state-container");
+          if (!bottomSection)
+            return null;
+          const zeroStateBlock = bottomSection.querySelector(".zero-state-block-container") || bottomSection;
+          return {
+            container: zeroStateBlock,
+            beforeNode: zeroStateBlock.querySelector("intent-chips-block")
+          };
+        }
+        const gemCard = zeroState.querySelector("bot-info-card");
+        if (gemCard) {
+          return {
+            container: zeroState,
+            beforeNode: zeroState.querySelector("bot-experiment-disclaimer") || zeroState.querySelector(".bot-recent-chats")
+          };
+        }
+        const recentChats = zeroState.querySelector(".bot-recent-chats");
+        if (recentChats) {
+          return {
+            container: zeroState,
+            beforeNode: recentChats
+          };
+        }
+        return {
+          container: zeroState
+        };
+      }
       function rebuildInitialButtons() {
         const existing = document.getElementById("custom-gemini-initial-buttons");
-        const zeroState = document.querySelector("modular-zero-state");
+        const zeroState = getInitialButtonsZeroStateRoot();
         if (!zeroState) {
           existing?.remove();
           return;
@@ -480,12 +548,11 @@
           existing?.remove();
           return;
         }
-        const bottomSection = zeroState.querySelector(".bottom-section-container") || zeroState.querySelector(".modular-zero-state-container");
-        if (!bottomSection) {
+        const mountTarget = getInitialButtonsMountTarget(zeroState);
+        if (!mountTarget) {
           existing?.remove();
           return;
         }
-        const zeroStateBlock = bottomSection.querySelector(".zero-state-block-container") || bottomSection;
         let bar = existing;
         if (!bar) {
           bar = document.createElement("div");
@@ -501,13 +568,13 @@
         barEl.style.alignItems = "center";
         barEl.style.margin = "0 0 0.75rem 0";
         barEl.style.pointerEvents = "auto";
-        const intentBlock = zeroStateBlock.querySelector("intent-chips-block");
-        if (intentBlock) {
-          if (barEl.parentElement !== zeroStateBlock) {
-            zeroStateBlock.insertBefore(barEl, intentBlock);
+        const { container, beforeNode } = mountTarget;
+        if (beforeNode) {
+          if (barEl.parentElement !== container || barEl.nextElementSibling !== beforeNode) {
+            container.insertBefore(barEl, beforeNode);
           }
-        } else if (barEl.parentElement !== zeroStateBlock) {
-          zeroStateBlock.prepend(barEl);
+        } else if (barEl.parentElement !== container) {
+          container.prepend(barEl);
         }
         initialManualSubmitText.forEach((item) => {
           const autoPasteEnabled = item.autoPaste === true;
@@ -644,21 +711,21 @@
     function getComposerRoot() {
       const sendButton = getSendButton();
       if (sendButton) {
-        const root = sendButton.closest("form, .input-area, .chat-input, .composer, chat-window");
+        const root = sendButton.closest("form, input-container, rich-textarea, .input-area, .chat-input, .composer, chat-window");
         if (root)
           return root;
         if (sendButton.parentElement)
           return sendButton.parentElement;
       }
-      const editor = document.querySelector("chat-window .textarea");
+      const editor = getPromptEditor();
       if (editor) {
-        const root = editor.closest("form, .input-area, .chat-input, .composer, chat-window");
+        const root = editor.closest("form, input-container, rich-textarea, .input-area, .chat-input, .composer, chat-window");
         if (root)
           return root;
         if (editor.parentElement)
           return editor.parentElement;
       }
-      return document.querySelector("chat-window");
+      return document.querySelector("chat-window, input-container, rich-textarea");
     }
     function hasUploadInProgress(root) {
       const previewRoot = root.querySelector(".uploader-file-preview-container") || root;
@@ -724,7 +791,7 @@
       retries: state.pasteImage ? 120 : 30,
       tick: async () => {
         tryClickImageToolButton();
-        const textarea = document.querySelector("chat-window .textarea");
+        const textarea = getPromptEditor();
         if (textarea && state.prompt && !promptFilled) {
           setGeminiPromptEditor(textarea, state.prompt);
           promptFilled = true;
@@ -1743,4 +1810,5 @@
   runContentScript();
 })();
 
-//# debugId=C78483C2FA96EE3A64756E2164756E21
+//# debugId=DB452CAFA486CC0764756E2164756E21
+//# debugId=ED50283E3383D42064756E2164756E21
