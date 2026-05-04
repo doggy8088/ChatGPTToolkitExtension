@@ -180,6 +180,7 @@
       "chat-window button.send-button",
       "button.send-button"
     ];
+    const GEMINI_COMPOSER_ROOT_SELECTOR = "form, input-container, rich-textarea, .input-area, .chat-input, .composer, chat-window";
     let promptFillRunId = 0;
     function getPromptEditor() {
       for (const selector of GEMINI_EDITOR_SELECTORS) {
@@ -219,8 +220,13 @@
         const button = document.querySelector(selector);
         if (button)
           return button;
-    }
+      }
       return null;
+    }
+    function findComposerRoot(element) {
+      if (!element)
+        return null;
+      return element.closest(GEMINI_COMPOSER_ROOT_SELECTOR) || element.parentElement;
     }
     function isSendButtonStopState(button) {
       if (!button)
@@ -709,22 +715,12 @@
     let geminiImagePasteAttempted = false;
     let submitted = false;
     function getComposerRoot() {
-      const sendButton = getSendButton();
-      if (sendButton) {
-        const root = sendButton.closest("form, input-container, rich-textarea, .input-area, .chat-input, .composer, chat-window");
-        if (root)
-          return root;
-        if (sendButton.parentElement)
-          return sendButton.parentElement;
-      }
-      const editor = getPromptEditor();
-      if (editor) {
-        const root = editor.closest("form, input-container, rich-textarea, .input-area, .chat-input, .composer, chat-window");
-        if (root)
-          return root;
-        if (editor.parentElement)
-          return editor.parentElement;
-      }
+      const sendButtonRoot = findComposerRoot(getSendButton());
+      if (sendButtonRoot)
+        return sendButtonRoot;
+      const editorRoot = findComposerRoot(getPromptEditor());
+      if (editorRoot)
+        return editorRoot;
       return document.querySelector("chat-window, input-container, rich-textarea");
     }
     function hasUploadInProgress(root) {
@@ -1810,5 +1806,4 @@
   runContentScript();
 })();
 
-//# debugId=DB452CAFA486CC0764756E2164756E21
-//# debugId=ED50283E3383D42064756E2164756E21
+//# debugId=6509FA7E849958BA64756E2164756E21

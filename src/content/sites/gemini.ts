@@ -38,6 +38,8 @@ export function initGemini(ctx: ContentContext) {
     'chat-window button.send-button',
     'button.send-button',
   ] as const;
+  const GEMINI_COMPOSER_ROOT_SELECTOR =
+    'form, input-container, rich-textarea, .input-area, .chat-input, .composer, chat-window';
 
   let promptFillRunId = 0;
 
@@ -79,6 +81,14 @@ export function initGemini(ctx: ContentContext) {
     }
 
     return null;
+  }
+
+  function findComposerRoot(element: HTMLElement | null) {
+    if (!element) return null;
+
+    return (
+      element.closest<HTMLElement>(GEMINI_COMPOSER_ROOT_SELECTOR) || element.parentElement
+    );
   }
 
   function isSendButtonStopState(button: HTMLButtonElement | null) {
@@ -660,23 +670,11 @@ export function initGemini(ctx: ContentContext) {
   let submitted = false;
 
   function getComposerRoot() {
-    const sendButton = getSendButton();
-    if (sendButton) {
-      const root = sendButton.closest<HTMLElement>(
-        'form, input-container, rich-textarea, .input-area, .chat-input, .composer, chat-window'
-      );
-      if (root) return root;
-      if (sendButton.parentElement) return sendButton.parentElement;
-    }
+    const sendButtonRoot = findComposerRoot(getSendButton());
+    if (sendButtonRoot) return sendButtonRoot;
 
-    const editor = getPromptEditor();
-    if (editor) {
-      const root = editor.closest<HTMLElement>(
-        'form, input-container, rich-textarea, .input-area, .chat-input, .composer, chat-window'
-      );
-      if (root) return root;
-      if (editor.parentElement) return editor.parentElement;
-    }
+    const editorRoot = findComposerRoot(getPromptEditor());
+    if (editorRoot) return editorRoot;
 
     return document.querySelector<HTMLElement>('chat-window, input-container, rich-textarea');
   }
