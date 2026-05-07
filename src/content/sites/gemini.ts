@@ -16,14 +16,41 @@ interface ReadyPrompt extends PromptItem {
   prompt: string;
 }
 
+interface InitialButtonsMountTarget {
+  container: HTMLElement;
+  beforeNode?: HTMLElement | null;
+}
+
 export function initGemini(ctx: ContentContext) {
   if (location.hostname !== 'gemini.google.com') return false;
 
   const { state, debug } = ctx;
   const CUSTOM_PROMPTS_KEY = 'chatgpttoolkit.customPrompts';
   const CLIPBOARD_ARGS_PLACEHOLDER = '{{args}}';
+  const GEMINI_EDITOR_SELECTORS = [
+    'chat-window .textarea',
+    'input-container rich-textarea .ql-editor',
+    'rich-textarea .ql-editor',
+    'input-container [contenteditable="true"][role="textbox"]',
+    'chat-window [contenteditable="true"][role="textbox"]',
+  ] as const;
+  const GEMINI_SEND_BUTTON_SELECTORS = [
+    'chat-window button.send-button',
+    'button.send-button',
+  ] as const;
+  const GEMINI_COMPOSER_ROOT_SELECTOR =
+    'form, input-container, rich-textarea, .input-area, .chat-input, .composer, chat-window';
 
   let promptFillRunId = 0;
+
+  function getPromptEditor() {
+    for (const selector of GEMINI_EDITOR_SELECTORS) {
+      const editor = document.querySelector<HTMLElement>(selector);
+      if (editor) return editor;
+    }
+
+    return null;
+  }
 
   function setGeminiPromptEditor(editorDiv: HTMLElement | null, promptText: string) {
     if (!editorDiv) return;
@@ -48,7 +75,20 @@ export function initGemini(ctx: ContentContext) {
   }
 
   function getSendButton() {
-    return document.querySelector<HTMLButtonElement>('chat-window button.send-button');
+    for (const selector of GEMINI_SEND_BUTTON_SELECTORS) {
+      const button = document.querySelector<HTMLButtonElement>(selector);
+      if (button) return button;
+    }
+
+    return null;
+  }
+
+  function findComposerRoot(element: HTMLElement | null) {
+    if (!element) return null;
+
+    return (
+      element.closest<HTMLElement>(GEMINI_COMPOSER_ROOT_SELECTOR) || element.parentElement
+    );
   }
 
   function isSendButtonStopState(button: HTMLButtonElement | null) {
@@ -103,7 +143,7 @@ export function initGemini(ctx: ContentContext) {
       tick: () => {
         if (runId !== promptFillRunId) return true;
 
-        const editorDiv = document.querySelector<HTMLElement>('chat-window .textarea');
+        const editorDiv = getPromptEditor();
         if (!editorDiv) return false;
 
         const current = normalizeEditorText(editorDiv.textContent || '');
@@ -369,10 +409,70 @@ export function initGemini(ctx: ContentContext) {
       }, 0);
     });
 
+    function getInitialButtonsZeroStateRoot() {
+      const modularZeroState = document.querySelector<HTMLElement>('modular-zero-state');
+      if (modularZeroState) return modularZeroState;
+
+      const zeroStateCandidates = Array.from(
+        document.querySelectorAll<HTMLElement>('.zero-state-container, .bot-info-card-container')
+      );
+
+      for (const candidate of zeroStateCandidates) {
+        if (!candidate.querySelector('bot-info-card')) continue;
+
+        const hasComposer =
+          Boolean(getPromptEditor());
+        if (!hasComposer) continue;
+
+        return candidate;
+      }
+
+      return null;
+    }
+
+    function getInitialButtonsMountTarget(zeroState: HTMLElement): InitialButtonsMountTarget | null {
+      if (zeroState.matches('modular-zero-state')) {
+        const bottomSection =
+          zeroState.querySelector<HTMLElement>('.bottom-section-container') ||
+          zeroState.querySelector<HTMLElement>('.modular-zero-state-container');
+        if (!bottomSection) return null;
+
+        const zeroStateBlock =
+          bottomSection.querySelector<HTMLElement>('.zero-state-block-container') || bottomSection;
+
+        return {
+          container: zeroStateBlock,
+          beforeNode: zeroStateBlock.querySelector<HTMLElement>('intent-chips-block'),
+        };
+      }
+
+      const gemCard = zeroState.querySelector<HTMLElement>('bot-info-card');
+      if (gemCard) {
+        return {
+          container: zeroState,
+          beforeNode:
+            zeroState.querySelector<HTMLElement>('bot-experiment-disclaimer') ||
+            zeroState.querySelector<HTMLElement>('.bot-recent-chats'),
+        };
+      }
+
+      const recentChats = zeroState.querySelector<HTMLElement>('.bot-recent-chats');
+      if (recentChats) {
+        return {
+          container: zeroState,
+          beforeNode: recentChats,
+        };
+      }
+
+      return {
+        container: zeroState,
+      };
+    }
+
     function rebuildInitialButtons() {
       const existing = document.getElementById('custom-gemini-initial-buttons');
 
-      const zeroState = document.querySelector<HTMLElement>('modular-zero-state');
+      const zeroState = getInitialButtonsZeroStateRoot();
       if (!zeroState) {
         existing?.remove();
         return;
@@ -383,16 +483,11 @@ export function initGemini(ctx: ContentContext) {
         return;
       }
 
-      const bottomSection =
-        zeroState.querySelector<HTMLElement>('.bottom-section-container') ||
-        zeroState.querySelector<HTMLElement>('.modular-zero-state-container');
-      if (!bottomSection) {
+      const mountTarget = getInitialButtonsMountTarget(zeroState);
+      if (!mountTarget) {
         existing?.remove();
         return;
       }
-
-      const zeroStateBlock =
-        bottomSection.querySelector<HTMLElement>('.zero-state-block-container') || bottomSection;
 
       let bar = existing;
       if (!bar) {
@@ -411,13 +506,13 @@ export function initGemini(ctx: ContentContext) {
       barEl.style.margin = '0 0 0.75rem 0';
       barEl.style.pointerEvents = 'auto';
 
-      const intentBlock = zeroStateBlock.querySelector<HTMLElement>('intent-chips-block');
-      if (intentBlock) {
-        if (barEl.parentElement !== zeroStateBlock) {
-          zeroStateBlock.insertBefore(barEl, intentBlock);
+      const { container, beforeNode } = mountTarget;
+      if (beforeNode) {
+        if (barEl.parentElement !== container || barEl.nextElementSibling !== beforeNode) {
+          container.insertBefore(barEl, beforeNode);
         }
-      } else if (barEl.parentElement !== zeroStateBlock) {
-        zeroStateBlock.prepend(barEl);
+      } else if (barEl.parentElement !== container) {
+        container.prepend(barEl);
       }
 
       initialManualSubmitText.forEach((item) => {
@@ -575,21 +670,13 @@ export function initGemini(ctx: ContentContext) {
   let submitted = false;
 
   function getComposerRoot() {
-    const sendButton = getSendButton();
-    if (sendButton) {
-      const root = sendButton.closest<HTMLElement>('form, .input-area, .chat-input, .composer, chat-window');
-      if (root) return root;
-      if (sendButton.parentElement) return sendButton.parentElement;
-    }
+    const sendButtonRoot = findComposerRoot(getSendButton());
+    if (sendButtonRoot) return sendButtonRoot;
 
-    const editor = document.querySelector<HTMLElement>('chat-window .textarea');
-    if (editor) {
-      const root = editor.closest<HTMLElement>('form, .input-area, .chat-input, .composer, chat-window');
-      if (root) return root;
-      if (editor.parentElement) return editor.parentElement;
-    }
+    const editorRoot = findComposerRoot(getPromptEditor());
+    if (editorRoot) return editorRoot;
 
-    return document.querySelector<HTMLElement>('chat-window');
+    return document.querySelector<HTMLElement>('chat-window, input-container, rich-textarea');
   }
 
   function hasUploadInProgress(root: HTMLElement) {
@@ -660,7 +747,7 @@ export function initGemini(ctx: ContentContext) {
     tick: async () => {
       tryClickImageToolButton();
 
-      const textarea = document.querySelector<HTMLElement>('chat-window .textarea');
+      const textarea = getPromptEditor();
       if (textarea && state.prompt && !promptFilled) {
         setGeminiPromptEditor(textarea, state.prompt);
         promptFilled = true;
