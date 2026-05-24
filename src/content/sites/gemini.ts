@@ -37,6 +37,14 @@ export function initGemini(ctx: ContentContext) {
   const GEMINI_SEND_BUTTON_SELECTORS = [
     'chat-window button.send-button',
     'button.send-button',
+    'chat-window button[aria-label*="Send"]',
+    'chat-window button[aria-label*="送出"]',
+    'chat-window button[aria-label*="傳送"]',
+    'button[aria-label*="Send"]',
+    'button[aria-label*="送出"]',
+    'button[aria-label*="傳送"]',
+    'button[data-test-id*="send"]',
+    'button[data-testid*="send"]',
   ] as const;
   const GEMINI_COMPOSER_ROOT_SELECTOR =
     'form, input-container, rich-textarea, .input-area, .chat-input, .composer, chat-window';
@@ -80,7 +88,33 @@ export function initGemini(ctx: ContentContext) {
       if (button) return button;
     }
 
-    return null;
+    const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('button'));
+    return buttons.find(isLikelySendButton) || null;
+  }
+
+  function isLikelySendButton(button: HTMLButtonElement) {
+    const ariaLabel = (button.getAttribute('aria-label') || '').toLowerCase();
+    const testId = (
+      button.getAttribute('data-test-id') ||
+      button.getAttribute('data-testid') ||
+      ''
+    ).toLowerCase();
+    const textContent = (button.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    const icon = button.querySelector<HTMLElement>('mat-icon, [data-mat-icon-name], [fonticon]');
+    const iconName = (
+      icon?.getAttribute('fonticon') ||
+      icon?.getAttribute('data-mat-icon-name') ||
+      icon?.textContent ||
+      ''
+    ).toLowerCase();
+
+    const sendTokens = ['send', 'submit', '送出', '傳送', '提交'];
+    return sendTokens.some((token) =>
+      ariaLabel.includes(token) ||
+      testId.includes(token) ||
+      textContent === token ||
+      iconName.includes(token)
+    );
   }
 
   function findComposerRoot(element: HTMLElement | null) {

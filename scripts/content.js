@@ -178,7 +178,15 @@
     ];
     const GEMINI_SEND_BUTTON_SELECTORS = [
       "chat-window button.send-button",
-      "button.send-button"
+      "button.send-button",
+      'chat-window button[aria-label*="Send"]',
+      'chat-window button[aria-label*="送出"]',
+      'chat-window button[aria-label*="傳送"]',
+      'button[aria-label*="Send"]',
+      'button[aria-label*="送出"]',
+      'button[aria-label*="傳送"]',
+      'button[data-test-id*="send"]',
+      'button[data-testid*="send"]'
     ];
     const GEMINI_COMPOSER_ROOT_SELECTOR = "form, input-container, rich-textarea, .input-area, .chat-input, .composer, chat-window";
     let promptFillRunId = 0;
@@ -221,7 +229,17 @@
         if (button)
           return button;
       }
-      return null;
+      const buttons = Array.from(document.querySelectorAll("button"));
+      return buttons.find(isLikelySendButton) || null;
+    }
+    function isLikelySendButton(button) {
+      const ariaLabel = (button.getAttribute("aria-label") || "").toLowerCase();
+      const testId = (button.getAttribute("data-test-id") || button.getAttribute("data-testid") || "").toLowerCase();
+      const textContent = (button.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+      const icon = button.querySelector("mat-icon, [data-mat-icon-name], [fonticon]");
+      const iconName = (icon?.getAttribute("fonticon") || icon?.getAttribute("data-mat-icon-name") || icon?.textContent || "").toLowerCase();
+      const sendTokens = ["send", "submit", "送出", "傳送", "提交"];
+      return sendTokens.some((token) => ariaLabel.includes(token) || testId.includes(token) || textContent === token || iconName.includes(token));
     }
     function findComposerRoot(element) {
       if (!element)
@@ -906,9 +924,17 @@
   function initChatGPT(ctx) {
     const { state, debug } = ctx;
     const CLIPBOARD_ARGS_PLACEHOLDER = "{{args}}";
+    function getPromptEditor() {
+      return document.querySelector('#prompt-textarea, textarea[placeholder], textarea, [contenteditable="true"][role="textbox"]');
+    }
     function setChatGPTPromptEditor(editorDiv, promptText) {
       if (!editorDiv)
         return;
+      if (editorDiv instanceof HTMLTextAreaElement) {
+        ctx.fillTextareaAndDispatchInput(editorDiv, promptText);
+        editorDiv.focus();
+        return;
+      }
       editorDiv.innerHTML = "<p>" + promptText + "</p>";
       editorDiv.dispatchEvent(new Event("input", { bubbles: true }));
       editorDiv.focus();
@@ -989,7 +1015,7 @@
     function logEditorState(editorDiv, label) {
       if (!debug)
         return;
-      const text = (editorDiv.textContent || "").replace(/\s+/g, " ").trim();
+      const text = (editorDiv instanceof HTMLTextAreaElement ? editorDiv.value : editorDiv.textContent || "").replace(/\s+/g, " ").trim();
       console.log(`[ChatGPTToolkit][chatgpt] ${label}`, {
         activeElement: describeElement(document.activeElement),
         textLength: text.length,
@@ -997,6 +1023,10 @@
       });
     }
     function placeCaretAtEnd(editorDiv) {
+      if (editorDiv instanceof HTMLTextAreaElement) {
+        editorDiv.selectionStart = editorDiv.selectionEnd = editorDiv.value.length;
+        return;
+      }
       const selection = window.getSelection();
       if (!selection)
         return;
@@ -1332,7 +1362,7 @@
           existing?.remove();
           return;
         }
-        const promptTextarea = document.getElementById("prompt-textarea");
+        const promptTextarea = getPromptEditor();
         if (!promptTextarea) {
           existing?.remove();
           return;
@@ -1439,7 +1469,7 @@
           });
           return;
         }
-        const promptTextarea = document.getElementById("prompt-textarea");
+        const promptTextarea = getPromptEditor();
         if (!promptTextarea) {
           buttonsAreas?.forEach((item) => {
             item.remove();
@@ -1527,7 +1557,7 @@
     }, 1000);
     let autoFillInProgress = false;
     const checkForTextareaInput = setInterval(async () => {
-      const textarea = document.getElementById("prompt-textarea");
+      const textarea = getPromptEditor();
       if (textarea && !autoFillInProgress) {
         autoFillInProgress = true;
         clearInterval(checkForTextareaInput);
@@ -1537,7 +1567,7 @@
     async function maybePasteImageIntoChatGPT() {
       if (!state.pasteImage || state.pastingImage)
         return;
-      const textarea = document.getElementById("prompt-textarea");
+      const textarea = getPromptEditor();
       if (!textarea)
         return;
       state.pastingImage = true;
@@ -1553,7 +1583,7 @@
     function maybeAutoSubmitChatGPT() {
       if (!state.autoSubmit || state.pasteImage)
         return;
-      const sendButton = document.querySelector('button[data-testid*="send-button"]');
+      const sendButton = getSendButton();
       if (isSendButtonEnabled(sendButton)) {
         if (debug)
           console.log("自動提交按鈕被點擊");
@@ -1574,6 +1604,20 @@
         return false;
       return true;
     }
+    function getSendButton() {
+      const selectors = [
+        'button[data-testid*="send-button"]',
+        'button[aria-label*="Send"]',
+        'button[aria-label*="傳送"]',
+        'button[aria-label*="送出"]'
+      ];
+      for (const selector of selectors) {
+        const button = document.querySelector(selector);
+        if (button)
+          return button;
+      }
+      return null;
+    }
     function autoSubmitWhenReady() {
       if (debug)
         console.log("[ChatGPTToolkit][chatgpt] autoSubmitWhenReady start");
@@ -1581,7 +1625,7 @@
         intervalMs: 80,
         retries: 25,
         tick: () => {
-          const sendButton = document.querySelector('button[data-testid*="send-button"]');
+          const sendButton = getSendButton();
           if (debug) {
             console.log("[ChatGPTToolkit][chatgpt] autoSubmitWhenReady tick", {
               hasSendButton: Boolean(sendButton),
@@ -1619,13 +1663,13 @@
         tick: () => {
           if (runId !== promptFillRunId)
             return true;
-          const div = document.getElementById("prompt-textarea");
+          const div = getPromptEditor();
           if (debug && !div) {
             console.log("[ChatGPTToolkit][chatgpt] fillPrompt tick: textarea missing", { runId });
           }
           if (!div)
             return false;
-          const current = normalizeEditorText(div.textContent || "");
+          const current = normalizeEditorText(div instanceof HTMLTextAreaElement ? div.value : div.textContent || "");
           const hasPrompt = expected.length > 0 ? current.includes(expected) : current.length > 0;
           if (debug) {
             console.log("[ChatGPTToolkit][chatgpt] fillPrompt tick", {
@@ -1806,4 +1850,4 @@
   runContentScript();
 })();
 
-//# debugId=6509FA7E849958BA64756E2164756E21
+//# debugId=6BCA57E64968B1C364756E2164756E21

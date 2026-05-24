@@ -41,6 +41,46 @@ function createContentContext(): ContentContext {
   };
 }
 
+function createPromptUrlContext(): ContentContext {
+  const state = {
+    prompt: '',
+    autoSubmit: false,
+    pasteImage: false,
+    tool: '',
+    pastingImage: false,
+  };
+
+  return {
+    debug: false,
+    state,
+    refreshParamsFromHash: () => {
+      state.prompt = '誰是保哥？';
+      state.autoSubmit = true;
+      state.pasteImage = false;
+      state.tool = '';
+      return state;
+    },
+    clearHash: () => {},
+    fillContentEditableWithParagraphs: () => {},
+    fillTextareaAndDispatchInput: (textarea, text) => {
+      if (!textarea) return;
+      textarea.value = text;
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    },
+    startRetryInterval: ({ retries = 10, tick }) => {
+      void (async () => {
+        for (let attempt = 0; attempt < retries; attempt++) {
+          if (await tick()) break;
+        }
+      })();
+
+      return 0;
+    },
+    delay: async () => {},
+    fetchClipboardImageAndSimulatePaste: async () => false,
+  };
+}
+
 function installChromeStub() {
   const previousChrome = (globalThis as { chrome?: unknown }).chrome;
   (globalThis as { chrome?: unknown }).chrome = {
@@ -91,6 +131,49 @@ function withPatchedTimers<T>(run: () => T) {
   }
 }
 
+async function withQueuedIntervals<T>(run: (flushIntervals: () => Promise<void>) => T | Promise<T>) {
+  const originalSetTimeout = globalThis.setTimeout;
+  const originalSetInterval = globalThis.setInterval;
+  const originalClearInterval = globalThis.clearInterval;
+  const intervals: TimerHandler[] = [];
+  const cleared = new Set<number>();
+
+  globalThis.setTimeout = ((handler: TimerHandler, _timeout?: number, ...args: unknown[]) => {
+    if (typeof handler === 'function') {
+      handler(...args);
+    }
+    return 0 as unknown as number;
+  }) as typeof setTimeout;
+
+  globalThis.setInterval = ((handler: TimerHandler) => {
+    intervals.push(handler);
+    return intervals.length as unknown as number;
+  }) as typeof setInterval;
+
+  globalThis.clearInterval = ((id?: number) => {
+    if (typeof id === 'number') cleared.add(id);
+  }) as typeof clearInterval;
+
+  const flushIntervals = async () => {
+    for (let index = 0; index < intervals.length; index += 1) {
+      const id = index + 1;
+      if (cleared.has(id)) continue;
+      const handler = intervals[index];
+      if (typeof handler === 'function') {
+        await handler();
+      }
+    }
+  };
+
+  try {
+    return await run(flushIntervals);
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+    globalThis.setInterval = originalSetInterval;
+    globalThis.clearInterval = originalClearInterval;
+  }
+}
+
 describe('chatgpt.com DOM snapshot', () => {
   beforeEach(() => {
     loadSnapshot();
@@ -111,6 +194,38 @@ describe('chatgpt.com DOM snapshot', () => {
       await Promise.resolve();
       expect(document.getElementById('custom-chatgpt-initial-buttons')).toBeNull();
       expect(document.getElementById('custom-chatgpt-magic-box-buttons')).toBeNull();
+    } finally {
+      restoreChrome();
+    }
+  });
+
+  test('fills URL prompt into textarea composer and auto submits', async () => {
+    document.documentElement.innerHTML = `
+      <head></head>
+      <body>
+        <form>
+          <textarea placeholder="Ask anything"></textarea>
+          <button type="button" aria-label="傳送提示詞"></button>
+        </form>
+      </body>
+    `;
+
+    let clickCalls = 0;
+    document.querySelector('button')?.addEventListener('click', () => {
+      clickCalls += 1;
+    });
+    const restoreChrome = installChromeStub();
+
+    try {
+      await withQueuedIntervals(async (flushIntervals) => {
+        initChatGPT(createPromptUrlContext());
+        await flushIntervals();
+        await flushIntervals();
+      });
+
+      const textarea = document.querySelector<HTMLTextAreaElement>('textarea');
+      expect(textarea?.value).toBe('誰是保哥？');
+      expect(clickCalls).toBe(1);
     } finally {
       restoreChrome();
     }

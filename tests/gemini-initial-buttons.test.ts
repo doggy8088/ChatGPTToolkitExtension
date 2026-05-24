@@ -288,4 +288,60 @@ describe('gemini initial buttons', () => {
       restoreChrome();
     }
   });
+
+  test('auto submits with aria-label send button when send-button class is absent', async () => {
+    loadDom(`
+      <chat-window>
+        <input-container>
+          <rich-textarea>
+            <div class="ql-editor" contenteditable="true" role="textbox"></div>
+          </rich-textarea>
+        </input-container>
+        <button type="button" aria-label="Send message">
+          <mat-icon>send</mat-icon>
+        </button>
+      </chat-window>
+    `);
+
+    Object.defineProperty(globalThis, 'location', {
+      configurable: true,
+      value: {
+        hostname: 'gemini.google.com',
+        hash: '#autoSubmit=true&prompt=What%20is%20SwiftPM?',
+        search: '',
+        pathname: '/app',
+      },
+    });
+
+    let clearHashCalls = 0;
+    let clickCalls = 0;
+    const restoreChrome = installChromeStub();
+    const sendButton = document.querySelector<HTMLButtonElement>('button[aria-label="Send message"]');
+    sendButton?.addEventListener('click', () => {
+      clickCalls += 1;
+    });
+
+    try {
+      withPatchedTimers(() => {
+        initGemini(
+          createPromptFillContext({
+            prompt: 'What is SwiftPM?',
+            autoSubmit: true,
+            onClearHash: () => {
+              clearHashCalls += 1;
+            },
+          })
+        );
+      });
+
+      await flushAsyncWork();
+
+      const editor = document.querySelector<HTMLElement>('input-container rich-textarea .ql-editor');
+      expect(editor?.textContent).toBe('What is SwiftPM?');
+      expect(clickCalls).toBe(1);
+      expect(clearHashCalls).toBe(1);
+    } finally {
+      restoreChrome();
+    }
+  });
 });

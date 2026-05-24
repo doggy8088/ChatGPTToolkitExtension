@@ -25,8 +25,19 @@ export function initChatGPT(ctx: ContentContext) {
   const { state, debug } = ctx;
   const CLIPBOARD_ARGS_PLACEHOLDER = '{{args}}';
 
+  function getPromptEditor() {
+    return document.querySelector<HTMLElement>(
+      '#prompt-textarea, textarea[placeholder], textarea, [contenteditable="true"][role="textbox"]'
+    );
+  }
+
   function setChatGPTPromptEditor(editorDiv: HTMLElement | null, promptText: string) {
     if (!editorDiv) return;
+    if (editorDiv instanceof HTMLTextAreaElement) {
+      ctx.fillTextareaAndDispatchInput(editorDiv, promptText);
+      editorDiv.focus();
+      return;
+    }
     editorDiv.innerHTML = '<p>' + promptText + '</p>';
     editorDiv.dispatchEvent(new Event('input', { bubbles: true }));
     editorDiv.focus();
@@ -122,7 +133,9 @@ export function initChatGPT(ctx: ContentContext) {
 
   function logEditorState(editorDiv: HTMLElement, label: string) {
     if (!debug) return;
-    const text = (editorDiv.textContent || '').replace(/\s+/g, ' ').trim();
+    const text = (
+      editorDiv instanceof HTMLTextAreaElement ? editorDiv.value : editorDiv.textContent || ''
+    ).replace(/\s+/g, ' ').trim();
     console.log(`[ChatGPTToolkit][chatgpt] ${label}`, {
       activeElement: describeElement(document.activeElement),
       textLength: text.length,
@@ -131,6 +144,11 @@ export function initChatGPT(ctx: ContentContext) {
   }
 
   function placeCaretAtEnd(editorDiv: HTMLElement) {
+    if (editorDiv instanceof HTMLTextAreaElement) {
+      editorDiv.selectionStart = editorDiv.selectionEnd = editorDiv.value.length;
+      return;
+    }
+
     const selection = window.getSelection();
     if (!selection) return;
     const range = document.createRange();
@@ -499,7 +517,7 @@ export function initChatGPT(ctx: ContentContext) {
         return;
       }
 
-      const promptTextarea = document.getElementById('prompt-textarea') as HTMLElement | null;
+      const promptTextarea = getPromptEditor();
       if (!promptTextarea) {
         existing?.remove();
         return;
@@ -646,7 +664,7 @@ export function initChatGPT(ctx: ContentContext) {
         return;
       }
 
-      const promptTextarea = document.getElementById('prompt-textarea');
+      const promptTextarea = getPromptEditor();
       if (!promptTextarea) {
         buttonsAreas?.forEach((item) => {
           item.remove();
@@ -761,7 +779,7 @@ export function initChatGPT(ctx: ContentContext) {
 
   let autoFillInProgress = false;
   const checkForTextareaInput = setInterval(async () => {
-    const textarea = document.getElementById('prompt-textarea') as HTMLElement | null;
+    const textarea = getPromptEditor();
     if (textarea && !autoFillInProgress) {
       autoFillInProgress = true;
       clearInterval(checkForTextareaInput);
@@ -772,7 +790,7 @@ export function initChatGPT(ctx: ContentContext) {
   async function maybePasteImageIntoChatGPT() {
     if (!state.pasteImage || state.pastingImage) return;
 
-    const textarea = document.getElementById('prompt-textarea') as HTMLElement | null;
+    const textarea = getPromptEditor();
     if (!textarea) return;
 
     state.pastingImage = true;
@@ -789,7 +807,7 @@ export function initChatGPT(ctx: ContentContext) {
   function maybeAutoSubmitChatGPT() {
     if (!state.autoSubmit || state.pasteImage) return;
 
-    const sendButton = document.querySelector<HTMLButtonElement>('button[data-testid*="send-button"]');
+    const sendButton = getSendButton();
     if (isSendButtonEnabled(sendButton)) {
       if (debug) console.log('自動提交按鈕被點擊');
       sendButton.click();
@@ -811,13 +829,29 @@ export function initChatGPT(ctx: ContentContext) {
     return true;
   }
 
+  function getSendButton() {
+    const selectors = [
+      'button[data-testid*="send-button"]',
+      'button[aria-label*="Send"]',
+      'button[aria-label*="傳送"]',
+      'button[aria-label*="送出"]',
+    ];
+
+    for (const selector of selectors) {
+      const button = document.querySelector<HTMLButtonElement>(selector);
+      if (button) return button;
+    }
+
+    return null;
+  }
+
   function autoSubmitWhenReady() {
     if (debug) console.log('[ChatGPTToolkit][chatgpt] autoSubmitWhenReady start');
     ctx.startRetryInterval({
       intervalMs: 80,
       retries: 25,
       tick: () => {
-        const sendButton = document.querySelector<HTMLButtonElement>('button[data-testid*="send-button"]');
+        const sendButton = getSendButton();
         if (debug) {
           console.log('[ChatGPTToolkit][chatgpt] autoSubmitWhenReady tick', {
             hasSendButton: Boolean(sendButton),
@@ -857,13 +891,15 @@ export function initChatGPT(ctx: ContentContext) {
       tick: () => {
         if (runId !== promptFillRunId) return true;
 
-        const div = document.getElementById('prompt-textarea') as HTMLElement | null;
+        const div = getPromptEditor();
         if (debug && !div) {
           console.log('[ChatGPTToolkit][chatgpt] fillPrompt tick: textarea missing', { runId });
         }
         if (!div) return false;
 
-        const current = normalizeEditorText(div.textContent || '');
+        const current = normalizeEditorText(
+          div instanceof HTMLTextAreaElement ? div.value : div.textContent || ''
+        );
         const hasPrompt = expected.length > 0 ? current.includes(expected) : current.length > 0;
         if (debug) {
           console.log('[ChatGPTToolkit][chatgpt] fillPrompt tick', {
