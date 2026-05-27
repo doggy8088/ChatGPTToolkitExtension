@@ -924,8 +924,46 @@
   function initChatGPT(ctx) {
     const { state, debug } = ctx;
     const CLIPBOARD_ARGS_PLACEHOLDER = "{{args}}";
+    function isElementVisible(el) {
+      if (!el)
+        return false;
+      const rect = el.getBoundingClientRect();
+      const style = window.getComputedStyle(el);
+      if (style.display === "none" || style.visibility === "hidden")
+        return false;
+      const hasLayoutBox = rect.width > 0 || rect.height > 0;
+      if (hasLayoutBox)
+        return true;
+      const userAgent = window.navigator?.userAgent || "";
+      if (/jsdom/i.test(userAgent))
+        return true;
+      return el.getClientRects().length > 0;
+    }
+    function getComposerRoot() {
+      const sendButton = getSendButton();
+      if (sendButton) {
+        return sendButton.closest('form[data-type="unified-composer"], form, main');
+      }
+      return document.querySelector('form[data-type="unified-composer"], main');
+    }
     function getPromptEditor() {
-      return document.querySelector('#prompt-textarea, textarea[placeholder], textarea, [contenteditable="true"][role="textbox"]');
+      const root = getComposerRoot() || document;
+      const selectors = [
+        "#prompt-textarea",
+        'textarea[data-testid*="prompt"]',
+        "textarea[placeholder]",
+        "textarea",
+        '[contenteditable="true"][role="textbox"]',
+        '[contenteditable="true"][data-virtualkeyboard="true"]',
+        '[contenteditable="true"]'
+      ];
+      for (const selector of selectors) {
+        const candidates = Array.from(root.querySelectorAll(selector));
+        const match = candidates.find((el) => isElementVisible(el) && !el.closest('[aria-hidden="true"]'));
+        if (match)
+          return match;
+      }
+      return null;
     }
     function setChatGPTPromptEditor(editorDiv, promptText) {
       if (!editorDiv)
@@ -935,7 +973,7 @@
         editorDiv.focus();
         return;
       }
-      editorDiv.innerHTML = "<p>" + promptText + "</p>";
+      ctx.fillContentEditableWithParagraphs(editorDiv, promptText);
       editorDiv.dispatchEvent(new Event("input", { bubbles: true }));
       editorDiv.focus();
     }
@@ -1378,15 +1416,13 @@
           return;
         }
         const composerGrid = form.querySelector('div[class*="bg-token-bg-primary"][class*="grid-template-areas"]') || form.querySelector('div[class*="grid-template-areas"]');
-        if (!composerGrid) {
-          existing?.remove();
-          return;
-        }
         let headerCandidates = [];
-        try {
-          headerCandidates = Array.from(composerGrid.querySelectorAll(':scope > div[class*="[grid-area:header]"], :scope > div[style*="grid-area: header"]'));
-        } catch {
-          headerCandidates = Array.from(composerGrid.querySelectorAll('div[class*="[grid-area:header]"], div[style*="grid-area: header"]'));
+        if (composerGrid) {
+          try {
+            headerCandidates = Array.from(composerGrid.querySelectorAll(':scope > div[class*="[grid-area:header]"], :scope > div[style*="grid-area: header"]'));
+          } catch {
+            headerCandidates = Array.from(composerGrid.querySelectorAll('div[class*="[grid-area:header]"], div[style*="grid-area: header"]'));
+          }
         }
         const headerContainer = headerCandidates.find((el) => el.id !== "custom-chatgpt-initial-buttons") || null;
         let bar = document.getElementById("custom-chatgpt-initial-buttons");
@@ -1399,30 +1435,29 @@
         const barEl = bar;
         barEl.style.display = "flex";
         barEl.style.flexWrap = "wrap";
-        barEl.style.gap = "0.5rem";
-        barEl.style.alignItems = "flex-start";
-        barEl.style.alignContent = "flex-start";
-        barEl.style.padding = "0.25rem 0.75rem 0.5rem 0.75rem";
+        barEl.style.gap = "0.45rem";
+        barEl.style.alignItems = "center";
+        barEl.style.alignContent = "center";
+        barEl.style.justifyContent = "center";
+        barEl.style.width = "100%";
+        barEl.style.boxSizing = "border-box";
+        barEl.style.padding = "0.15rem 0.25rem 0.6rem 0.25rem";
         barEl.style.pointerEvents = "auto";
+        barEl.style.zIndex = "2";
         if (headerContainer && headerContainer !== barEl) {
           if (barEl.parentElement !== headerContainer)
             headerContainer.append(barEl);
           barEl.style.gridArea = "";
         } else {
-          if (barEl.parentElement !== composerGrid)
-            composerGrid.prepend(barEl);
-          barEl.style.gridArea = "header";
-        }
-        try {
-          const baseEl = barEl.parentElement || composerGrid;
-          const baseRect = baseEl.getBoundingClientRect();
-          const promptRect = promptTextarea.getBoundingClientRect();
-          const left = Math.max(0, Math.round(promptRect.left - baseRect.left));
-          if (Number.isFinite(left) && left > 0) {
-            barEl.style.paddingLeft = `${left}px`;
-            barEl.style.paddingRight = "0.75rem";
+          const formParent = form.parentElement;
+          if (!formParent) {
+            existing?.remove();
+            return;
           }
-        } catch {}
+          if (barEl.parentElement !== formParent)
+            formParent.insertBefore(barEl, form);
+          barEl.style.gridArea = "";
+        }
         initialManualSubmitText.forEach((item) => {
           const autoPasteEnabled = item.autoPaste === true;
           const autoSubmitEnabled = item.autoSubmit === true;
@@ -1431,17 +1466,34 @@
           btn.style.display = "inline-flex";
           btn.style.alignItems = "center";
           btn.style.justifyContent = "center";
-          btn.style.alignSelf = "flex-start";
+          btn.style.alignSelf = "center";
           btn.style.flex = "0 0 auto";
-          btn.style.border = "1px solid #d1d5db";
+          btn.style.border = "1px solid rgba(255, 255, 255, 0.28)";
           btn.style.borderRadius = "999px";
-          btn.style.padding = "0.25rem 0.6rem";
+          btn.style.padding = "0.28rem 0.8rem";
           btn.style.margin = "0";
-          btn.style.fontSize = "0.85rem";
-          btn.style.background = "transparent";
+          btn.style.fontSize = "0.82rem";
+          btn.style.fontWeight = "500";
+          btn.style.letterSpacing = "0.01em";
+          btn.style.color = "rgba(255, 255, 255, 0.92)";
+          btn.style.background = "linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.06))";
+          btn.style.backdropFilter = "blur(2px)";
+          btn.style.webkitBackdropFilter = "blur(2px)";
+          btn.style.boxShadow = "inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 1px 2px rgba(0, 0, 0, 0.25)";
           btn.style.cursor = "pointer";
           btn.style.lineHeight = "1.2";
           btn.style.whiteSpace = "nowrap";
+          btn.style.transition = "all 140ms ease";
+          btn.addEventListener("mouseenter", () => {
+            btn.style.transform = "translateY(-1px)";
+            btn.style.borderColor = "rgba(255, 255, 255, 0.45)";
+            btn.style.background = "linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.1))";
+          });
+          btn.addEventListener("mouseleave", () => {
+            btn.style.transform = "translateY(0)";
+            btn.style.borderColor = "rgba(255, 255, 255, 0.28)";
+            btn.style.background = "linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.06))";
+          });
           btn.textContent = item.title;
           if (item.altText) {
             btn.title = String(item.altText);
@@ -1606,15 +1658,21 @@
     }
     function getSendButton() {
       const selectors = [
+        'button[data-testid="composer-send-button"]',
+        'button[data-testid="send-button"]',
         'button[data-testid*="send-button"]',
+        'button[aria-label*="Submit"]',
         'button[aria-label*="Send"]',
         'button[aria-label*="傳送"]',
         'button[aria-label*="送出"]'
       ];
       for (const selector of selectors) {
-        const button = document.querySelector(selector);
-        if (button)
-          return button;
+        const buttons = Array.from(document.querySelectorAll(selector));
+        const enabledButton = buttons.find((button) => isElementVisible(button) && !button.disabled);
+        if (enabledButton)
+          return enabledButton;
+        if (buttons.length > 0)
+          return buttons[0];
       }
       return null;
     }
@@ -1850,4 +1908,4 @@
   runContentScript();
 })();
 
-//# debugId=6BCA57E64968B1C364756E2164756E21
+//# debugId=BFD2C7ACABCF34D364756E2164756E21
