@@ -53,8 +53,10 @@ export function initGemini(ctx: ContentContext) {
 
   function getPromptEditor() {
     for (const selector of GEMINI_EDITOR_SELECTORS) {
-      const editor = document.querySelector<HTMLElement>(selector);
-      if (editor) return editor;
+      const editors = Array.from(document.querySelectorAll<HTMLElement>(selector));
+      const visibleEditor = editors.find((item) => isElementVisible(item));
+      if (visibleEditor) return visibleEditor;
+      if (editors[0]) return editors[0];
     }
 
     return null;
@@ -144,6 +146,15 @@ export function initGemini(ctx: ContentContext) {
       iconName.includes('close') ||
       iconName.includes('cancel')
     );
+  }
+
+  function isElementVisible(element: HTMLElement | null) {
+    if (!element) return false;
+    const style = window.getComputedStyle(element);
+    if (style.display === 'none') return false;
+    if (style.visibility === 'hidden') return false;
+    const rect = element.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
   }
 
   function autoSubmitWhenReady() {
@@ -261,12 +272,26 @@ export function initGemini(ctx: ContentContext) {
 
     button.addEventListener('pointerdown', (event) => {
       if (event.button !== 0) return;
+      event.stopPropagation();
       trigger('pointerdown');
     });
 
+    button.addEventListener('mousedown', (event) => {
+      if (event.button !== 0) return;
+      event.stopPropagation();
+    });
+
     button.addEventListener('click', (event) => {
-      if (event.detail !== 0) return;
+      event.preventDefault();
+      event.stopPropagation();
       trigger('click');
+    });
+
+    button.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      event.stopPropagation();
+      trigger(`keydown:${event.key}`);
     });
   }
 
@@ -369,6 +394,8 @@ export function initGemini(ctx: ContentContext) {
     let followUpManualSubmitText: ReadyPrompt[] = [];
     let localeDefaultManualSubmitText: ReadyPrompt[] = [];
     let lastResponse: Element | undefined;
+    let initialButtonsSignature = '';
+    let shiftedInitialHeading: HTMLElement | null = null;
 
     const currentLocale = chrome.i18n?.getUILanguage();
     if (currentLocale) {
@@ -435,7 +462,32 @@ export function initGemini(ctx: ContentContext) {
     }
 
     let mutationObserverTimer: ReturnType<typeof setTimeout> | undefined;
-    const obs = new MutationObserver(() => {
+    const obs = new MutationObserver((mutations) => {
+      const hasRelevantMutation = mutations.some((mutation) => {
+        const target = mutation.target;
+        const element =
+          target instanceof HTMLElement
+            ? target
+            : target.parentElement instanceof HTMLElement
+              ? target.parentElement
+              : null;
+
+        if (!element) return true;
+        if (element.closest('#custom-gemini-initial-buttons')) return false;
+        if (element.closest('#custom-gemini-followup-buttons')) return false;
+        if (element.getAttribute('data-chatgpttoolkit-gemini-heading-shift') === 'true') return false;
+
+        const isOurButtonNode = (node: Node) =>
+          node instanceof HTMLElement &&
+          (node.id === 'custom-gemini-initial-buttons' || node.id === 'custom-gemini-followup-buttons');
+
+        if (Array.from(mutation.addedNodes).some(isOurButtonNode)) return false;
+        if (Array.from(mutation.removedNodes).some(isOurButtonNode)) return false;
+
+        return true;
+      });
+      if (!hasRelevantMutation) return;
+
       clearTimeout(mutationObserverTimer);
       mutationObserverTimer = setTimeout(() => {
         rebuildInitialButtons();
@@ -443,83 +495,171 @@ export function initGemini(ctx: ContentContext) {
       }, 0);
     });
 
-    function getInitialButtonsZeroStateRoot() {
-      const modularZeroState = document.querySelector<HTMLElement>('modular-zero-state');
-      if (modularZeroState) return modularZeroState;
+    function getInitialButtonsComposerAnchor() {
+      const editor = getPromptEditor();
+      const sendButton = getSendButton();
+      const editorAnchor =
+        document
+          .querySelector<HTMLElement>(
+            'input-container [contenteditable="true"][role="textbox"], rich-textarea [contenteditable="true"][role="textbox"]'
+          )
+          ?.closest<HTMLElement>('input-container') || null;
 
-      const zeroStateCandidates = Array.from(
-        document.querySelectorAll<HTMLElement>('.zero-state-container, .bot-info-card-container')
+      const candidates = [
+        editorAnchor,
+        editor?.closest<HTMLElement>('input-container'),
+        editor?.closest<HTMLElement>('form'),
+        sendButton?.closest<HTMLElement>('input-container'),
+        sendButton?.closest<HTMLElement>('form'),
+        ...Array.from(document.querySelectorAll<HTMLElement>('chat-window input-container')),
+        ...Array.from(document.querySelectorAll<HTMLElement>('input-container')),
+      ];
+
+      const uniq = Array.from(new Set(candidates.filter((item): item is HTMLElement => Boolean(item))));
+      const visible = uniq.filter((item) => Boolean(item.parentElement) && isElementVisible(item));
+      const preferred = visible.find((item) => item.contains(editor) || item.contains(sendButton as Node));
+      if (preferred) return preferred;
+
+      const byTop = [...visible].sort(
+        (a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top
       );
-
-      for (const candidate of zeroStateCandidates) {
-        if (!candidate.querySelector('bot-info-card')) continue;
-
-        const hasComposer =
-          Boolean(getPromptEditor());
-        if (!hasComposer) continue;
-
-        return candidate;
-      }
-
-      return null;
+      return byTop[0] || uniq.find((item) => Boolean(item.parentElement)) || null;
     }
 
-    function getInitialButtonsMountTarget(zeroState: HTMLElement): InitialButtonsMountTarget | null {
-      if (zeroState.matches('modular-zero-state')) {
-        const bottomSection =
-          zeroState.querySelector<HTMLElement>('.bottom-section-container') ||
-          zeroState.querySelector<HTMLElement>('.modular-zero-state-container');
-        if (!bottomSection) return null;
+    function getInitialButtonsZeroStateMountTarget(): InitialButtonsMountTarget | null {
+      const zeroStateBlock = document.querySelector<HTMLElement>('.zero-state-block-container');
+      if (!zeroStateBlock) return null;
 
-        const zeroStateBlock =
-          bottomSection.querySelector<HTMLElement>('.zero-state-block-container') || bottomSection;
+      const primaryMessage =
+        zeroStateBlock.querySelector<HTMLElement>('assistant-messages-primary') ||
+        zeroStateBlock.querySelector<HTMLElement>('.assistant-messages-primary-container');
+      if (!primaryMessage) return null;
 
-        return {
-          container: zeroStateBlock,
-          beforeNode: zeroStateBlock.querySelector<HTMLElement>('intent-chips-block'),
-        };
-      }
-
-      const gemCard = zeroState.querySelector<HTMLElement>('bot-info-card');
-      if (gemCard) {
-        return {
-          container: zeroState,
-          beforeNode:
-            zeroState.querySelector<HTMLElement>('bot-experiment-disclaimer') ||
-            zeroState.querySelector<HTMLElement>('.bot-recent-chats'),
-        };
-      }
-
-      const recentChats = zeroState.querySelector<HTMLElement>('.bot-recent-chats');
-      if (recentChats) {
-        return {
-          container: zeroState,
-          beforeNode: recentChats,
-        };
+      let beforeNode = primaryMessage.nextElementSibling as HTMLElement | null;
+      if (beforeNode && beforeNode.id === 'custom-gemini-initial-buttons') {
+        beforeNode = beforeNode.nextElementSibling as HTMLElement | null;
       }
 
       return {
-        container: zeroState,
+        container: zeroStateBlock,
+        beforeNode,
       };
+    }
+
+    function getInitialButtonsMountTarget(): InitialButtonsMountTarget | null {
+      if (getAssistantResponseBlocks().length > 0) return null;
+
+      const zeroStateMountTarget = getInitialButtonsZeroStateMountTarget();
+      if (zeroStateMountTarget) return zeroStateMountTarget;
+
+      const composerAnchor = getInitialButtonsComposerAnchor();
+      if (!composerAnchor || !composerAnchor.parentElement) return null;
+
+      return {
+        container: composerAnchor.parentElement,
+        beforeNode: composerAnchor,
+      };
+    }
+
+    function getInitialButtonsHeadingTarget(anchor: HTMLElement, bar: HTMLElement) {
+      const anchorRect = anchor.getBoundingClientRect();
+      const pageCenter = window.innerWidth / 2;
+      const candidates = Array.from(document.querySelectorAll<HTMLElement>('h1, h2, div, span'))
+        .filter((item) => {
+          if (item === bar || item.contains(bar) || bar.contains(item)) return false;
+          if (anchor.contains(item)) return false;
+          if (!isElementVisible(item)) return false;
+
+          const text = (item.textContent || '').replace(/\s+/g, ' ').trim();
+          if (text.length < 2 || text.length > 80) return false;
+
+          const rect = item.getBoundingClientRect();
+          if (rect.bottom > anchorRect.top) return false;
+          if (rect.top < 80) return false;
+
+          const style = window.getComputedStyle(item);
+          const fontSize = Number.parseFloat(style.fontSize || '0');
+          if (!Number.isFinite(fontSize) || fontSize < 24) return false;
+
+          return true;
+        })
+        .map((item) => {
+          const rect = item.getBoundingClientRect();
+          const centerDistance = Math.abs(rect.left + rect.width / 2 - pageCenter);
+          const verticalDistance = anchorRect.top - rect.bottom;
+          return { item, centerDistance, verticalDistance, area: rect.width * rect.height };
+        })
+        .sort((a, b) => {
+          if (Math.abs(a.verticalDistance - b.verticalDistance) > 8) {
+            return a.verticalDistance - b.verticalDistance;
+          }
+          if (Math.abs(a.centerDistance - b.centerDistance) > 8) {
+            return a.centerDistance - b.centerDistance;
+          }
+          return b.area - a.area;
+        });
+
+      return candidates[0]?.item || null;
+    }
+
+    function setStylePropertyIfChanged(element: HTMLElement, property: string, value: string) {
+      if (element.style.getPropertyValue(property) !== value) {
+        element.style.setProperty(property, value);
+      }
+    }
+
+    function removeStylePropertyIfPresent(element: HTMLElement, property: string) {
+      if (element.style.getPropertyValue(property)) {
+        element.style.removeProperty(property);
+      }
+    }
+
+    function setInitialButtonsHeadingShift(headingTarget: HTMLElement | null, shiftPx: number) {
+      if (shiftedInitialHeading && shiftedInitialHeading !== headingTarget) {
+        shiftedInitialHeading.style.removeProperty('transform');
+        shiftedInitialHeading.removeAttribute('data-chatgpttoolkit-gemini-heading-shift');
+      }
+
+      shiftedInitialHeading = headingTarget;
+      if (!headingTarget) return;
+
+      setStylePropertyIfChanged(headingTarget, 'transform', `translateY(-${shiftPx}px)`);
+      if (headingTarget.getAttribute('data-chatgpttoolkit-gemini-heading-shift') !== 'true') {
+        headingTarget.setAttribute('data-chatgpttoolkit-gemini-heading-shift', 'true');
+      }
+    }
+
+    function resetInitialButtonsHeadingShift() {
+      setInitialButtonsHeadingShift(null, 0);
+    }
+
+    function getReadyPromptsSignature(items: ReadyPrompt[]) {
+      return JSON.stringify(
+        items.map((item) => ({
+          title: item.title,
+          prompt: item.prompt,
+          altText: item.altText || '',
+          autoPaste: item.autoPaste === true,
+          autoSubmit: item.autoSubmit === true,
+        }))
+      );
     }
 
     function rebuildInitialButtons() {
       const existing = document.getElementById('custom-gemini-initial-buttons');
 
-      const zeroState = getInitialButtonsZeroStateRoot();
-      if (!zeroState) {
-        existing?.remove();
-        return;
-      }
-
       if (!Array.isArray(initialManualSubmitText) || initialManualSubmitText.length === 0) {
         existing?.remove();
+        resetInitialButtonsHeadingShift();
+        initialButtonsSignature = '';
         return;
       }
 
-      const mountTarget = getInitialButtonsMountTarget(zeroState);
+      const mountTarget = getInitialButtonsMountTarget();
       if (!mountTarget) {
         existing?.remove();
+        resetInitialButtonsHeadingShift();
+        initialButtonsSignature = '';
         return;
       }
 
@@ -527,27 +667,58 @@ export function initGemini(ctx: ContentContext) {
       if (!bar) {
         bar = document.createElement('div');
         bar.id = 'custom-gemini-initial-buttons';
-      } else {
-        bar.innerHTML = '';
       }
 
       const barEl = bar as HTMLDivElement;
-      barEl.style.display = 'flex';
-      barEl.style.flexWrap = 'wrap';
-      barEl.style.gap = '0.5rem';
-      barEl.style.justifyContent = 'center';
-      barEl.style.alignItems = 'center';
-      barEl.style.margin = '0 0 0.75rem 0';
-      barEl.style.pointerEvents = 'auto';
+      const nextSignature = getReadyPromptsSignature(initialManualSubmitText);
+      const shouldRebuildButtons = nextSignature !== initialButtonsSignature;
+      if (shouldRebuildButtons && barEl.style.visibility !== 'hidden') {
+        barEl.style.visibility = 'hidden';
+      }
+      setStylePropertyIfChanged(barEl, 'display', 'flex');
+      setStylePropertyIfChanged(barEl, 'flex-wrap', 'wrap');
+      setStylePropertyIfChanged(barEl, 'gap', '0.5rem');
+      setStylePropertyIfChanged(barEl, 'justify-content', 'center');
+      setStylePropertyIfChanged(barEl, 'align-items', 'center');
+      // 拉大「大字 -> 初始按鈕」距離，同時維持按鈕到輸入框的視覺比例。
+      setStylePropertyIfChanged(barEl, 'margin', '0.9rem 0 0.9rem 0');
+      setStylePropertyIfChanged(barEl, 'width', '100%');
+      setStylePropertyIfChanged(barEl, 'max-width', '100%');
+      setStylePropertyIfChanged(barEl, 'box-sizing', 'border-box');
+      setStylePropertyIfChanged(barEl, 'pointer-events', 'auto');
+      setStylePropertyIfChanged(barEl, 'position', 'relative');
+      setStylePropertyIfChanged(barEl, 'z-index', '2');
+
+      removeStylePropertyIfPresent(barEl, 'left');
+      removeStylePropertyIfPresent(barEl, 'top');
+      removeStylePropertyIfPresent(barEl, 'padding-left');
+
+      const headingShiftPx = 28;
+      const buttonShiftPx = 8;
+      setStylePropertyIfChanged(barEl, 'transform', `translateY(-${buttonShiftPx}px)`);
 
       const { container, beforeNode } = mountTarget;
       if (beforeNode) {
         if (barEl.parentElement !== container || barEl.nextElementSibling !== beforeNode) {
           container.insertBefore(barEl, beforeNode);
         }
-      } else if (barEl.parentElement !== container) {
-        container.prepend(barEl);
+      } else if (barEl.parentElement !== container || barEl.nextElementSibling) {
+        container.appendChild(barEl);
       }
+
+      const anchorForHeading = beforeNode || container;
+      const headingTarget = getInitialButtonsHeadingTarget(anchorForHeading, barEl);
+      setInitialButtonsHeadingShift(headingTarget, headingShiftPx);
+
+      if (!shouldRebuildButtons) {
+        if (barEl.style.visibility !== 'visible') {
+          barEl.style.visibility = 'visible';
+        }
+        return;
+      }
+
+      barEl.innerHTML = '';
+      initialButtonsSignature = nextSignature;
 
       initialManualSubmitText.forEach((item) => {
         const autoPasteEnabled = item.autoPaste === true;
@@ -555,6 +726,7 @@ export function initGemini(ctx: ContentContext) {
 
         const btn = document.createElement('button');
         btn.type = 'button';
+        btn.tabIndex = 0;
         btn.style.display = 'inline-flex';
         btn.style.alignItems = 'center';
         btn.style.justifyContent = 'center';
@@ -568,6 +740,9 @@ export function initGemini(ctx: ContentContext) {
         btn.style.lineHeight = '1.2';
         btn.style.whiteSpace = 'nowrap';
         btn.style.color = 'inherit';
+        btn.style.pointerEvents = 'auto';
+        btn.style.position = 'relative';
+        btn.style.zIndex = '3';
         btn.textContent = item.title;
         if (item.altText) {
           btn.title = String(item.altText);
@@ -575,6 +750,12 @@ export function initGemini(ctx: ContentContext) {
         bindPromptButton(btn, item, autoPasteEnabled, autoSubmitEnabled, 'initial');
 
         barEl.append(btn);
+      });
+
+      requestAnimationFrame(() => {
+        if (barEl.isConnected && barEl.style.visibility !== 'visible') {
+          barEl.style.visibility = 'visible';
+        }
       });
     }
 
@@ -688,7 +869,6 @@ export function initGemini(ctx: ContentContext) {
     rebuildFollowUpButtons();
     obs.observe(document.body, {
       childList: true,
-      attributes: true,
       subtree: true,
     });
   })();

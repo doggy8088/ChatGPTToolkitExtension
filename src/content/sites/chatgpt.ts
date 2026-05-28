@@ -654,7 +654,7 @@ export function initChatGPT(ctx: ContentContext) {
         btn.style.color = 'rgba(255, 255, 255, 0.92)';
         btn.style.background = 'linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.06))';
         btn.style.backdropFilter = 'blur(2px)';
-        btn.style.webkitBackdropFilter = 'blur(2px)';
+        btn.style.setProperty('-webkit-backdrop-filter', 'blur(2px)');
         btn.style.boxShadow = 'inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 1px 2px rgba(0, 0, 0, 0.25)';
         btn.style.cursor = 'pointer';
         btn.style.lineHeight = '1.2';

@@ -31,6 +31,17 @@ function createChromeStorageMock() {
   (globalThis as any).chrome = {
     storage: {
       local: storageArea
+    },
+    i18n: {
+      getMessage(key: string) {
+        if (key === 'options_import_error_not_array') {
+          return '必須是陣列格式';
+        }
+        if (key === 'options_import_error_missing_fields') {
+          return '必須包含 title 和 prompt';
+        }
+        return key;
+      }
     }
   };
 
