@@ -952,7 +952,7 @@ export function initChatGPT(ctx: ContentContext) {
         if (!div) return false;
 
         const current = normalizeEditorText(
-          div instanceof HTMLTextAreaElement ? div.value : div.textContent || ''
+          div instanceof HTMLTextAreaElement ? div.value : div.innerText || div.textContent || ''
         );
         const hasPrompt = expected.length > 0 ? current.includes(expected) : current.length > 0;
         if (debug) {

@@ -302,7 +302,7 @@
           const editorDiv = getPromptEditor();
           if (!editorDiv)
             return false;
-          const current = normalizeEditorText(editorDiv.textContent || "");
+          const current = normalizeEditorText(editorDiv.innerText || editorDiv.textContent || "");
           const hasPrompt = expected.length > 0 ? current.includes(expected) : current.length > 0;
           if (hasPrompt) {
             if (autoSubmit && !autoSubmitScheduled) {
@@ -1889,7 +1889,7 @@
           }
           if (!div)
             return false;
-          const current = normalizeEditorText(div instanceof HTMLTextAreaElement ? div.value : div.textContent || "");
+          const current = normalizeEditorText(div instanceof HTMLTextAreaElement ? div.value : div.innerText || div.textContent || "");
           const hasPrompt = expected.length > 0 ? current.includes(expected) : current.length > 0;
           if (debug) {
             console.log("[ChatGPTToolkit][chatgpt] fillPrompt tick", {
@@ -2070,4 +2070,4 @@
   runContentScript();
 })();
 
-//# debugId=7BE12035671D107A64756E2164756E21
+//# debugId=9CA9F0474A5D357264756E2164756E21

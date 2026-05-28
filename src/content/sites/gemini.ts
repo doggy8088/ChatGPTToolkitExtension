@@ -191,7 +191,7 @@ export function initGemini(ctx: ContentContext) {
         const editorDiv = getPromptEditor();
         if (!editorDiv) return false;
 
-        const current = normalizeEditorText(editorDiv.textContent || '');
+        const current = normalizeEditorText(editorDiv.innerText || editorDiv.textContent || '');
         const hasPrompt = expected.length > 0 ? current.includes(expected) : current.length > 0;
 
         if (hasPrompt) {
