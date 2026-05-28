@@ -702,45 +702,62 @@ export function initChatGPT(ctx: ContentContext) {
       }
       barEl.style.gridArea = '';
 
+      let styleEl = document.getElementById('custom-chatgpt-button-styles');
+      if (!styleEl) {
+        styleEl = document.createElement('style');
+        styleEl.id = 'custom-chatgpt-button-styles';
+        styleEl.textContent = `
+          #custom-chatgpt-initial-buttons button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            align-self: center;
+            flex: 0 0 auto;
+            border-radius: 999px;
+            padding: 0.28rem 0.8rem;
+            margin: 0;
+            font-size: 0.82rem;
+            font-weight: 500;
+            letter-spacing: 0.01em;
+            cursor: pointer;
+            line-height: 1.2;
+            white-space: nowrap;
+            transition: all 140ms ease;
+            backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
+            
+            /* Light theme (default) */
+            color: rgba(13, 13, 13, 0.88);
+            border: 1px solid rgba(0, 0, 0, 0.15);
+            background: linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.02));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 1px 2px rgba(0, 0, 0, 0.05);
+          }
+          #custom-chatgpt-initial-buttons button:hover {
+            transform: translateY(-1px);
+            border-color: rgba(0, 0, 0, 0.25);
+            background: linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.04));
+          }
+          /* Dark theme */
+          .dark #custom-chatgpt-initial-buttons button {
+            color: rgba(255, 255, 255, 0.92);
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.06));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 1px 2px rgba(0, 0, 0, 0.25);
+          }
+          .dark #custom-chatgpt-initial-buttons button:hover {
+            border-color: rgba(255, 255, 255, 0.45);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.1));
+          }
+        `;
+        document.head.appendChild(styleEl);
+      }
+
       initialManualSubmitText.forEach((item) => {
         const autoPasteEnabled = item.autoPaste === true;
         const autoSubmitEnabled = item.autoSubmit === true;
 
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.style.display = 'inline-flex';
-        btn.style.alignItems = 'center';
-        btn.style.justifyContent = 'center';
-        btn.style.alignSelf = 'center';
-        btn.style.flex = '0 0 auto';
-        btn.style.border = '1px solid rgba(255, 255, 255, 0.28)';
-        btn.style.borderRadius = '999px';
-        btn.style.padding = '0.28rem 0.8rem';
-        btn.style.margin = '0';
-        btn.style.fontSize = '0.82rem';
-        btn.style.fontWeight = '500';
-        btn.style.letterSpacing = '0.01em';
-        btn.style.color = 'rgba(255, 255, 255, 0.92)';
-        btn.style.background = 'linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.06))';
-        btn.style.backdropFilter = 'blur(2px)';
-        btn.style.setProperty('-webkit-backdrop-filter', 'blur(2px)');
-        btn.style.boxShadow = 'inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 1px 2px rgba(0, 0, 0, 0.25)';
-        btn.style.cursor = 'pointer';
-        btn.style.lineHeight = '1.2';
-        btn.style.whiteSpace = 'nowrap';
-        btn.style.transition = 'all 140ms ease';
-        btn.addEventListener('mouseenter', () => {
-          btn.style.transform = 'translateY(-1px)';
-          btn.style.borderColor = 'rgba(255, 255, 255, 0.45)';
-          btn.style.background =
-            'linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.1))';
-        });
-        btn.addEventListener('mouseleave', () => {
-          btn.style.transform = 'translateY(0)';
-          btn.style.borderColor = 'rgba(255, 255, 255, 0.28)';
-          btn.style.background =
-            'linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.06))';
-        });
         btn.textContent = item.title;
         if (item.altText) {
           btn.title = String(item.altText);
