@@ -1555,26 +1555,88 @@
         });
         return results;
       }
+      let shiftedInitialHeading = null;
+      function setInitialButtonsHeadingShift(headingTarget, shiftPx) {
+        if (shiftedInitialHeading && shiftedInitialHeading !== headingTarget) {
+          shiftedInitialHeading.style.removeProperty("transform");
+          shiftedInitialHeading.removeAttribute("data-chatgpttoolkit-chatgpt-heading-shift");
+        }
+        shiftedInitialHeading = headingTarget;
+        if (!headingTarget)
+          return;
+        if (headingTarget.style.getPropertyValue("transform") !== `translateY(-${shiftPx}px)`) {
+          headingTarget.style.setProperty("transform", `translateY(-${shiftPx}px)`);
+        }
+        if (headingTarget.getAttribute("data-chatgpttoolkit-chatgpt-heading-shift") !== "true") {
+          headingTarget.setAttribute("data-chatgpttoolkit-chatgpt-heading-shift", "true");
+        }
+      }
+      function resetInitialButtonsHeadingShift() {
+        setInitialButtonsHeadingShift(null, 0);
+      }
+      function getInitialButtonsHeadingTarget(anchor, bar) {
+        const anchorRect = anchor.getBoundingClientRect();
+        const pageCenter = window.innerWidth / 2;
+        const candidates = Array.from(document.querySelectorAll("h1, h2, div, span")).filter((item) => {
+          if (item === bar || item.contains(bar) || bar.contains(item))
+            return false;
+          if (anchor.contains(item))
+            return false;
+          if (!isElementVisible(item))
+            return false;
+          const text = (item.textContent || "").replace(/\s+/g, " ").trim();
+          if (text.length < 2 || text.length > 80)
+            return false;
+          const rect = item.getBoundingClientRect();
+          if (rect.bottom > anchorRect.top)
+            return false;
+          if (rect.top < 80)
+            return false;
+          const style = window.getComputedStyle(item);
+          const fontSize = Number.parseFloat(style.fontSize || "0");
+          if (!Number.isFinite(fontSize) || fontSize < 20)
+            return false;
+          return true;
+        }).map((item) => {
+          const rect = item.getBoundingClientRect();
+          const centerDistance = Math.abs(rect.left + rect.width / 2 - pageCenter);
+          const verticalDistance = anchorRect.top - rect.bottom;
+          return { item, centerDistance, verticalDistance, area: rect.width * rect.height };
+        }).sort((a, b) => {
+          if (Math.abs(a.verticalDistance - b.verticalDistance) > 8) {
+            return a.verticalDistance - b.verticalDistance;
+          }
+          if (Math.abs(a.centerDistance - b.centerDistance) > 8) {
+            return a.centerDistance - b.centerDistance;
+          }
+          return b.area - a.area;
+        });
+        return candidates[0]?.item || null;
+      }
       function rebuild_initial_buttons() {
         const existing = document.getElementById("custom-chatgpt-initial-buttons");
         const stopButton = document.querySelector('button[data-testid="stop-button"]');
         if (stopButton) {
           existing?.remove();
+          resetInitialButtonsHeadingShift();
           return;
         }
         const promptTextarea = getPromptEditor();
         if (!promptTextarea) {
           existing?.remove();
+          resetInitialButtonsHeadingShift();
           return;
         }
         const hasAnyMessages = Boolean(document.querySelector('div[data-message-author-role="assistant"], div[data-message-author-role="user"]'));
         if (hasAnyMessages || !Array.isArray(initialManualSubmitText) || initialManualSubmitText.length === 0) {
           existing?.remove();
+          resetInitialButtonsHeadingShift();
           return;
         }
         const form = promptTextarea.closest('form[data-type="unified-composer"]') || promptTextarea.closest("form");
         if (!form) {
           existing?.remove();
+          resetInitialButtonsHeadingShift();
           return;
         }
         const composerGrid = form.querySelector('div[class*="bg-token-bg-primary"][class*="grid-template-areas"]') || form.querySelector('div[class*="grid-template-areas"]');
@@ -1595,6 +1657,9 @@
           bar.innerHTML = "";
         }
         const barEl = bar;
+        barEl.style.position = "absolute";
+        barEl.style.bottom = "100%";
+        barEl.style.left = "0";
         barEl.style.display = "flex";
         barEl.style.flexWrap = "wrap";
         barEl.style.gap = "0.45rem";
@@ -1603,23 +1668,18 @@
         barEl.style.justifyContent = "center";
         barEl.style.width = "100%";
         barEl.style.boxSizing = "border-box";
-        barEl.style.padding = "0.15rem 0.25rem 0.6rem 0.25rem";
+        barEl.style.padding = "0.15rem 0.25rem 0.15rem 0.25rem";
+        barEl.style.margin = "0";
+        barEl.style.transform = "translateY(-16px)";
         barEl.style.pointerEvents = "auto";
-        barEl.style.zIndex = "2";
-        if (headerContainer && headerContainer !== barEl) {
-          if (barEl.parentElement !== headerContainer)
-            headerContainer.append(barEl);
-          barEl.style.gridArea = "";
-        } else {
-          const formParent = form.parentElement;
-          if (!formParent) {
-            existing?.remove();
-            return;
-          }
-          if (barEl.parentElement !== formParent)
-            formParent.insertBefore(barEl, form);
-          barEl.style.gridArea = "";
+        barEl.style.zIndex = "10";
+        if (window.getComputedStyle(form).position === "static") {
+          form.style.setProperty("position", "relative");
         }
+        if (barEl.parentElement !== form) {
+          form.appendChild(barEl);
+        }
+        barEl.style.gridArea = "";
         initialManualSubmitText.forEach((item) => {
           const autoPasteEnabled = item.autoPaste === true;
           const autoSubmitEnabled = item.autoSubmit === true;
@@ -1663,6 +1723,9 @@
           bindPromptButton(btn, item, autoPasteEnabled, autoSubmitEnabled, "initial");
           barEl.append(btn);
         });
+        const anchorForHeading = headerContainer || form;
+        const headingTarget = getInitialButtonsHeadingTarget(anchorForHeading, barEl);
+        setInitialButtonsHeadingShift(headingTarget, 48);
       }
       function getAssistantTurnBlocks() {
         const turnArticles = Array.from(document.querySelectorAll('article[data-testid^="conversation-turn-"][data-turn="assistant"]'));
@@ -2070,4 +2133,4 @@
   runContentScript();
 })();
 
-//# debugId=9CA9F0474A5D357264756E2164756E21
+//# debugId=0B5F6B6A75C936D464756E2164756E21
