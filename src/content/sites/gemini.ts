@@ -780,11 +780,7 @@ export function initGemini(ctx: ContentContext) {
       }
 
       const sendButton = getSendButton();
-      if (!sendButton) {
-        existing?.remove();
-        return;
-      }
-      if (isSendButtonStopState(sendButton)) {
+      if (sendButton && isSendButtonStopState(sendButton)) {
         existing?.remove();
         return;
       }

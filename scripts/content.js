@@ -807,11 +807,7 @@
           return;
         }
         const sendButton = getSendButton();
-        if (!sendButton) {
-          existing?.remove();
-          return;
-        }
-        if (isSendButtonStopState(sendButton)) {
+        if (sendButton && isSendButtonStopState(sendButton)) {
           existing?.remove();
           return;
         }
@@ -2151,4 +2147,4 @@
   runContentScript();
 })();
 
-//# debugId=A73339D05884EEDF64756E2164756E21
+//# debugId=D7527F94EF9D58C464756E2164756E21

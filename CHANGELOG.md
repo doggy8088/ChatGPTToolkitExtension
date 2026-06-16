@@ -1,5 +1,22 @@
 # Changelog
 
+- 0.44.3 (2026/06/16)
+
+  - Chore
+    - 將擴充套件版本由 `0.44.2` 升級為 `0.44.3`。
+    - 同步更新 `options.html` 頁尾顯示版本為 `0.44.3`。
+
+  - New features
+    - None
+
+  - Bug fixes
+    - 修正 Gemini 追問按鈕在輸入框無文字時消失的問題：
+      - Gemini UI 於輸入框清空時不渲染傳送按鈕，導致 `getSendButton()` 回傳 `null`，`rebuildFollowUpButtons()` 誤判為需要移除追問按鈕。
+      - 將條件由「找不到傳送按鈕時移除追問按鈕」改為「找到傳送按鈕且確認為停止狀態（AI 生成中）時才移除」，使追問按鈕在輸入框為空時仍能正常顯示。
+
+  - Breaking changes
+    - None
+
 - 0.44.1 (2026/05/28)
 
   - Chore
