@@ -1,5 +1,20 @@
 # Changelog
 
+- 0.44.4 (2026/06/20)
+
+  - Chore
+    - 將擴充套件版本由 `0.44.3` 升級為 `0.44.4`。
+    - 同步更新 `options.html` 頁尾顯示版本為 `0.44.4`。
+
+  - New features
+    - None
+
+  - Bug fixes
+    - 在 ChatGPT 的 `/scheduled` 與 `/deep-research` 頁面排除初始按鈕顯示，避免這些非一般對話入口頁出現自訂初始提示按鈕。
+
+  - Breaking changes
+    - None
+
 - 0.44.3 (2026/06/16)
 
   - Chore

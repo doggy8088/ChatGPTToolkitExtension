@@ -1082,6 +1082,10 @@
   function initChatGPT(ctx) {
     const { state, debug } = ctx;
     const CLIPBOARD_ARGS_PLACEHOLDER = "{{args}}";
+    const INITIAL_BUTTONS_EXCLUDED_PATHS = ["/scheduled", "/deep-research"];
+    function isInitialButtonsExcludedPage() {
+      return location.hostname === "chatgpt.com" && INITIAL_BUTTONS_EXCLUDED_PATHS.some((path) => location.pathname === path || location.pathname.startsWith(`${path}/`));
+    }
     function isElementVisible(el) {
       if (!el)
         return false;
@@ -1611,6 +1615,11 @@
       }
       function rebuild_initial_buttons() {
         const existing = document.getElementById("custom-chatgpt-initial-buttons");
+        if (isInitialButtonsExcludedPage()) {
+          existing?.remove();
+          resetInitialButtonsHeadingShift();
+          return;
+        }
         const stopButton = document.querySelector('button[data-testid="stop-button"]');
         if (stopButton) {
           existing?.remove();
@@ -2147,4 +2156,4 @@
   runContentScript();
 })();
 
-//# debugId=D7527F94EF9D58C464756E2164756E21
+//# debugId=63A15B88C6649F2A64756E2164756E21

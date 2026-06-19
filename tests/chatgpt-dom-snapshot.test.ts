@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { initChatGPT } from '../src/content/sites/chatgpt';
@@ -10,6 +10,7 @@ ensureHappyDom();
 const snapshotPath = fileURLToPath(new URL('./fixtures/chatgpt/chatgpt.dom.html', import.meta.url));
 const rawSnapshot = readFileSync(snapshotPath, 'utf8');
 const sanitizedSnapshot = sanitizeSnapshot(rawSnapshot);
+const originalLocation = globalThis.location;
 
 function sanitizeSnapshot(html: string) {
   const withoutScripts = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
@@ -81,7 +82,7 @@ function createPromptUrlContext(): ContentContext {
   };
 }
 
-function installChromeStub() {
+function installChromeStub(customPrompts?: unknown[]) {
   const previousChrome = (globalThis as { chrome?: unknown }).chrome;
   (globalThis as { chrome?: unknown }).chrome = {
     i18n: {
@@ -90,7 +91,13 @@ function installChromeStub() {
     storage: {
       local: {
         get: (_keys: string[], callback: (items: Record<string, unknown>) => void) => {
-          callback({});
+          callback(
+            customPrompts
+              ? {
+                  'chatgpttoolkit.customPrompts': customPrompts,
+                }
+              : {}
+          );
         },
         set: (_items: Record<string, unknown>, callback?: () => void) => {
           callback?.();
@@ -105,6 +112,19 @@ function installChromeStub() {
   return () => {
     (globalThis as { chrome?: unknown }).chrome = previousChrome;
   };
+}
+
+function setChatGPTLocation(pathname: string) {
+  Object.defineProperty(globalThis, 'location', {
+    configurable: true,
+    value: {
+      hostname: 'chatgpt.com',
+      href: `https://chatgpt.com${pathname}`,
+      hash: '',
+      search: '',
+      pathname,
+    },
+  });
 }
 
 function withPatchedTimers<T>(run: () => T) {
@@ -128,6 +148,12 @@ function withPatchedTimers<T>(run: () => T) {
     globalThis.setTimeout = originalSetTimeout;
     globalThis.setInterval = originalSetInterval;
     globalThis.clearInterval = originalClearInterval;
+  }
+}
+
+async function flushAsyncWork() {
+  for (let index = 0; index < 5; index += 1) {
+    await Promise.resolve();
   }
 }
 
@@ -177,6 +203,14 @@ async function withQueuedIntervals<T>(run: (flushIntervals: () => Promise<void>)
 describe('chatgpt.com DOM snapshot', () => {
   beforeEach(() => {
     loadSnapshot();
+    setChatGPTLocation('/');
+  });
+
+  afterEach(() => {
+    Object.defineProperty(globalThis, 'location', {
+      configurable: true,
+      value: originalLocation,
+    });
   });
 
   test('loads expected shell elements from snapshot', () => {
@@ -191,7 +225,7 @@ describe('chatgpt.com DOM snapshot', () => {
       withPatchedTimers(() => {
         initChatGPT(createContentContext());
       });
-      await Promise.resolve();
+      await flushAsyncWork();
       expect(document.getElementById('custom-chatgpt-initial-buttons')).toBeNull();
       expect(document.getElementById('custom-chatgpt-magic-box-buttons')).toBeNull();
     } finally {
@@ -228,6 +262,83 @@ describe('chatgpt.com DOM snapshot', () => {
       expect(clickCalls).toBe(1);
     } finally {
       restoreChrome();
+    }
+  });
+
+  test('injects initial buttons on chatgpt root page', async () => {
+    document.documentElement.innerHTML = `
+      <head></head>
+      <body>
+        <main>
+          <form data-type="unified-composer">
+            <textarea placeholder="Ask anything"></textarea>
+            <button type="button" data-testid="composer-send-button"></button>
+          </form>
+        </main>
+      </body>
+    `;
+
+    const restoreChrome = installChromeStub([
+      {
+        enabled: true,
+        initial: true,
+        title: '快速摘要',
+        prompt: '請先幫我整理重點',
+      },
+    ]);
+
+    try {
+      withPatchedTimers(() => {
+        initChatGPT(createContentContext());
+      });
+      await flushAsyncWork();
+
+      const bar = document.getElementById('custom-chatgpt-initial-buttons');
+      expect(bar).not.toBeNull();
+      expect(bar?.textContent).toContain('快速摘要');
+    } finally {
+      restoreChrome();
+    }
+  });
+
+  test('skips initial buttons on excluded chatgpt pages', async () => {
+    for (const pathname of ['/scheduled', '/deep-research']) {
+      setChatGPTLocation(pathname);
+      document.documentElement.innerHTML = `
+        <head></head>
+        <body>
+          <main>
+            <form data-type="unified-composer">
+              <textarea placeholder="Ask anything"></textarea>
+              <button type="button" data-testid="composer-send-button"></button>
+            </form>
+          </main>
+        </body>
+      `;
+
+      const staleBar = document.createElement('div');
+      staleBar.id = 'custom-chatgpt-initial-buttons';
+      document.body.appendChild(staleBar);
+
+      const restoreChrome = installChromeStub([
+        {
+          enabled: true,
+          initial: true,
+          title: '快速摘要',
+          prompt: '請先幫我整理重點',
+        },
+      ]);
+
+      try {
+        withPatchedTimers(() => {
+          initChatGPT(createContentContext());
+        });
+        await flushAsyncWork();
+
+        expect(document.getElementById('custom-chatgpt-initial-buttons')).toBeNull();
+      } finally {
+        restoreChrome();
+      }
     }
   });
 });

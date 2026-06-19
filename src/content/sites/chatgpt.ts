@@ -24,6 +24,16 @@ type MarkmapInstanceHandle = {
 export function initChatGPT(ctx: ContentContext) {
   const { state, debug } = ctx;
   const CLIPBOARD_ARGS_PLACEHOLDER = '{{args}}';
+  const INITIAL_BUTTONS_EXCLUDED_PATHS = ['/scheduled', '/deep-research'];
+
+  function isInitialButtonsExcludedPage() {
+    return (
+      location.hostname === 'chatgpt.com' &&
+      INITIAL_BUTTONS_EXCLUDED_PATHS.some(
+        (path) => location.pathname === path || location.pathname.startsWith(`${path}/`)
+      )
+    );
+  }
 
   function isElementVisible(el: HTMLElement | null) {
     if (!el) return false;
@@ -611,6 +621,12 @@ export function initChatGPT(ctx: ContentContext) {
 
     function rebuild_initial_buttons() {
       const existing = document.getElementById('custom-chatgpt-initial-buttons');
+
+      if (isInitialButtonsExcludedPage()) {
+        existing?.remove();
+        resetInitialButtonsHeadingShift();
+        return;
+      }
 
       const stopButton = document.querySelector('button[data-testid="stop-button"]');
       if (stopButton) {
