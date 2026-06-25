@@ -1,5 +1,62 @@
 # Changelog
 
+- 0.44.4 (2026/06/20)
+
+  - Chore
+    - 將擴充套件版本由 `0.44.3` 升級為 `0.44.4`。
+    - 同步更新 `options.html` 頁尾顯示版本為 `0.44.4`。
+
+  - New features
+    - None
+
+  - Bug fixes
+    - 在 ChatGPT 的 `/scheduled` 與 `/deep-research` 頁面排除初始按鈕顯示，避免這些非一般對話入口頁出現自訂初始提示按鈕。
+
+  - Breaking changes
+    - None
+
+- 0.44.3 (2026/06/16)
+
+  - Chore
+    - 將擴充套件版本由 `0.44.2` 升級為 `0.44.3`。
+    - 同步更新 `options.html` 頁尾顯示版本為 `0.44.3`。
+
+  - New features
+    - None
+
+  - Bug fixes
+    - 修正 Gemini 追問按鈕在輸入框無文字時消失的問題：
+      - Gemini UI 於輸入框清空時不渲染傳送按鈕，導致 `getSendButton()` 回傳 `null`，`rebuildFollowUpButtons()` 誤判為需要移除追問按鈕。
+      - 將條件由「找不到傳送按鈕時移除追問按鈕」改為「找到傳送按鈕且確認為停止狀態（AI 生成中）時才移除」，使追問按鈕在輸入框為空時仍能正常顯示。
+
+  - Breaking changes
+    - None
+
+- 0.44.1 (2026/05/28)
+
+  - Chore
+    - 將擴充套件版本由 `0.44.0` 升級為 `0.44.1`。
+    - 同步更新 `options.html` 頁尾顯示版本為 `0.44.1`。
+
+  - New features
+    - 改版初始按鈕視覺設計，提供更一致且更專業的介面風格：
+      - 採用膠囊型按鈕外觀與半透明漸層背景。
+      - 調整字重、字距、內距與間距，提升可讀性與資訊層次。
+      - 新增滑鼠懸停微動態與高亮狀態，改善互動回饋。
+
+  - Bug fixes
+    - 修正 ChatGPT 版面更新後，初始按鈕點擊有機率無法帶入提示語到聊天輸入框的問題：
+      - 強化輸入編輯器偵測策略，優先搜尋可見且可互動的 composer 元素。
+      - 擴充送出按鈕選擇器，支援新版 `composer-send-button` 與 `send-button`。
+      - 改善 contenteditable 寫入流程，避免直接操作 `innerHTML` 造成不穩定。
+    - 修正初始按鈕容器造成輸入列版面擠壓、導致 placeholder 文字偏移到右側的問題：
+      - 調整按鈕容器掛載位置，避免與輸入列主排版區互相擠壓。
+      - 移除會依座標強制偏移的左側 padding 校正邏輯，避免新版版面下錯位。
+      - 保留 header 區優先插入與回退策略，提升在不同 ChatGPT 版型上的相容性。
+
+  - Breaking changes
+    - None
+
 - 0.43.10 (2026/01/22)
 
   - Chore

@@ -178,7 +178,7 @@ describe('gemini initial buttons', () => {
     });
   });
 
-  test('injects initial buttons into modular zero state', async () => {
+  test('injects initial buttons above composer on modular zero state layout', async () => {
     loadDom(`
       <modular-zero-state>
         <div class="bottom-section-container">
@@ -207,13 +207,14 @@ describe('gemini initial buttons', () => {
       expect(bar).not.toBeNull();
       expect(bar?.children.length).toBeGreaterThanOrEqual(1);
       expect(bar?.textContent).toContain('快速摘要');
-      expect(bar?.nextElementSibling?.tagName.toLowerCase()).toBe('intent-chips-block');
+      expect(bar?.nextElementSibling?.tagName.toLowerCase()).toBe('input-container');
+      expect((bar as HTMLDivElement).style.position).toBe('relative');
     } finally {
       restoreChrome();
     }
   });
 
-  test('injects initial buttons into gem vm zero state', async () => {
+  test('injects initial buttons above composer on gem vm zero state layout', async () => {
     loadDom(`
       <div class="zero-state-container bot-info-card-container">
         <bot-info-card></bot-info-card>
@@ -235,12 +236,229 @@ describe('gemini initial buttons', () => {
 
       await flushAsyncWork();
 
-      const zeroState = document.querySelector<HTMLElement>('.zero-state-container.bot-info-card-container');
       const bar = document.getElementById('custom-gemini-initial-buttons');
-      expect(zeroState).not.toBeNull();
       expect(bar).not.toBeNull();
-      expect(bar?.parentElement).toBe(zeroState);
-      expect(bar?.nextElementSibling?.tagName.toLowerCase()).toBe('bot-experiment-disclaimer');
+      expect(bar?.nextElementSibling?.tagName.toLowerCase()).toBe('input-container');
+      expect((bar as HTMLDivElement).style.position).toBe('relative');
+    } finally {
+      restoreChrome();
+    }
+  });
+
+  test('injects initial buttons above composer when zero state layout is missing', async () => {
+    loadDom(`
+      <chat-window>
+        <form class="composer-form">
+          <input-container>
+            <rich-textarea>
+              <div class="ql-editor" contenteditable="true" role="textbox"></div>
+            </rich-textarea>
+          </input-container>
+        </form>
+      </chat-window>
+    `);
+
+    const restoreChrome = installChromeStub();
+
+    try {
+      withPatchedTimers(() => {
+        initGemini(createContentContext());
+      });
+
+      await flushAsyncWork();
+
+      const composer = document.querySelector<HTMLElement>('form.composer-form');
+      const bar = document.getElementById('custom-gemini-initial-buttons');
+      expect(composer).not.toBeNull();
+      expect(bar).not.toBeNull();
+      expect(bar?.nextElementSibling?.tagName.toLowerCase()).toBe('input-container');
+      expect(bar?.children.length).toBeGreaterThanOrEqual(1);
+    } finally {
+      restoreChrome();
+    }
+  });
+
+  test('injects initial buttons after Gemini primary heading block', async () => {
+    loadDom(`
+      <div class="zero-state-block-container">
+        <assistant-messages-primary>
+          <div class="assistant-messages-primary-container">
+            <h1><span class="message-text">保哥，該你囉！</span></h1>
+          </div>
+        </assistant-messages-primary>
+      </div>
+      <input-container>
+        <fieldset class="input-area-container">
+          <input-area-v2>
+            <div class="input-area">
+              <rich-textarea>
+                <div class="ql-editor" contenteditable="true" role="textbox"></div>
+              </rich-textarea>
+            </div>
+          </input-area-v2>
+        </fieldset>
+      </input-container>
+    `);
+
+    const restoreChrome = installChromeStub();
+
+    try {
+      withPatchedTimers(() => {
+        initGemini(createContentContext());
+      });
+
+      await flushAsyncWork();
+
+      const primary = document.querySelector<HTMLElement>('assistant-messages-primary');
+      const bar = document.getElementById('custom-gemini-initial-buttons');
+      expect(primary).not.toBeNull();
+      expect(bar).not.toBeNull();
+      expect(bar?.parentElement?.classList.contains('zero-state-block-container')).toBe(true);
+      expect(primary?.nextElementSibling).toBe(bar);
+      expect((bar as HTMLDivElement).style.position).toBe('relative');
+      expect((bar?.querySelector('button') as HTMLButtonElement).style.pointerEvents).toBe('auto');
+    } finally {
+      restoreChrome();
+    }
+  });
+
+  test('initial button click fills prompt and remains keyboard focusable', async () => {
+    loadDom(`
+      <div class="zero-state-block-container">
+        <assistant-messages-primary>
+          <div class="assistant-messages-primary-container">
+            <h1><span class="message-text">保哥，該你囉！</span></h1>
+          </div>
+        </assistant-messages-primary>
+      </div>
+      <input-container>
+        <fieldset class="input-area-container">
+          <input-area-v2>
+            <div class="input-area">
+              <rich-textarea>
+                <div class="ql-editor" contenteditable="true" role="textbox"></div>
+              </rich-textarea>
+            </div>
+          </input-area-v2>
+        </fieldset>
+      </input-container>
+    `);
+
+    const restoreChrome = installChromeStub();
+
+    try {
+      withPatchedTimers(() => {
+        initGemini(createPromptFillContext());
+      });
+
+      await flushAsyncWork();
+
+      const button = document.querySelector<HTMLButtonElement>('#custom-gemini-initial-buttons button');
+      const editor = document.querySelector<HTMLElement>('input-container rich-textarea .ql-editor');
+      expect(button).not.toBeNull();
+      expect(editor).not.toBeNull();
+      expect(button?.tabIndex).toBe(0);
+
+      button?.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+      await flushAsyncWork();
+
+      expect(editor?.textContent).toContain('請先幫我整理重點');
+    } finally {
+      restoreChrome();
+    }
+  });
+
+  test('does not replace initial button nodes on unrelated DOM mutation', async () => {
+    loadDom(`
+      <div class="zero-state-block-container">
+        <assistant-messages-primary>
+          <div class="assistant-messages-primary-container">
+            <h1><span class="message-text">保哥，該你囉！</span></h1>
+          </div>
+        </assistant-messages-primary>
+      </div>
+      <input-container>
+        <fieldset class="input-area-container">
+          <input-area-v2>
+            <div class="input-area">
+              <rich-textarea>
+                <div class="ql-editor" contenteditable="true" role="textbox"></div>
+              </rich-textarea>
+            </div>
+          </input-area-v2>
+        </fieldset>
+      </input-container>
+    `);
+
+    const restoreChrome = installChromeStub();
+
+    try {
+      withPatchedTimers(() => {
+        initGemini(createPromptFillContext());
+      });
+
+      await flushAsyncWork();
+
+      const firstButton = document.querySelector<HTMLButtonElement>('#custom-gemini-initial-buttons button');
+      expect(firstButton).not.toBeNull();
+
+      document.body.appendChild(document.createElement('div'));
+      await flushAsyncWork();
+
+      const nextButton = document.querySelector<HTMLButtonElement>('#custom-gemini-initial-buttons button');
+      expect(nextButton).toBe(firstButton);
+    } finally {
+      restoreChrome();
+    }
+  });
+
+  test('does not mutate initial button bar on unrelated DOM mutation', async () => {
+    loadDom(`
+      <div class="zero-state-block-container">
+        <assistant-messages-primary>
+          <div class="assistant-messages-primary-container">
+            <h1><span class="message-text">保哥，該你囉！</span></h1>
+          </div>
+        </assistant-messages-primary>
+      </div>
+      <input-container>
+        <fieldset class="input-area-container">
+          <input-area-v2>
+            <div class="input-area">
+              <rich-textarea>
+                <div class="ql-editor" contenteditable="true" role="textbox"></div>
+              </rich-textarea>
+            </div>
+          </input-area-v2>
+        </fieldset>
+      </input-container>
+    `);
+
+    const restoreChrome = installChromeStub();
+
+    try {
+      withPatchedTimers(() => {
+        initGemini(createPromptFillContext());
+      });
+
+      await flushAsyncWork();
+
+      const bar = document.getElementById('custom-gemini-initial-buttons');
+      expect(bar).not.toBeNull();
+
+      const records: MutationRecord[] = [];
+      const observer = new MutationObserver((items) => records.push(...items));
+      observer.observe(bar as HTMLElement, {
+        childList: true,
+        attributes: true,
+        subtree: true,
+      });
+
+      document.body.appendChild(document.createElement('div'));
+      await flushAsyncWork();
+      observer.disconnect();
+
+      expect(records.length).toBe(0);
     } finally {
       restoreChrome();
     }
@@ -285,6 +503,62 @@ describe('gemini initial buttons', () => {
       expect(editor?.children.length).toBe(2);
       expect(editor?.children[0].textContent).toBe('你好');
       expect(editor?.children[1].textContent).toBe('既有內容');
+      expect(clearHashCalls).toBe(1);
+    } finally {
+      restoreChrome();
+    }
+  });
+
+  test('auto submits with aria-label send button when send-button class is absent', async () => {
+    loadDom(`
+      <chat-window>
+        <input-container>
+          <rich-textarea>
+            <div class="ql-editor" contenteditable="true" role="textbox"></div>
+          </rich-textarea>
+        </input-container>
+        <button type="button" aria-label="Send message">
+          <mat-icon>send</mat-icon>
+        </button>
+      </chat-window>
+    `);
+
+    Object.defineProperty(globalThis, 'location', {
+      configurable: true,
+      value: {
+        hostname: 'gemini.google.com',
+        hash: '#autoSubmit=true&prompt=What%20is%20SwiftPM?',
+        search: '',
+        pathname: '/app',
+      },
+    });
+
+    let clearHashCalls = 0;
+    let clickCalls = 0;
+    const restoreChrome = installChromeStub();
+    const sendButton = document.querySelector<HTMLButtonElement>('button[aria-label="Send message"]');
+    sendButton?.addEventListener('click', () => {
+      clickCalls += 1;
+    });
+
+    try {
+      withPatchedTimers(() => {
+        initGemini(
+          createPromptFillContext({
+            prompt: 'What is SwiftPM?',
+            autoSubmit: true,
+            onClearHash: () => {
+              clearHashCalls += 1;
+            },
+          })
+        );
+      });
+
+      await flushAsyncWork();
+
+      const editor = document.querySelector<HTMLElement>('input-container rich-textarea .ql-editor');
+      expect(editor?.textContent).toBe('What is SwiftPM?');
+      expect(clickCalls).toBe(1);
       expect(clearHashCalls).toBe(1);
     } finally {
       restoreChrome();

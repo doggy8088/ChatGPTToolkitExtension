@@ -24,6 +24,59 @@ type MarkmapInstanceHandle = {
 
 export function initChatGPT(ctx: ContentContext) {
   const { state, debug } = ctx;
+  const INITIAL_BUTTONS_EXCLUDED_PATHS = ['/scheduled', '/deep-research'];
+
+  function isInitialButtonsExcludedPage() {
+    return (
+      location.hostname === 'chatgpt.com' &&
+      INITIAL_BUTTONS_EXCLUDED_PATHS.some(
+        (path) => location.pathname === path || location.pathname.startsWith(`${path}/`)
+      )
+    );
+  }
+
+  function isElementVisible(el: HTMLElement | null) {
+    if (!el) return false;
+    const rect = el.getBoundingClientRect();
+    const style = window.getComputedStyle(el);
+    if (style.display === 'none' || style.visibility === 'hidden') return false;
+
+    const hasLayoutBox = rect.width > 0 || rect.height > 0;
+    if (hasLayoutBox) return true;
+
+    const userAgent = window.navigator?.userAgent || '';
+    if (/jsdom/i.test(userAgent)) return true;
+
+    return el.getClientRects().length > 0;
+  }
+
+  function getComposerRoot() {
+    const sendButton = getSendButton();
+    if (sendButton) {
+      return sendButton.closest('form[data-type="unified-composer"], form, main') as HTMLElement | null;
+    }
+    return document.querySelector<HTMLElement>('form[data-type="unified-composer"], main');
+  }
+
+  function getPromptEditor() {
+    const root = getComposerRoot() || document;
+    const selectors = [
+      '#prompt-textarea',
+      'textarea[data-testid*="prompt"]',
+      'textarea[placeholder]',
+      'textarea',
+      '[contenteditable="true"][role="textbox"]',
+      '[contenteditable="true"][data-virtualkeyboard="true"]',
+      '[contenteditable="true"]',
+    ];
+
+    for (const selector of selectors) {
+      const candidates = Array.from(root.querySelectorAll<HTMLElement>(selector));
+      const match = candidates.find((el) => isElementVisible(el) && !el.closest('[aria-hidden="true"]'));
+      if (match) return match;
+    }
+    return null;
+  }
 
   function setChatGPTPromptEditor(
     editorDiv: HTMLElement | null,
@@ -31,7 +84,13 @@ export function initChatGPT(ctx: ContentContext) {
     preserveExistingText = false
   ) {
     if (!editorDiv) return;
+    if (editorDiv instanceof HTMLTextAreaElement) {
+      ctx.fillTextareaAndDispatchInput(editorDiv, promptText, preserveExistingText);
+      editorDiv.focus();
+      return;
+    }
     ctx.fillContentEditableWithParagraphs(editorDiv, promptText, preserveExistingText);
+    editorDiv.dispatchEvent(new Event('input', { bubbles: true }));
     editorDiv.focus();
   }
 
@@ -117,7 +176,9 @@ export function initChatGPT(ctx: ContentContext) {
 
   function logEditorState(editorDiv: HTMLElement, label: string) {
     if (!debug) return;
-    const text = (editorDiv.textContent || '').replace(/\s+/g, ' ').trim();
+    const text = (
+      editorDiv instanceof HTMLTextAreaElement ? editorDiv.value : editorDiv.textContent || ''
+    ).replace(/\s+/g, ' ').trim();
     console.log(`[ChatGPTToolkit][chatgpt] ${label}`, {
       activeElement: describeElement(document.activeElement),
       textLength: text.length,
@@ -126,6 +187,11 @@ export function initChatGPT(ctx: ContentContext) {
   }
 
   function placeCaretAtEnd(editorDiv: HTMLElement) {
+    if (editorDiv instanceof HTMLTextAreaElement) {
+      editorDiv.selectionStart = editorDiv.selectionEnd = editorDiv.value.length;
+      return;
+    }
+
     const selection = window.getSelection();
     if (!selection) return;
     const range = document.createRange();
@@ -485,18 +551,90 @@ export function initChatGPT(ctx: ContentContext) {
       return results;
     }
 
+    let shiftedInitialHeading: HTMLElement | null = null;
+
+    function setInitialButtonsHeadingShift(headingTarget: HTMLElement | null, shiftPx: number) {
+      if (shiftedInitialHeading && shiftedInitialHeading !== headingTarget) {
+        shiftedInitialHeading.style.removeProperty('transform');
+        shiftedInitialHeading.removeAttribute('data-chatgpttoolkit-chatgpt-heading-shift');
+      }
+
+      shiftedInitialHeading = headingTarget;
+      if (!headingTarget) return;
+
+      if (headingTarget.style.getPropertyValue('transform') !== `translateY(-${shiftPx}px)`) {
+        headingTarget.style.setProperty('transform', `translateY(-${shiftPx}px)`);
+      }
+      if (headingTarget.getAttribute('data-chatgpttoolkit-chatgpt-heading-shift') !== 'true') {
+        headingTarget.setAttribute('data-chatgpttoolkit-chatgpt-heading-shift', 'true');
+      }
+    }
+
+    function resetInitialButtonsHeadingShift() {
+      setInitialButtonsHeadingShift(null, 0);
+    }
+
+    function getInitialButtonsHeadingTarget(anchor: HTMLElement, bar: HTMLElement) {
+      const anchorRect = anchor.getBoundingClientRect();
+      const pageCenter = window.innerWidth / 2;
+      const candidates = Array.from(document.querySelectorAll<HTMLElement>('h1, h2, div, span'))
+        .filter((item) => {
+          if (item === bar || item.contains(bar) || bar.contains(item)) return false;
+          if (anchor.contains(item)) return false;
+          if (!isElementVisible(item)) return false;
+
+          const text = (item.textContent || '').replace(/\s+/g, ' ').trim();
+          if (text.length < 2 || text.length > 80) return false;
+
+          const rect = item.getBoundingClientRect();
+          if (rect.bottom > anchorRect.top) return false;
+          if (rect.top < 80) return false;
+
+          const style = window.getComputedStyle(item);
+          const fontSize = Number.parseFloat(style.fontSize || '0');
+          if (!Number.isFinite(fontSize) || fontSize < 20) return false;
+
+          return true;
+        })
+        .map((item) => {
+          const rect = item.getBoundingClientRect();
+          const centerDistance = Math.abs(rect.left + rect.width / 2 - pageCenter);
+          const verticalDistance = anchorRect.top - rect.bottom;
+          return { item, centerDistance, verticalDistance, area: rect.width * rect.height };
+        })
+        .sort((a, b) => {
+          if (Math.abs(a.verticalDistance - b.verticalDistance) > 8) {
+            return a.verticalDistance - b.verticalDistance;
+          }
+          if (Math.abs(a.centerDistance - b.centerDistance) > 8) {
+            return a.centerDistance - b.centerDistance;
+          }
+          return b.area - a.area;
+        });
+
+      return candidates[0]?.item || null;
+    }
+
     function rebuild_initial_buttons() {
       const existing = document.getElementById('custom-chatgpt-initial-buttons');
+
+      if (isInitialButtonsExcludedPage()) {
+        existing?.remove();
+        resetInitialButtonsHeadingShift();
+        return;
+      }
 
       const stopButton = document.querySelector('button[data-testid="stop-button"]');
       if (stopButton) {
         existing?.remove();
+        resetInitialButtonsHeadingShift();
         return;
       }
 
-      const promptTextarea = document.getElementById('prompt-textarea') as HTMLElement | null;
+      const promptTextarea = getPromptEditor();
       if (!promptTextarea) {
         existing?.remove();
+        resetInitialButtonsHeadingShift();
         return;
       }
 
@@ -505,14 +643,16 @@ export function initChatGPT(ctx: ContentContext) {
       );
       if (hasAnyMessages || !Array.isArray(initialManualSubmitText) || initialManualSubmitText.length === 0) {
         existing?.remove();
+        resetInitialButtonsHeadingShift();
         return;
       }
 
       const form =
-        promptTextarea.closest('form[data-type="unified-composer"]') ||
-        promptTextarea.closest('form');
+        promptTextarea.closest<HTMLFormElement>('form[data-type="unified-composer"]') ||
+        promptTextarea.closest<HTMLFormElement>('form');
       if (!form) {
         existing?.remove();
+        resetInitialButtonsHeadingShift();
         return;
       }
 
@@ -520,24 +660,21 @@ export function initChatGPT(ctx: ContentContext) {
         form.querySelector<HTMLElement>('div[class*="bg-token-bg-primary"][class*="grid-template-areas"]') ||
         form.querySelector<HTMLElement>('div[class*="grid-template-areas"]');
 
-      if (!composerGrid) {
-        existing?.remove();
-        return;
-      }
-
       let headerCandidates: HTMLElement[] = [];
-      try {
-        headerCandidates = Array.from(
-          composerGrid.querySelectorAll<HTMLElement>(
-            ':scope > div[class*="[grid-area:header]"], :scope > div[style*="grid-area: header"]'
-          )
-        );
-      } catch {
-        headerCandidates = Array.from(
-          composerGrid.querySelectorAll<HTMLElement>(
-            'div[class*="[grid-area:header]"], div[style*="grid-area: header"]'
-          )
-        );
+      if (composerGrid) {
+        try {
+          headerCandidates = Array.from(
+            composerGrid.querySelectorAll<HTMLElement>(
+              ':scope > div[class*="[grid-area:header]"], :scope > div[style*="grid-area: header"]'
+            )
+          );
+        } catch {
+          headerCandidates = Array.from(
+            composerGrid.querySelectorAll<HTMLElement>(
+              'div[class*="[grid-area:header]"], div[style*="grid-area: header"]'
+            )
+          );
+        }
       }
       const headerContainer =
         headerCandidates.find((el) => el.id !== 'custom-chatgpt-initial-buttons') || null;
@@ -551,33 +688,80 @@ export function initChatGPT(ctx: ContentContext) {
       }
 
       const barEl = bar as HTMLDivElement;
+      barEl.style.position = 'absolute';
+      barEl.style.bottom = '100%';
+      barEl.style.left = '0';
       barEl.style.display = 'flex';
       barEl.style.flexWrap = 'wrap';
-      barEl.style.gap = '0.5rem';
-      barEl.style.alignItems = 'flex-start';
-      barEl.style.alignContent = 'flex-start';
-      barEl.style.padding = '0.25rem 0.75rem 0.5rem 0.75rem';
+      barEl.style.gap = '0.45rem';
+      barEl.style.alignItems = 'center';
+      barEl.style.alignContent = 'center';
+      barEl.style.justifyContent = 'center';
+      barEl.style.width = '100%';
+      barEl.style.boxSizing = 'border-box';
+      barEl.style.padding = '0.15rem 0.25rem 0.15rem 0.25rem';
+      barEl.style.margin = '0';
+      barEl.style.transform = 'translateY(-16px)';
       barEl.style.pointerEvents = 'auto';
+      barEl.style.zIndex = '10';
 
-      if (headerContainer && headerContainer !== barEl) {
-        if (barEl.parentElement !== headerContainer) headerContainer.append(barEl);
-        barEl.style.gridArea = '';
-      } else {
-        if (barEl.parentElement !== composerGrid) composerGrid.prepend(barEl);
-        barEl.style.gridArea = 'header';
+      if (window.getComputedStyle(form).position === 'static') {
+        form.style.setProperty('position', 'relative');
       }
 
-      try {
-        const baseEl = (barEl.parentElement || composerGrid) as HTMLElement;
-        const baseRect = baseEl.getBoundingClientRect();
-        const promptRect = promptTextarea.getBoundingClientRect();
-        const left = Math.max(0, Math.round(promptRect.left - baseRect.left));
-        if (Number.isFinite(left) && left > 0) {
-        barEl.style.paddingLeft = `${left}px`;
-        barEl.style.paddingRight = '0.75rem';
-        }
-      } catch {
-        // ignore
+      if (barEl.parentElement !== form) {
+        form.appendChild(barEl);
+      }
+      barEl.style.gridArea = '';
+
+      let styleEl = document.getElementById('custom-chatgpt-button-styles');
+      if (!styleEl) {
+        styleEl = document.createElement('style');
+        styleEl.id = 'custom-chatgpt-button-styles';
+        styleEl.textContent = `
+          #custom-chatgpt-initial-buttons button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            align-self: center;
+            flex: 0 0 auto;
+            border-radius: 999px;
+            padding: 0.28rem 0.8rem;
+            margin: 0;
+            font-size: 0.82rem;
+            font-weight: 500;
+            letter-spacing: 0.01em;
+            cursor: pointer;
+            line-height: 1.2;
+            white-space: nowrap;
+            transition: all 140ms ease;
+            backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
+            
+            /* Light theme (default) */
+            color: rgba(13, 13, 13, 0.88);
+            border: 1px solid rgba(0, 0, 0, 0.15);
+            background: linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.02));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 1px 2px rgba(0, 0, 0, 0.05);
+          }
+          #custom-chatgpt-initial-buttons button:hover {
+            transform: translateY(-1px);
+            border-color: rgba(0, 0, 0, 0.25);
+            background: linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.04));
+          }
+          /* Dark theme */
+          .dark #custom-chatgpt-initial-buttons button {
+            color: rgba(255, 255, 255, 0.92);
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.06));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 1px 2px rgba(0, 0, 0, 0.25);
+          }
+          .dark #custom-chatgpt-initial-buttons button:hover {
+            border-color: rgba(255, 255, 255, 0.45);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.1));
+          }
+        `;
+        document.head.appendChild(styleEl);
       }
 
       initialManualSubmitText.forEach((item) => {
@@ -586,20 +770,6 @@ export function initChatGPT(ctx: ContentContext) {
 
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.style.display = 'inline-flex';
-        btn.style.alignItems = 'center';
-        btn.style.justifyContent = 'center';
-        btn.style.alignSelf = 'flex-start';
-        btn.style.flex = '0 0 auto';
-        btn.style.border = '1px solid #d1d5db';
-        btn.style.borderRadius = '999px';
-        btn.style.padding = '0.25rem 0.6rem';
-        btn.style.margin = '0';
-        btn.style.fontSize = '0.85rem';
-        btn.style.background = 'transparent';
-        btn.style.cursor = 'pointer';
-        btn.style.lineHeight = '1.2';
-        btn.style.whiteSpace = 'nowrap';
         btn.textContent = item.title;
         if (item.altText) {
           btn.title = String(item.altText);
@@ -608,6 +778,10 @@ export function initChatGPT(ctx: ContentContext) {
 
         barEl.append(btn);
       });
+
+      const anchorForHeading = headerContainer || form;
+      const headingTarget = getInitialButtonsHeadingTarget(anchorForHeading, barEl);
+      setInitialButtonsHeadingShift(headingTarget, 48);
     }
 
     function getAssistantTurnBlocks() {
@@ -641,7 +815,7 @@ export function initChatGPT(ctx: ContentContext) {
         return;
       }
 
-      const promptTextarea = document.getElementById('prompt-textarea');
+      const promptTextarea = getPromptEditor();
       if (!promptTextarea) {
         buttonsAreas?.forEach((item) => {
           item.remove();
@@ -756,7 +930,7 @@ export function initChatGPT(ctx: ContentContext) {
 
   let autoFillInProgress = false;
   const checkForTextareaInput = setInterval(async () => {
-    const textarea = document.getElementById('prompt-textarea') as HTMLElement | null;
+    const textarea = getPromptEditor();
     if (textarea && !autoFillInProgress) {
       autoFillInProgress = true;
       clearInterval(checkForTextareaInput);
@@ -767,7 +941,7 @@ export function initChatGPT(ctx: ContentContext) {
   async function maybePasteImageIntoChatGPT() {
     if (!state.pasteImage || state.pastingImage) return;
 
-    const textarea = document.getElementById('prompt-textarea') as HTMLElement | null;
+    const textarea = getPromptEditor();
     if (!textarea) return;
 
     state.pastingImage = true;
@@ -784,7 +958,7 @@ export function initChatGPT(ctx: ContentContext) {
   function maybeAutoSubmitChatGPT() {
     if (!state.autoSubmit || state.pasteImage) return;
 
-    const sendButton = document.querySelector<HTMLButtonElement>('button[data-testid*="send-button"]');
+    const sendButton = getSendButton();
     if (isSendButtonEnabled(sendButton)) {
       if (debug) console.log('自動提交按鈕被點擊');
       sendButton.click();
@@ -806,13 +980,34 @@ export function initChatGPT(ctx: ContentContext) {
     return true;
   }
 
+  function getSendButton() {
+    const selectors = [
+      'button[data-testid="composer-send-button"]',
+      'button[data-testid="send-button"]',
+      'button[data-testid*="send-button"]',
+      'button[aria-label*="Submit"]',
+      'button[aria-label*="Send"]',
+      'button[aria-label*="傳送"]',
+      'button[aria-label*="送出"]',
+    ];
+
+    for (const selector of selectors) {
+      const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>(selector));
+      const enabledButton = buttons.find((button) => isElementVisible(button) && !button.disabled);
+      if (enabledButton) return enabledButton;
+      if (buttons.length > 0) return buttons[0];
+    }
+
+    return null;
+  }
+
   function autoSubmitWhenReady() {
     if (debug) console.log('[ChatGPTToolkit][chatgpt] autoSubmitWhenReady start');
     ctx.startRetryInterval({
       intervalMs: 80,
       retries: 25,
       tick: () => {
-        const sendButton = document.querySelector<HTMLButtonElement>('button[data-testid*="send-button"]');
+        const sendButton = getSendButton();
         if (debug) {
           console.log('[ChatGPTToolkit][chatgpt] autoSubmitWhenReady tick', {
             hasSendButton: Boolean(sendButton),
@@ -856,13 +1051,15 @@ export function initChatGPT(ctx: ContentContext) {
       tick: () => {
         if (runId !== promptFillRunId) return true;
 
-        const div = document.getElementById('prompt-textarea') as HTMLElement | null;
+        const div = getPromptEditor();
         if (debug && !div) {
           console.log('[ChatGPTToolkit][chatgpt] fillPrompt tick: textarea missing', { runId });
         }
         if (!div) return false;
 
-        const current = normalizeEditorText(div.textContent || '');
+        const current = normalizeEditorText(
+          div instanceof HTMLTextAreaElement ? div.value : div.innerText || div.textContent || ''
+        );
         const hasPrompt = expected.length > 0 ? current.includes(expected) : current.length > 0;
         if (debug) {
           console.log('[ChatGPTToolkit][chatgpt] fillPrompt tick', {
