@@ -17,6 +17,49 @@ interface ContentUtilsApi {
   parseToolkitHash: (hash: string, locationSearch: string) => ParsedToolkitHash;
 }
 
+export const CLIPBOARD_ARGS_PLACEHOLDER = '{{args}}';
+
+export function buildPrefixedText(newText: string, existingText: string) {
+  if (!existingText) return newText;
+  if (!newText) return existingText;
+  return newText.endsWith('\n') ? `${newText}${existingText}` : `${newText}\n${existingText}`;
+}
+
+function normalizeComparableText(text: string) {
+  return (text || '')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/\u00A0/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function hasPrefixText(existingText: string, prefixText: string) {
+  if (!existingText || !prefixText) return false;
+  if (existingText === prefixText) return true;
+
+  const rawPrefixWithBreak = prefixText.endsWith('\n') ? prefixText : `${prefixText}\n`;
+  if (existingText.startsWith(rawPrefixWithBreak)) return true;
+
+  const normalizedExisting = normalizeComparableText(existingText);
+  const normalizedPrefix = normalizeComparableText(prefixText);
+  return normalizedPrefix.length > 0 && normalizedExisting.startsWith(normalizedPrefix);
+}
+
+export function resolvePromptText(
+  promptText: string,
+  clipboardText: string,
+  placeholder = CLIPBOARD_ARGS_PLACEHOLDER
+) {
+  const trimmedClipboard = clipboardText.trim();
+  if (!trimmedClipboard) return promptText;
+
+  if (promptText.includes(placeholder)) {
+    return promptText.split(placeholder).join(trimmedClipboard);
+  }
+
+  return buildPrefixedText(promptText, trimmedClipboard);
+}
+
 export interface ParamsState {
   prompt: string;
   autoSubmit: boolean;
@@ -30,8 +73,16 @@ export interface ContentContext {
   state: ParamsState;
   refreshParamsFromHash: () => ParamsState | null;
   clearHash: () => void;
-  fillContentEditableWithParagraphs: (target: HTMLElement | null, text: string) => void;
-  fillTextareaAndDispatchInput: (textarea: HTMLTextAreaElement | null, text: string) => void;
+  fillContentEditableWithParagraphs: (
+    target: HTMLElement | null,
+    text: string,
+    preserveExistingText?: boolean
+  ) => void;
+  fillTextareaAndDispatchInput: (
+    textarea: HTMLTextAreaElement | null,
+    text: string,
+    preserveExistingText?: boolean
+  ) => void;
   startRetryInterval: (options: RetryIntervalOptions) => number;
   delay: (ms: number) => Promise<void>;
   fetchClipboardImageAndSimulatePaste: (targetElement: HTMLElement | null) => Promise<boolean>;
@@ -55,9 +106,39 @@ export function createContentContext(): ContentContext | null {
     pastingImage: false,
   };
 
-  function fillContentEditableWithParagraphs(target: HTMLElement | null, text: string) {
+  function readTargetText(target: HTMLElement | HTMLTextAreaElement) {
+    if (target instanceof HTMLTextAreaElement) {
+      return target.value;
+    }
+
+    return Array.from(target.childNodes)
+      .map((node) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+          return node.textContent || '';
+        }
+
+        if (node instanceof HTMLBRElement) {
+          return '\n';
+        }
+
+        return (node as HTMLElement).textContent || '';
+      })
+      .join('\n');
+  }
+
+  function fillContentEditableWithParagraphs(
+    target: HTMLElement | null,
+    text: string,
+    preserveExistingText = false
+  ) {
     if (!target) return;
-    const lines = (text || '').split('\n');
+    const existingText = readTargetText(target);
+    const nextText = preserveExistingText
+      ? hasPrefixText(existingText, text)
+        ? existingText
+        : buildPrefixedText(text, existingText)
+      : text;
+    const lines = (nextText || '').split('\n');
     target.innerHTML = '';
     lines.forEach((line) => {
       const paragraph = document.createElement('p');
@@ -66,9 +147,18 @@ export function createContentContext(): ContentContext | null {
     });
   }
 
-  function fillTextareaAndDispatchInput(textarea: HTMLTextAreaElement | null, text: string) {
+  function fillTextareaAndDispatchInput(
+    textarea: HTMLTextAreaElement | null,
+    text: string,
+    preserveExistingText = false
+  ) {
     if (!textarea) return;
-    textarea.value = text;
+    const existingText = readTargetText(textarea);
+    textarea.value = preserveExistingText
+      ? hasPrefixText(existingText, text)
+        ? existingText
+        : buildPrefixedText(text, existingText)
+      : text;
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
   }
 

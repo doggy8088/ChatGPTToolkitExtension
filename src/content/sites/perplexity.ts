@@ -13,7 +13,7 @@ export function initPerplexity(ctx: ContentContext) {
       const textarea = document.querySelector<HTMLTextAreaElement>('textarea[autofocus]');
       if (!textarea) return false;
 
-      ctx.fillTextareaAndDispatchInput(textarea, params.prompt);
+      ctx.fillTextareaAndDispatchInput(textarea, params.prompt, true);
 
       if (params.autoSubmit) {
         setTimeout(() => {

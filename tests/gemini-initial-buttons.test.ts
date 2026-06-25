@@ -250,7 +250,7 @@ describe('gemini initial buttons', () => {
     loadDom(`
       <input-container>
         <rich-textarea>
-          <div class="ql-editor" contenteditable="true" role="textbox"></div>
+          <div class="ql-editor" contenteditable="true" role="textbox"><p>既有內容</p></div>
         </rich-textarea>
       </input-container>
     `);
@@ -282,7 +282,9 @@ describe('gemini initial buttons', () => {
 
       const editor = document.querySelector<HTMLElement>('input-container rich-textarea .ql-editor');
       expect(editor).not.toBeNull();
-      expect(editor?.textContent).toBe('你好');
+      expect(editor?.children.length).toBe(2);
+      expect(editor?.children[0].textContent).toBe('你好');
+      expect(editor?.children[1].textContent).toBe('既有內容');
       expect(clearHashCalls).toBe(1);
     } finally {
       restoreChrome();

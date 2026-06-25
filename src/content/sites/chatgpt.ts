@@ -1,4 +1,5 @@
 import type { ContentContext } from '../context';
+import { resolvePromptText } from '../context';
 
 interface PromptItem {
   enabled?: boolean;
@@ -23,12 +24,14 @@ type MarkmapInstanceHandle = {
 
 export function initChatGPT(ctx: ContentContext) {
   const { state, debug } = ctx;
-  const CLIPBOARD_ARGS_PLACEHOLDER = '{{args}}';
 
-  function setChatGPTPromptEditor(editorDiv: HTMLElement | null, promptText: string) {
+  function setChatGPTPromptEditor(
+    editorDiv: HTMLElement | null,
+    promptText: string,
+    preserveExistingText = false
+  ) {
     if (!editorDiv) return;
-    editorDiv.innerHTML = '<p>' + promptText + '</p>';
-    editorDiv.dispatchEvent(new Event('input', { bubbles: true }));
+    ctx.fillContentEditableWithParagraphs(editorDiv, promptText, preserveExistingText);
     editorDiv.focus();
   }
 
@@ -75,19 +78,11 @@ export function initChatGPT(ctx: ContentContext) {
 
       if (autoPasteEnabled) {
         readClipboardTextSafely().then((text) => {
-          const trimmed = text.trim();
-          const hasArgsPlaceholder = item.prompt.includes(CLIPBOARD_ARGS_PLACEHOLDER);
-          const nextPrompt = hasArgsPlaceholder
-            ? item.prompt.split(CLIPBOARD_ARGS_PLACEHOLDER).join(trimmed)
-            : trimmed
-              ? item.prompt + trimmed
-              : item.prompt;
+          const nextPrompt = resolvePromptText(item.prompt, text);
           if (debug) {
             console.log(`[ChatGPTToolkit][chatgpt] ${label} button clipboard resolved`, {
               title: item.title,
               clipboardLength: text.length,
-              trimmedLength: trimmed.length,
-              hasArgsPlaceholder,
               nextPromptLength: nextPrompt.length,
             });
           }
@@ -286,7 +281,7 @@ export function initChatGPT(ctx: ContentContext) {
 
     if (state.prompt) {
       logEditorState(textarea, 'before prompt fill');
-      setChatGPTPromptEditor(textarea, state.prompt);
+      setChatGPTPromptEditor(textarea, state.prompt, true);
       logEditorState(textarea, 'after prompt fill');
     }
 
@@ -833,7 +828,11 @@ export function initChatGPT(ctx: ContentContext) {
   }
 
   function normalizeEditorText(text: string) {
-    return text.replace(/\s+/g, ' ').trim();
+    return (text || '')
+      .replace(/[\u200B-\u200D\uFEFF]/g, '')
+      .replace(/\u00A0/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   let promptFillRunId = 0;
@@ -884,7 +883,7 @@ export function initChatGPT(ctx: ContentContext) {
           return true;
         }
 
-        setChatGPTPromptEditor(div, prompt);
+        setChatGPTPromptEditor(div, prompt, true);
         placeCaretAtEnd(div);
         if (debug) {
           console.log('[ChatGPTToolkit][chatgpt] fillPrompt wrote prompt', {

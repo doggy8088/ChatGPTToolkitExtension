@@ -13,7 +13,7 @@ export function initClaude(ctx: ContentContext) {
       const textarea = document.querySelector<HTMLElement>('div[contenteditable]');
       if (!textarea) return false;
 
-      ctx.fillContentEditableWithParagraphs(textarea, params.prompt);
+      ctx.fillContentEditableWithParagraphs(textarea, params.prompt, true);
 
       const button = document.querySelector<HTMLButtonElement>('button');
       if (!button) return false;

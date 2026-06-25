@@ -13,7 +13,7 @@ export function initGroq(ctx: ContentContext) {
       const textarea = document.getElementById('chat') as HTMLTextAreaElement | null;
       if (!textarea) return false;
 
-      ctx.fillTextareaAndDispatchInput(textarea, params.prompt);
+      ctx.fillTextareaAndDispatchInput(textarea, params.prompt, true);
 
       if (params.autoSubmit) {
         setTimeout(() => {

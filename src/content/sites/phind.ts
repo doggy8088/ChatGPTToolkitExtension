@@ -13,7 +13,7 @@ export function initPhind(ctx: ContentContext) {
       const textarea = document.querySelector<HTMLTextAreaElement>('textarea[name="q"]');
       if (!textarea) return false;
 
-      ctx.fillTextareaAndDispatchInput(textarea, params.prompt);
+      ctx.fillTextareaAndDispatchInput(textarea, params.prompt, true);
 
       if (params.autoSubmit) {
         textarea.form?.submit();

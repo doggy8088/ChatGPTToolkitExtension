@@ -1,4 +1,5 @@
 import type { ContentContext } from '../context';
+import { resolvePromptText } from '../context';
 
 interface PromptItem {
   enabled?: boolean;
@@ -26,7 +27,6 @@ export function initGemini(ctx: ContentContext) {
 
   const { state, debug } = ctx;
   const CUSTOM_PROMPTS_KEY = 'chatgpttoolkit.customPrompts';
-  const CLIPBOARD_ARGS_PLACEHOLDER = '{{args}}';
   const GEMINI_EDITOR_SELECTORS = [
     'chat-window .textarea',
     'input-container rich-textarea .ql-editor',
@@ -52,10 +52,13 @@ export function initGemini(ctx: ContentContext) {
     return null;
   }
 
-  function setGeminiPromptEditor(editorDiv: HTMLElement | null, promptText: string) {
+  function setGeminiPromptEditor(
+    editorDiv: HTMLElement | null,
+    promptText: string,
+    preserveExistingText = false
+  ) {
     if (!editorDiv) return;
-    ctx.fillContentEditableWithParagraphs(editorDiv, promptText);
-    editorDiv.dispatchEvent(new Event('input', { bubbles: true }));
+    ctx.fillContentEditableWithParagraphs(editorDiv, promptText, preserveExistingText);
     editorDiv.focus();
   }
 
@@ -129,7 +132,11 @@ export function initGemini(ctx: ContentContext) {
   }
 
   function normalizeEditorText(text: string) {
-    return text.replace(/\s+/g, ' ').trim();
+    return (text || '')
+      .replace(/[\u200B-\u200D\uFEFF]/g, '')
+      .replace(/\u00A0/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   function fillPrompt(prompt: string, autoSubmit = true) {
@@ -157,7 +164,7 @@ export function initGemini(ctx: ContentContext) {
           return true;
         }
 
-        setGeminiPromptEditor(editorDiv, prompt);
+        setGeminiPromptEditor(editorDiv, prompt, true);
         if (autoSubmit && !autoSubmitScheduled) {
           autoSubmitScheduled = true;
           autoSubmitWhenReady();
@@ -202,19 +209,11 @@ export function initGemini(ctx: ContentContext) {
 
       if (autoPasteEnabled) {
         readClipboardTextSafely().then((text) => {
-          const trimmed = text.trim();
-          const hasArgsPlaceholder = item.prompt.includes(CLIPBOARD_ARGS_PLACEHOLDER);
-          const nextPrompt = hasArgsPlaceholder
-            ? item.prompt.split(CLIPBOARD_ARGS_PLACEHOLDER).join(trimmed)
-            : trimmed
-              ? item.prompt + trimmed
-              : item.prompt;
+          const nextPrompt = resolvePromptText(item.prompt, text);
           if (debug) {
             console.log(`[ChatGPTToolkit][gemini] ${label} button clipboard resolved`, {
               title: item.title,
               clipboardLength: text.length,
-              trimmedLength: trimmed.length,
-              hasArgsPlaceholder,
               nextPromptLength: nextPrompt.length,
             });
           }
@@ -749,7 +748,7 @@ export function initGemini(ctx: ContentContext) {
 
       const textarea = getPromptEditor();
       if (textarea && state.prompt && !promptFilled) {
-        setGeminiPromptEditor(textarea, state.prompt);
+        setGeminiPromptEditor(textarea, state.prompt, true);
         promptFilled = true;
       }
 
