@@ -1,5 +1,22 @@
 # Changelog
 
+- 0.45.0 (2026/06/25)
+
+  - Chore
+    - 將擴充套件版本由 `0.44.4` 升級為 `0.45.0`。
+    - 同步更新 `options.html` 頁尾顯示版本為 `0.45.0`。
+
+  - New features
+    - 新增跨站點「前綴插入」提示文字行為：填入 prompt 時保留原輸入內容，並將新文字插在前方。
+    - 新增共用 prompt 組裝邏輯，統一支援 `{{args}}` 佔位符替換與剪貼簿內容拼接規則。
+
+  - Bug fixes
+    - 改善 ChatGPT 輸入編輯器偵測與寫入相容性，支援 `textarea` 與 `contenteditable` 路徑，降低版面變動造成填入失敗的機率。
+    - 修正多站點（Claude、Gemini、Groq、Perplexity、Phind）原本可能覆蓋使用者既有輸入內容的問題。
+
+  - Breaking changes
+    - None
+
 - 0.44.4 (2026/06/20)
 
   - Chore
