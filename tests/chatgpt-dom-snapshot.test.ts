@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { initChatGPT } from '../src/content/sites/chatgpt';
-import type { ContentContext } from '../src/content/context';
+import { buildPrefixedText, hasPrefixText, type ContentContext } from '../src/content/context';
 import { ensureHappyDom } from './utils/happyDom';
 
 ensureHappyDom();
@@ -42,7 +42,11 @@ function createContentContext(): ContentContext {
   };
 }
 
-function createPromptUrlContext(): ContentContext {
+function createPromptUrlContext(options?: {
+  prompt?: string;
+  autoSubmit?: boolean;
+  fillTextareaPreservingExistingText?: boolean;
+}): ContentContext {
   const state = {
     prompt: '',
     autoSubmit: false,
@@ -55,17 +59,23 @@ function createPromptUrlContext(): ContentContext {
     debug: false,
     state,
     refreshParamsFromHash: () => {
-      state.prompt = '誰是保哥？';
-      state.autoSubmit = true;
+      state.prompt = options?.prompt || '誰是保哥？';
+      state.autoSubmit = options?.autoSubmit ?? true;
       state.pasteImage = false;
       state.tool = '';
       return state;
     },
     clearHash: () => {},
     fillContentEditableWithParagraphs: () => {},
-    fillTextareaAndDispatchInput: (textarea, text) => {
+    fillTextareaAndDispatchInput: (textarea, text, preserveExistingText = false) => {
       if (!textarea) return;
-      textarea.value = text;
+      const shouldPreserveExistingText =
+        preserveExistingText || options?.fillTextareaPreservingExistingText === true;
+      textarea.value = shouldPreserveExistingText
+        ? hasPrefixText(textarea.value, text)
+          ? textarea.value
+          : buildPrefixedText(text, textarea.value)
+        : text;
       textarea.dispatchEvent(new Event('input', { bubbles: true }));
     },
     startRetryInterval: ({ retries = 10, tick }) => {
@@ -260,6 +270,39 @@ describe('chatgpt.com DOM snapshot', () => {
       const textarea = document.querySelector<HTMLTextAreaElement>('textarea');
       expect(textarea?.value).toBe('誰是保哥？');
       expect(clickCalls).toBe(1);
+    } finally {
+      restoreChrome();
+    }
+  });
+
+  test('fills URL prompt into textarea composer when existing text starts with a partial word match', async () => {
+    document.documentElement.innerHTML = `
+      <head></head>
+      <body>
+        <form>
+          <textarea placeholder="Ask anything">hello</textarea>
+          <button type="button" aria-label="傳送提示詞"></button>
+        </form>
+      </body>
+    `;
+
+    const restoreChrome = installChromeStub();
+
+    try {
+      await withQueuedIntervals(async (flushIntervals) => {
+        initChatGPT(
+          createPromptUrlContext({
+            prompt: 'he',
+            autoSubmit: false,
+            fillTextareaPreservingExistingText: true,
+          })
+        );
+        await flushIntervals();
+        await flushIntervals();
+      });
+
+      const textarea = document.querySelector<HTMLTextAreaElement>('textarea');
+      expect(textarea?.value).toBe('he\nhello');
     } finally {
       restoreChrome();
     }

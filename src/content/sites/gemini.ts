@@ -1,5 +1,5 @@
 import type { ContentContext } from '../context';
-import { resolvePromptText } from '../context';
+import { hasPrefixText, normalizeComparableText, resolvePromptText } from '../context';
 
 interface PromptItem {
   enabled?: boolean;
@@ -177,16 +177,11 @@ export function initGemini(ctx: ContentContext) {
   }
 
   function normalizeEditorText(text: string) {
-    return (text || '')
-      .replace(/[\u200B-\u200D\uFEFF]/g, '')
-      .replace(/\u00A0/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
+    return normalizeComparableText(text);
   }
 
   function fillPrompt(prompt: string, autoSubmit = true) {
     const runId = ++promptFillRunId;
-    const expected = normalizeEditorText(prompt);
     let autoSubmitScheduled = false;
 
     ctx.startRetryInterval({
@@ -198,8 +193,9 @@ export function initGemini(ctx: ContentContext) {
         const editorDiv = getPromptEditor();
         if (!editorDiv) return false;
 
-        const current = normalizeEditorText(editorDiv.innerText || editorDiv.textContent || '');
-        const hasPrompt = expected.length > 0 ? current.includes(expected) : current.length > 0;
+        const rawCurrent = editorDiv.innerText || editorDiv.textContent || '';
+        const current = normalizeEditorText(rawCurrent);
+        const hasPrompt = prompt.length > 0 ? hasPrefixText(rawCurrent, prompt) : current.length > 0;
 
         if (hasPrompt) {
           if (autoSubmit && !autoSubmitScheduled) {

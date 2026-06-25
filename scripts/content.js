@@ -25,7 +25,10 @@ ${existingText}`;
       return true;
     const normalizedExisting = normalizeComparableText(existingText);
     const normalizedPrefix = normalizeComparableText(prefixText);
-    return normalizedPrefix.length > 0 && normalizedExisting.startsWith(normalizedPrefix);
+    if (normalizedPrefix.length > 0 && normalizedExisting.startsWith(normalizedPrefix)) {
+      return normalizedExisting.length === normalizedPrefix.length || normalizedExisting.charAt(normalizedPrefix.length) === " ";
+    }
+    return false;
   }
   function resolvePromptText(promptText, clipboardText, placeholder = CLIPBOARD_ARGS_PLACEHOLDER) {
     const trimmedClipboard = clipboardText.trim();
@@ -53,6 +56,9 @@ ${existingText}`;
     function readTargetText(target) {
       if (target instanceof HTMLTextAreaElement) {
         return target.value;
+      }
+      if (target.isConnected) {
+        return target.innerText;
       }
       return Array.from(target.childNodes).map((node) => {
         if (node.nodeType === Node.TEXT_NODE) {
@@ -340,11 +346,10 @@ ${existingText}`;
       });
     }
     function normalizeEditorText(text) {
-      return (text || "").replace(/[\u200B-\u200D\uFEFF]/g, "").replace(/\u00A0/g, " ").replace(/\s+/g, " ").trim();
+      return normalizeComparableText(text);
     }
     function fillPrompt(prompt, autoSubmit = true) {
       const runId = ++promptFillRunId;
-      const expected = normalizeEditorText(prompt);
       let autoSubmitScheduled = false;
       ctx.startRetryInterval({
         intervalMs: 80,
@@ -355,8 +360,9 @@ ${existingText}`;
           const editorDiv = getPromptEditor();
           if (!editorDiv)
             return false;
-          const current = normalizeEditorText(editorDiv.innerText || editorDiv.textContent || "");
-          const hasPrompt = expected.length > 0 ? current.includes(expected) : current.length > 0;
+          const rawCurrent = editorDiv.innerText || editorDiv.textContent || "";
+          const current = normalizeEditorText(rawCurrent);
+          const hasPrompt = prompt.length > 0 ? hasPrefixText(rawCurrent, prompt) : current.length > 0;
           if (hasPrompt) {
             if (autoSubmit && !autoSubmitScheduled) {
               autoSubmitScheduled = true;
@@ -1992,7 +1998,7 @@ ${existingText}`;
       });
     }
     function normalizeEditorText(text) {
-      return (text || "").replace(/[\u200B-\u200D\uFEFF]/g, "").replace(/\u00A0/g, " ").replace(/\s+/g, " ").trim();
+      return normalizeComparableText(text);
     }
     let promptFillRunId = 0;
     function fillPrompt(prompt, autoSubmit = true) {
@@ -2019,8 +2025,9 @@ ${existingText}`;
           }
           if (!div)
             return false;
-          const current = normalizeEditorText(div instanceof HTMLTextAreaElement ? div.value : div.innerText || div.textContent || "");
-          const hasPrompt = expected.length > 0 ? current.includes(expected) : current.length > 0;
+          const rawCurrent = div instanceof HTMLTextAreaElement ? div.value : div.innerText || div.textContent || "";
+          const current = normalizeEditorText(rawCurrent);
+          const hasPrompt = prompt.length > 0 ? hasPrefixText(rawCurrent, prompt) : current.length > 0;
           if (debug) {
             console.log("[ChatGPTToolkit][chatgpt] fillPrompt tick", {
               runId,
@@ -2200,4 +2207,4 @@ ${existingText}`;
   runContentScript();
 })();
 
-//# debugId=7961037783291CCC64756E2164756E21
+//# debugId=7EC7CE1B8385DCF364756E2164756E21

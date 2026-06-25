@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { initGemini } from '../src/content/sites/gemini';
 import type { ContentContext } from '../src/content/context';
+import { buildPrefixedText, hasPrefixText } from '../src/content/context';
 import { ensureHappyDom } from './utils/happyDom';
 
 ensureHappyDom();
@@ -55,9 +56,15 @@ function createPromptFillContext(options?: {
     clearHash: () => {
       options?.onClearHash?.();
     },
-    fillContentEditableWithParagraphs: (target, text) => {
+    fillContentEditableWithParagraphs: (target, text, preserveExistingText = false) => {
       if (!target) return;
-      const lines = (text || '').split('\n');
+      const existingText = target.isConnected ? target.innerText : target.textContent || '';
+      const nextText = preserveExistingText
+        ? hasPrefixText(existingText, text)
+          ? existingText
+          : buildPrefixedText(text, existingText)
+        : text;
+      const lines = (nextText || '').split('\n');
       target.innerHTML = '';
       lines.forEach((line) => {
         const paragraph = document.createElement('p');
@@ -487,6 +494,13 @@ describe('gemini initial buttons', () => {
     const restoreChrome = installChromeStub();
 
     try {
+      const editor = document.querySelector<HTMLElement>('input-container rich-textarea .ql-editor');
+      expect(editor).not.toBeNull();
+      Object.defineProperty(editor!, 'innerText', {
+        configurable: true,
+        get: () => '既有內容',
+      });
+
       initGemini(
         createPromptFillContext({
           prompt: '你好',
@@ -498,8 +512,6 @@ describe('gemini initial buttons', () => {
 
       await flushAsyncWork();
 
-      const editor = document.querySelector<HTMLElement>('input-container rich-textarea .ql-editor');
-      expect(editor).not.toBeNull();
       expect(editor?.children.length).toBe(2);
       expect(editor?.children[0].textContent).toBe('你好');
       expect(editor?.children[1].textContent).toBe('既有內容');

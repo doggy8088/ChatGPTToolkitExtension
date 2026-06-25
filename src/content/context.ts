@@ -25,7 +25,7 @@ export function buildPrefixedText(newText: string, existingText: string) {
   return newText.endsWith('\n') ? `${newText}${existingText}` : `${newText}\n${existingText}`;
 }
 
-function normalizeComparableText(text: string) {
+export function normalizeComparableText(text: string) {
   return (text || '')
     .replace(/[\u200B-\u200D\uFEFF]/g, '')
     .replace(/\u00A0/g, ' ')
@@ -33,7 +33,7 @@ function normalizeComparableText(text: string) {
     .trim();
 }
 
-function hasPrefixText(existingText: string, prefixText: string) {
+export function hasPrefixText(existingText: string, prefixText: string) {
   if (!existingText || !prefixText) return false;
   if (existingText === prefixText) return true;
 
@@ -42,7 +42,14 @@ function hasPrefixText(existingText: string, prefixText: string) {
 
   const normalizedExisting = normalizeComparableText(existingText);
   const normalizedPrefix = normalizeComparableText(prefixText);
-  return normalizedPrefix.length > 0 && normalizedExisting.startsWith(normalizedPrefix);
+  if (normalizedPrefix.length > 0 && normalizedExisting.startsWith(normalizedPrefix)) {
+    return (
+      normalizedExisting.length === normalizedPrefix.length ||
+      normalizedExisting.charAt(normalizedPrefix.length) === ' '
+    );
+  }
+
+  return false;
 }
 
 export function resolvePromptText(
@@ -109,6 +116,10 @@ export function createContentContext(): ContentContext | null {
   function readTargetText(target: HTMLElement | HTMLTextAreaElement) {
     if (target instanceof HTMLTextAreaElement) {
       return target.value;
+    }
+
+    if (target.isConnected) {
+      return target.innerText;
     }
 
     return Array.from(target.childNodes)

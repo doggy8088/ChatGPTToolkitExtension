@@ -1,5 +1,5 @@
 import type { ContentContext } from '../context';
-import { resolvePromptText } from '../context';
+import { hasPrefixText, normalizeComparableText, resolvePromptText } from '../context';
 
 interface PromptItem {
   enabled?: boolean;
@@ -1023,11 +1023,7 @@ export function initChatGPT(ctx: ContentContext) {
   }
 
   function normalizeEditorText(text: string) {
-    return (text || '')
-      .replace(/[\u200B-\u200D\uFEFF]/g, '')
-      .replace(/\u00A0/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
+    return normalizeComparableText(text);
   }
 
   let promptFillRunId = 0;
@@ -1057,10 +1053,10 @@ export function initChatGPT(ctx: ContentContext) {
         }
         if (!div) return false;
 
-        const current = normalizeEditorText(
-          div instanceof HTMLTextAreaElement ? div.value : div.innerText || div.textContent || ''
-        );
-        const hasPrompt = expected.length > 0 ? current.includes(expected) : current.length > 0;
+        const rawCurrent =
+          div instanceof HTMLTextAreaElement ? div.value : div.innerText || div.textContent || '';
+        const current = normalizeEditorText(rawCurrent);
+        const hasPrompt = prompt.length > 0 ? hasPrefixText(rawCurrent, prompt) : current.length > 0;
         if (debug) {
           console.log('[ChatGPTToolkit][chatgpt] fillPrompt tick', {
             runId,

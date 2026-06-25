@@ -1,5 +1,22 @@
 # Changelog
 
+- 0.45.1 (2026/06/25)
+
+  - Chore
+    - 將擴充套件版本由 `0.45.0` 升級為 `0.45.1`。
+    - 同步更新 `options.html` 頁尾顯示版本為 `0.45.1`。
+
+  - New features
+    - None
+
+  - Bug fixes
+    - 修正前綴插入判斷誤將部分字首視為已存在的問題，避免像 `hello` 與 `he` 這類情況被誤判而跳過插入。
+    - 改善 contenteditable 文字讀取邏輯：元素已連接 DOM 時優先使用 `innerText`，降低 `<br>` 與巢狀區塊造成換行錯誤的機率。
+    - 抽出共用 `normalizeComparableText`，統一 ChatGPT 與 Gemini 的文字正規化邏輯，減少重複程式碼。
+
+  - Breaking changes
+    - None
+
 - 0.45.0 (2026/06/25)
 
   - Chore
