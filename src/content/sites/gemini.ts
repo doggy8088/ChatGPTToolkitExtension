@@ -1,4 +1,5 @@
 import type { ContentContext } from '../context';
+import { extractPromptEditorText } from '../editorText';
 
 interface PromptItem {
   enabled?: boolean;
@@ -78,14 +79,7 @@ export function initGemini(ctx: ContentContext) {
   }
 
   function getPromptEditorText() {
-    const editorDiv = getPromptEditor();
-    if (!editorDiv) return '';
-    if (editorDiv instanceof HTMLTextAreaElement) return editorDiv.value;
-    const paragraphs = Array.from(editorDiv.querySelectorAll('p'));
-    if (paragraphs.length) {
-      return paragraphs.map((paragraph) => paragraph.textContent || '').join('\n');
-    }
-    return editorDiv.innerText || editorDiv.textContent || '';
+    return extractPromptEditorText(getPromptEditor());
   }
 
   function isSendButtonEnabled(button: HTMLButtonElement | null): button is HTMLButtonElement {
@@ -202,7 +196,7 @@ export function initGemini(ctx: ContentContext) {
         const editorDiv = getPromptEditor();
         if (!editorDiv) return false;
 
-        const current = normalizeEditorText(editorDiv.innerText || editorDiv.textContent || '');
+        const current = normalizeEditorText(extractPromptEditorText(editorDiv));
         const hasPrompt = expected.length > 0 ? current.includes(expected) : current.length > 0;
 
         if (hasPrompt) {

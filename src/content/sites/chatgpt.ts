@@ -1,4 +1,5 @@
 import type { ContentContext } from '../context';
+import { extractPromptEditorText } from '../editorText';
 
 interface PromptItem {
   enabled?: boolean;
@@ -99,14 +100,7 @@ export function initChatGPT(ctx: ContentContext) {
   }
 
   function getPromptEditorText() {
-    const editorDiv = getPromptEditor();
-    if (!editorDiv) return '';
-    if (editorDiv instanceof HTMLTextAreaElement) return editorDiv.value;
-    const paragraphs = Array.from(editorDiv.querySelectorAll('p'));
-    if (paragraphs.length) {
-      return paragraphs.map((paragraph) => paragraph.textContent || '').join('\n');
-    }
-    return editorDiv.innerText || editorDiv.textContent || '';
+    return extractPromptEditorText(getPromptEditor());
   }
 
   function bindPromptButton(
@@ -1071,9 +1065,7 @@ export function initChatGPT(ctx: ContentContext) {
         }
         if (!div) return false;
 
-        const current = normalizeEditorText(
-          div instanceof HTMLTextAreaElement ? div.value : div.innerText || div.textContent || ''
-        );
+        const current = normalizeEditorText(extractPromptEditorText(div));
         const hasPrompt = expected.length > 0 ? current.includes(expected) : current.length > 0;
         if (debug) {
           console.log('[ChatGPTToolkit][chatgpt] fillPrompt tick', {

@@ -80,7 +80,7 @@ function createPromptFillContext(options?: {
   };
 }
 
-function installChromeStub() {
+function installChromeStub(customPrompts?: unknown[]) {
   const previousChrome = (globalThis as { chrome?: unknown }).chrome;
   (globalThis as { chrome?: unknown }).chrome = {
     i18n: {
@@ -90,7 +90,7 @@ function installChromeStub() {
       local: {
         get: (_keys: string[], callback: (items: Record<string, unknown>) => void) => {
           callback({
-            'chatgpttoolkit.customPrompts': [
+            'chatgpttoolkit.customPrompts': customPrompts || [
               {
                 enabled: true,
                 initial: true,
@@ -112,6 +112,26 @@ function installChromeStub() {
 
   return () => {
     (globalThis as { chrome?: unknown }).chrome = previousChrome;
+  };
+}
+
+function installClipboardStub(readText: () => string) {
+  const navigatorRef = globalThis.navigator as Navigator & { clipboard?: unknown };
+  const previousDescriptor = Object.getOwnPropertyDescriptor(navigatorRef, 'clipboard');
+
+  Object.defineProperty(navigatorRef, 'clipboard', {
+    configurable: true,
+    value: {
+      readText: () => Promise.resolve(readText()),
+    },
+  });
+
+  return () => {
+    if (previousDescriptor) {
+      Object.defineProperty(navigatorRef, 'clipboard', previousDescriptor);
+    } else {
+      delete navigatorRef.clipboard;
+    }
   };
 }
 
@@ -153,8 +173,9 @@ function loadDom(bodyHtml: string) {
 }
 
 async function flushAsyncWork() {
-  await Promise.resolve();
-  await Promise.resolve();
+  for (let index = 0; index < 5; index += 1) {
+    await Promise.resolve();
+  }
 }
 
 describe('gemini initial buttons', () => {
@@ -365,6 +386,70 @@ describe('gemini initial buttons', () => {
       expect(editor?.textContent).toContain('請先幫我整理重點');
     } finally {
       restoreChrome();
+    }
+  });
+
+  test('auto paste button preserves soft line breaks from existing editor content', async () => {
+    loadDom(`
+      <div class="zero-state-block-container">
+        <assistant-messages-primary>
+          <div class="assistant-messages-primary-container">
+            <h1><span class="message-text">保哥，該你囉！</span></h1>
+          </div>
+        </assistant-messages-primary>
+      </div>
+      <input-container>
+        <fieldset class="input-area-container">
+          <input-area-v2>
+            <div class="input-area">
+              <rich-textarea>
+                <div class="ql-editor" contenteditable="true" role="textbox">
+                  <p>第一行<br>第二行</p>
+                </div>
+              </rich-textarea>
+            </div>
+          </input-area-v2>
+        </fieldset>
+      </input-container>
+    `);
+
+    let clipboardReads = 0;
+    const restoreClipboard = installClipboardStub(() => {
+      clipboardReads += 1;
+      return '剪貼簿內容';
+    });
+    const restoreChrome = installChromeStub([
+      {
+        enabled: true,
+        initial: true,
+        title: '快速摘要',
+        prompt: '請摘要：{{args}}',
+        autoPaste: true,
+      },
+    ]);
+
+    try {
+      withPatchedTimers(() => {
+        initGemini(createPromptFillContext());
+      });
+
+      await flushAsyncWork();
+
+      const button = document.querySelector<HTMLButtonElement>('#custom-gemini-initial-buttons button');
+      expect(button).not.toBeNull();
+
+      button?.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+      await flushAsyncWork();
+
+      const editor = document.querySelector<HTMLElement>('input-container rich-textarea .ql-editor');
+      const paragraphs = Array.from(editor?.querySelectorAll('p') || []).map(
+        (paragraph) => paragraph.textContent || ''
+      );
+      expect(clipboardReads).toBe(0);
+      expect(paragraphs).toEqual(['請摘要：第一行', '第二行']);
+    } finally {
+      restoreChrome();
+      restoreClipboard();
     }
   });
 

@@ -94,7 +94,16 @@ function createArgsResolutionContext(): ContentContext {
     },
     refreshParamsFromHash: () => null,
     clearHash: () => {},
-    fillContentEditableWithParagraphs: () => {},
+    fillContentEditableWithParagraphs: (target, text) => {
+      if (!target) return;
+      const lines = (text || '').split('\n');
+      target.innerHTML = '';
+      lines.forEach((line) => {
+        const paragraph = document.createElement('p');
+        paragraph.textContent = line;
+        target.appendChild(paragraph);
+      });
+    },
     fillTextareaAndDispatchInput: (textarea, text) => {
       if (!textarea) return;
       textarea.value = text;
@@ -499,6 +508,65 @@ describe('chatgpt.com DOM snapshot', () => {
 
       expect(clipboardReads).toBe(0);
       expect(textarea?.value).toBe('請摘要：既有的輸入內容');
+    } finally {
+      restoreChrome();
+      restoreClipboard();
+    }
+  });
+
+  test('auto paste button preserves soft line breaks from existing editor content', async () => {
+    document.documentElement.innerHTML = `
+      <head></head>
+      <body>
+        <main>
+          <form data-type="unified-composer">
+            <div id="prompt-textarea" contenteditable="true" role="textbox">
+              <p>第一行<br>第二行</p>
+            </div>
+            <button type="button" data-testid="composer-send-button"></button>
+          </form>
+        </main>
+      </body>
+    `;
+
+    let clipboardReads = 0;
+    const restoreClipboard = installClipboardStub(() => {
+      clipboardReads += 1;
+      return '剪貼簿內容';
+    });
+    const restoreChrome = installChromeStub([
+      {
+        enabled: true,
+        initial: true,
+        title: '快速摘要',
+        prompt: '請摘要：{{args}}',
+        autoPaste: true,
+      },
+    ]);
+
+    try {
+      withPatchedTimers(() => {
+        initChatGPT(createArgsResolutionContext());
+      });
+      await flushAsyncWork();
+
+      const button = document
+        .getElementById('custom-chatgpt-initial-buttons')
+        ?.querySelector<HTMLButtonElement>('button');
+      expect(button).not.toBeNull();
+
+      withPatchedTimers(() => {
+        button?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      });
+      await flushAsyncWork();
+      await flushAsyncWork();
+
+      const editor = document.querySelector<HTMLElement>('#prompt-textarea');
+      const paragraphs = Array.from(editor?.querySelectorAll('p') || []).map(
+        (paragraph) => paragraph.textContent || ''
+      );
+      expect(clipboardReads).toBe(0);
+      expect(paragraphs).toEqual(['請摘要：第一行', '第二行']);
     } finally {
       restoreChrome();
       restoreClipboard();
