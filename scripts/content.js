@@ -217,6 +217,19 @@
         return "";
       });
     }
+    function getPromptEditorText() {
+      const editorDiv = getPromptEditor();
+      if (!editorDiv)
+        return "";
+      if (editorDiv instanceof HTMLTextAreaElement)
+        return editorDiv.value;
+      const paragraphs = Array.from(editorDiv.querySelectorAll("p"));
+      if (paragraphs.length) {
+        return paragraphs.map((paragraph) => paragraph.textContent || "").join(`
+`);
+      }
+      return editorDiv.innerText || editorDiv.textContent || "";
+    }
     function isSendButtonEnabled(button) {
       if (!button)
         return false;
@@ -345,14 +358,15 @@
           });
         }
         if (autoPasteEnabled) {
-          readClipboardTextSafely().then((text) => {
-            const trimmed = text.trim();
+          const editorText = getPromptEditorText().trim();
+          const resolveArgsText = editorText ? Promise.resolve(editorText) : readClipboardTextSafely().then((text) => text.trim());
+          resolveArgsText.then((trimmed) => {
             const hasArgsPlaceholder = item.prompt.includes(CLIPBOARD_ARGS_PLACEHOLDER);
             const nextPrompt = hasArgsPlaceholder ? item.prompt.split(CLIPBOARD_ARGS_PLACEHOLDER).join(trimmed) : trimmed ? item.prompt + trimmed : item.prompt;
             if (debug) {
-              console.log(`[ChatGPTToolkit][gemini] ${label} button clipboard resolved`, {
+              console.log(`[ChatGPTToolkit][gemini] ${label} button args resolved`, {
                 title: item.title,
-                clipboardLength: text.length,
+                argsSource: editorText ? "editor" : "clipboard",
                 trimmedLength: trimmed.length,
                 hasArgsPlaceholder,
                 nextPromptLength: nextPrompt.length
@@ -1148,6 +1162,19 @@
         return "";
       });
     }
+    function getPromptEditorText() {
+      const editorDiv = getPromptEditor();
+      if (!editorDiv)
+        return "";
+      if (editorDiv instanceof HTMLTextAreaElement)
+        return editorDiv.value;
+      const paragraphs = Array.from(editorDiv.querySelectorAll("p"));
+      if (paragraphs.length) {
+        return paragraphs.map((paragraph) => paragraph.textContent || "").join(`
+`);
+      }
+      return editorDiv.innerText || editorDiv.textContent || "";
+    }
     function bindPromptButton(button, item, autoPasteEnabled, autoSubmitEnabled, label) {
       let lastTriggerAt = 0;
       const trigger = (source) => {
@@ -1173,14 +1200,15 @@
           });
         }
         if (autoPasteEnabled) {
-          readClipboardTextSafely().then((text) => {
-            const trimmed = text.trim();
+          const editorText = getPromptEditorText().trim();
+          const resolveArgsText = editorText ? Promise.resolve(editorText) : readClipboardTextSafely().then((text) => text.trim());
+          resolveArgsText.then((trimmed) => {
             const hasArgsPlaceholder = item.prompt.includes(CLIPBOARD_ARGS_PLACEHOLDER);
             const nextPrompt = hasArgsPlaceholder ? item.prompt.split(CLIPBOARD_ARGS_PLACEHOLDER).join(trimmed) : trimmed ? item.prompt + trimmed : item.prompt;
             if (debug) {
-              console.log(`[ChatGPTToolkit][chatgpt] ${label} button clipboard resolved`, {
+              console.log(`[ChatGPTToolkit][chatgpt] ${label} button args resolved`, {
                 title: item.title,
-                clipboardLength: text.length,
+                argsSource: editorText ? "editor" : "clipboard",
                 trimmedLength: trimmed.length,
                 hasArgsPlaceholder,
                 nextPromptLength: nextPrompt.length
@@ -2156,4 +2184,4 @@
   runContentScript();
 })();
 
-//# debugId=63A15B88C6649F2A64756E2164756E21
+//# debugId=986C654B9A3A793764756E2164756E21

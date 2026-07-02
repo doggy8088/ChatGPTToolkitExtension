@@ -96,6 +96,7 @@ export class OptionsController {
     this.applyI18nText();
     this.applyI18nPlaceholders();
     this.applyI18nAriaLabels();
+    this.applyI18nTitles();
   }
 
   private applyI18nText(): void {
@@ -122,6 +123,15 @@ export class OptionsController {
       const key = element.dataset.i18nAriaLabel;
       if (!key) return;
       element.setAttribute('aria-label', getMessage(key, this.resolveI18nArgs(element.dataset.i18nArgs)));
+    });
+  }
+
+  private applyI18nTitles(): void {
+    const elements = document.querySelectorAll<HTMLElement>('[data-i18n-title]');
+    elements.forEach((element) => {
+      const key = element.dataset.i18nTitle;
+      if (!key) return;
+      element.title = getMessage(key, this.resolveI18nArgs(element.dataset.i18nArgs));
     });
   }
 
