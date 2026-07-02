@@ -82,6 +82,67 @@ function createPromptUrlContext(): ContentContext {
   };
 }
 
+function createArgsResolutionContext(): ContentContext {
+  return {
+    debug: false,
+    state: {
+      prompt: '',
+      autoSubmit: false,
+      pasteImage: false,
+      tool: '',
+      pastingImage: false,
+    },
+    refreshParamsFromHash: () => null,
+    clearHash: () => {},
+    fillContentEditableWithParagraphs: (target, text) => {
+      if (!target) return;
+      const lines = (text || '').split('\n');
+      target.innerHTML = '';
+      lines.forEach((line) => {
+        const paragraph = document.createElement('p');
+        paragraph.textContent = line;
+        target.appendChild(paragraph);
+      });
+    },
+    fillTextareaAndDispatchInput: (textarea, text) => {
+      if (!textarea) return;
+      textarea.value = text;
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    },
+    startRetryInterval: ({ retries = 10, tick }) => {
+      void (async () => {
+        for (let attempt = 0; attempt < retries; attempt++) {
+          if (await tick()) break;
+        }
+      })();
+
+      return 0;
+    },
+    delay: async () => {},
+    fetchClipboardImageAndSimulatePaste: async () => false,
+  };
+}
+
+function installClipboardStub(readText: () => string) {
+  const navigatorRef = globalThis.navigator as Navigator & { clipboard?: unknown };
+  const previousDescriptor = Object.getOwnPropertyDescriptor(navigatorRef, 'clipboard');
+
+  Object.defineProperty(navigatorRef, 'clipboard', {
+    configurable: true,
+    value: {
+      readText: () => Promise.resolve(readText()),
+    },
+  });
+
+  return () => {
+    if (previousDescriptor) {
+      Object.defineProperty(navigatorRef, 'clipboard', previousDescriptor);
+    } else {
+      delete navigatorRef.clipboard;
+    }
+  };
+}
+
 function installChromeStub(customPrompts?: unknown[]) {
   const previousChrome = (globalThis as { chrome?: unknown }).chrome;
   (globalThis as { chrome?: unknown }).chrome = {
@@ -339,6 +400,176 @@ describe('chatgpt.com DOM snapshot', () => {
       } finally {
         restoreChrome();
       }
+    }
+  });
+
+  test('auto paste button replaces {{args}} with clipboard content when input is empty', async () => {
+    document.documentElement.innerHTML = `
+      <head></head>
+      <body>
+        <main>
+          <form data-type="unified-composer">
+            <textarea placeholder="Ask anything"></textarea>
+            <button type="button" data-testid="composer-send-button"></button>
+          </form>
+        </main>
+      </body>
+    `;
+
+    let clipboardReads = 0;
+    const restoreClipboard = installClipboardStub(() => {
+      clipboardReads += 1;
+      return '剪貼簿內容';
+    });
+    const restoreChrome = installChromeStub([
+      {
+        enabled: true,
+        initial: true,
+        title: '快速摘要',
+        prompt: '請摘要：{{args}}',
+        autoPaste: true,
+      },
+    ]);
+
+    try {
+      withPatchedTimers(() => {
+        initChatGPT(createArgsResolutionContext());
+      });
+      await flushAsyncWork();
+
+      const button = document
+        .getElementById('custom-chatgpt-initial-buttons')
+        ?.querySelector<HTMLButtonElement>('button');
+      expect(button).not.toBeNull();
+
+      withPatchedTimers(() => {
+        button?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      });
+      await flushAsyncWork();
+      await flushAsyncWork();
+
+      const textarea = document.querySelector<HTMLTextAreaElement>('textarea');
+      expect(clipboardReads).toBe(1);
+      expect(textarea?.value).toBe('請摘要：剪貼簿內容');
+    } finally {
+      restoreChrome();
+      restoreClipboard();
+    }
+  });
+
+  test('auto paste button replaces {{args}} with existing input content without reading clipboard', async () => {
+    document.documentElement.innerHTML = `
+      <head></head>
+      <body>
+        <main>
+          <form data-type="unified-composer">
+            <textarea placeholder="Ask anything"></textarea>
+            <button type="button" data-testid="composer-send-button"></button>
+          </form>
+        </main>
+      </body>
+    `;
+
+    let clipboardReads = 0;
+    const restoreClipboard = installClipboardStub(() => {
+      clipboardReads += 1;
+      return '剪貼簿內容';
+    });
+    const restoreChrome = installChromeStub([
+      {
+        enabled: true,
+        initial: true,
+        title: '快速摘要',
+        prompt: '請摘要：{{args}}',
+        autoPaste: true,
+      },
+    ]);
+
+    try {
+      withPatchedTimers(() => {
+        initChatGPT(createArgsResolutionContext());
+      });
+      await flushAsyncWork();
+
+      const textarea = document.querySelector<HTMLTextAreaElement>('textarea');
+      expect(textarea).not.toBeNull();
+      textarea!.value = '既有的輸入內容';
+
+      const button = document
+        .getElementById('custom-chatgpt-initial-buttons')
+        ?.querySelector<HTMLButtonElement>('button');
+      expect(button).not.toBeNull();
+
+      withPatchedTimers(() => {
+        button?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      });
+      await flushAsyncWork();
+      await flushAsyncWork();
+
+      expect(clipboardReads).toBe(0);
+      expect(textarea?.value).toBe('請摘要：既有的輸入內容');
+    } finally {
+      restoreChrome();
+      restoreClipboard();
+    }
+  });
+
+  test('auto paste button preserves soft line breaks from existing editor content', async () => {
+    document.documentElement.innerHTML = `
+      <head></head>
+      <body>
+        <main>
+          <form data-type="unified-composer">
+            <div id="prompt-textarea" contenteditable="true" role="textbox">
+              <p>第一行<br>第二行</p>
+            </div>
+            <button type="button" data-testid="composer-send-button"></button>
+          </form>
+        </main>
+      </body>
+    `;
+
+    let clipboardReads = 0;
+    const restoreClipboard = installClipboardStub(() => {
+      clipboardReads += 1;
+      return '剪貼簿內容';
+    });
+    const restoreChrome = installChromeStub([
+      {
+        enabled: true,
+        initial: true,
+        title: '快速摘要',
+        prompt: '請摘要：{{args}}',
+        autoPaste: true,
+      },
+    ]);
+
+    try {
+      withPatchedTimers(() => {
+        initChatGPT(createArgsResolutionContext());
+      });
+      await flushAsyncWork();
+
+      const button = document
+        .getElementById('custom-chatgpt-initial-buttons')
+        ?.querySelector<HTMLButtonElement>('button');
+      expect(button).not.toBeNull();
+
+      withPatchedTimers(() => {
+        button?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      });
+      await flushAsyncWork();
+      await flushAsyncWork();
+
+      const editor = document.querySelector<HTMLElement>('#prompt-textarea');
+      const paragraphs = Array.from(editor?.querySelectorAll('p') || []).map(
+        (paragraph) => paragraph.textContent || ''
+      );
+      expect(clipboardReads).toBe(0);
+      expect(paragraphs).toEqual(['請摘要：第一行', '第二行']);
+    } finally {
+      restoreChrome();
+      restoreClipboard();
     }
   });
 });

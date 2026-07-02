@@ -1,4 +1,5 @@
 import type { ContentContext } from '../context';
+import { extractPromptEditorText } from '../editorText';
 
 interface PromptItem {
   enabled?: boolean;
@@ -75,6 +76,10 @@ export function initGemini(ctx: ContentContext) {
       if (debug) console.warn('[ChatGPTToolkit][gemini] clipboard read failed', error);
       return '';
     });
+  }
+
+  function getPromptEditorText() {
+    return extractPromptEditorText(getPromptEditor());
   }
 
   function isSendButtonEnabled(button: HTMLButtonElement | null): button is HTMLButtonElement {
@@ -191,7 +196,7 @@ export function initGemini(ctx: ContentContext) {
         const editorDiv = getPromptEditor();
         if (!editorDiv) return false;
 
-        const current = normalizeEditorText(editorDiv.innerText || editorDiv.textContent || '');
+        const current = normalizeEditorText(extractPromptEditorText(editorDiv));
         const hasPrompt = expected.length > 0 ? current.includes(expected) : current.length > 0;
 
         if (hasPrompt) {
@@ -246,8 +251,11 @@ export function initGemini(ctx: ContentContext) {
       }
 
       if (autoPasteEnabled) {
-        readClipboardTextSafely().then((text) => {
-          const trimmed = text.trim();
+        const editorText = getPromptEditorText().trim();
+        const resolveArgsText = editorText
+          ? Promise.resolve(editorText)
+          : readClipboardTextSafely().then((text) => text.trim());
+        resolveArgsText.then((trimmed) => {
           const hasArgsPlaceholder = item.prompt.includes(CLIPBOARD_ARGS_PLACEHOLDER);
           const nextPrompt = hasArgsPlaceholder
             ? item.prompt.split(CLIPBOARD_ARGS_PLACEHOLDER).join(trimmed)
@@ -255,9 +263,9 @@ export function initGemini(ctx: ContentContext) {
               ? item.prompt + trimmed
               : item.prompt;
           if (debug) {
-            console.log(`[ChatGPTToolkit][gemini] ${label} button clipboard resolved`, {
+            console.log(`[ChatGPTToolkit][gemini] ${label} button args resolved`, {
               title: item.title,
-              clipboardLength: text.length,
+              argsSource: editorText ? 'editor' : 'clipboard',
               trimmedLength: trimmed.length,
               hasArgsPlaceholder,
               nextPromptLength: nextPrompt.length,

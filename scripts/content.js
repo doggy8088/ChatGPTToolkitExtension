@@ -162,6 +162,39 @@
     return true;
   }
 
+  // src/content/editorText.ts
+  function extractPromptEditorText(editor) {
+    if (!editor)
+      return "";
+    if (editor instanceof HTMLTextAreaElement)
+      return editor.value;
+    const paragraphs = Array.from(editor.querySelectorAll("p"));
+    if (paragraphs.length) {
+      return paragraphs.map((paragraph) => extractTextPreservingBreaks(paragraph)).join(`
+`);
+    }
+    return editor.innerText || extractTextPreservingBreaks(editor) || editor.textContent || "";
+  }
+  function extractTextPreservingBreaks(element) {
+    const parts = [];
+    function visit(node) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        parts.push(node.textContent || "");
+        return;
+      }
+      if (node.nodeType !== Node.ELEMENT_NODE)
+        return;
+      if (node.tagName === "BR") {
+        parts.push(`
+`);
+        return;
+      }
+      node.childNodes.forEach(visit);
+    }
+    visit(element);
+    return parts.join("");
+  }
+
   // src/content/sites/gemini.ts
   function initGemini(ctx) {
     if (location.hostname !== "gemini.google.com")
@@ -216,6 +249,9 @@
           console.warn("[ChatGPTToolkit][gemini] clipboard read failed", error);
         return "";
       });
+    }
+    function getPromptEditorText() {
+      return extractPromptEditorText(getPromptEditor());
     }
     function isSendButtonEnabled(button) {
       if (!button)
@@ -302,7 +338,7 @@
           const editorDiv = getPromptEditor();
           if (!editorDiv)
             return false;
-          const current = normalizeEditorText(editorDiv.innerText || editorDiv.textContent || "");
+          const current = normalizeEditorText(extractPromptEditorText(editorDiv));
           const hasPrompt = expected.length > 0 ? current.includes(expected) : current.length > 0;
           if (hasPrompt) {
             if (autoSubmit && !autoSubmitScheduled) {
@@ -345,14 +381,15 @@
           });
         }
         if (autoPasteEnabled) {
-          readClipboardTextSafely().then((text) => {
-            const trimmed = text.trim();
+          const editorText = getPromptEditorText().trim();
+          const resolveArgsText = editorText ? Promise.resolve(editorText) : readClipboardTextSafely().then((text) => text.trim());
+          resolveArgsText.then((trimmed) => {
             const hasArgsPlaceholder = item.prompt.includes(CLIPBOARD_ARGS_PLACEHOLDER);
             const nextPrompt = hasArgsPlaceholder ? item.prompt.split(CLIPBOARD_ARGS_PLACEHOLDER).join(trimmed) : trimmed ? item.prompt + trimmed : item.prompt;
             if (debug) {
-              console.log(`[ChatGPTToolkit][gemini] ${label} button clipboard resolved`, {
+              console.log(`[ChatGPTToolkit][gemini] ${label} button args resolved`, {
                 title: item.title,
-                clipboardLength: text.length,
+                argsSource: editorText ? "editor" : "clipboard",
                 trimmedLength: trimmed.length,
                 hasArgsPlaceholder,
                 nextPromptLength: nextPrompt.length
@@ -1148,6 +1185,9 @@
         return "";
       });
     }
+    function getPromptEditorText() {
+      return extractPromptEditorText(getPromptEditor());
+    }
     function bindPromptButton(button, item, autoPasteEnabled, autoSubmitEnabled, label) {
       let lastTriggerAt = 0;
       const trigger = (source) => {
@@ -1173,14 +1213,15 @@
           });
         }
         if (autoPasteEnabled) {
-          readClipboardTextSafely().then((text) => {
-            const trimmed = text.trim();
+          const editorText = getPromptEditorText().trim();
+          const resolveArgsText = editorText ? Promise.resolve(editorText) : readClipboardTextSafely().then((text) => text.trim());
+          resolveArgsText.then((trimmed) => {
             const hasArgsPlaceholder = item.prompt.includes(CLIPBOARD_ARGS_PLACEHOLDER);
             const nextPrompt = hasArgsPlaceholder ? item.prompt.split(CLIPBOARD_ARGS_PLACEHOLDER).join(trimmed) : trimmed ? item.prompt + trimmed : item.prompt;
             if (debug) {
-              console.log(`[ChatGPTToolkit][chatgpt] ${label} button clipboard resolved`, {
+              console.log(`[ChatGPTToolkit][chatgpt] ${label} button args resolved`, {
                 title: item.title,
-                clipboardLength: text.length,
+                argsSource: editorText ? "editor" : "clipboard",
                 trimmedLength: trimmed.length,
                 hasArgsPlaceholder,
                 nextPromptLength: nextPrompt.length
@@ -1975,7 +2016,7 @@
           }
           if (!div)
             return false;
-          const current = normalizeEditorText(div instanceof HTMLTextAreaElement ? div.value : div.innerText || div.textContent || "");
+          const current = normalizeEditorText(extractPromptEditorText(div));
           const hasPrompt = expected.length > 0 ? current.includes(expected) : current.length > 0;
           if (debug) {
             console.log("[ChatGPTToolkit][chatgpt] fillPrompt tick", {
@@ -2156,4 +2197,4 @@
   runContentScript();
 })();
 
-//# debugId=63A15B88C6649F2A64756E2164756E21
+//# debugId=DBC311E6F4C08EE964756E2164756E21

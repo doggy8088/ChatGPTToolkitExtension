@@ -1,4 +1,5 @@
 import type { ContentContext } from '../context';
+import { extractPromptEditorText } from '../editorText';
 
 interface PromptItem {
   enabled?: boolean;
@@ -98,6 +99,10 @@ export function initChatGPT(ctx: ContentContext) {
     });
   }
 
+  function getPromptEditorText() {
+    return extractPromptEditorText(getPromptEditor());
+  }
+
   function bindPromptButton(
     button: HTMLButtonElement,
     item: ReadyPrompt,
@@ -132,8 +137,11 @@ export function initChatGPT(ctx: ContentContext) {
       }
 
       if (autoPasteEnabled) {
-        readClipboardTextSafely().then((text) => {
-          const trimmed = text.trim();
+        const editorText = getPromptEditorText().trim();
+        const resolveArgsText = editorText
+          ? Promise.resolve(editorText)
+          : readClipboardTextSafely().then((text) => text.trim());
+        resolveArgsText.then((trimmed) => {
           const hasArgsPlaceholder = item.prompt.includes(CLIPBOARD_ARGS_PLACEHOLDER);
           const nextPrompt = hasArgsPlaceholder
             ? item.prompt.split(CLIPBOARD_ARGS_PLACEHOLDER).join(trimmed)
@@ -141,9 +149,9 @@ export function initChatGPT(ctx: ContentContext) {
               ? item.prompt + trimmed
               : item.prompt;
           if (debug) {
-            console.log(`[ChatGPTToolkit][chatgpt] ${label} button clipboard resolved`, {
+            console.log(`[ChatGPTToolkit][chatgpt] ${label} button args resolved`, {
               title: item.title,
-              clipboardLength: text.length,
+              argsSource: editorText ? 'editor' : 'clipboard',
               trimmedLength: trimmed.length,
               hasArgsPlaceholder,
               nextPromptLength: nextPrompt.length,
@@ -1057,9 +1065,7 @@ export function initChatGPT(ctx: ContentContext) {
         }
         if (!div) return false;
 
-        const current = normalizeEditorText(
-          div instanceof HTMLTextAreaElement ? div.value : div.innerText || div.textContent || ''
-        );
+        const current = normalizeEditorText(extractPromptEditorText(div));
         const hasPrompt = expected.length > 0 ? current.includes(expected) : current.length > 0;
         if (debug) {
           console.log('[ChatGPTToolkit][chatgpt] fillPrompt tick', {
