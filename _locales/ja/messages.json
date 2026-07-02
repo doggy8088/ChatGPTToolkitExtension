@@ -96,7 +96,7 @@
     "message": "使用可能な変数："
   },
   "options_modal_prompt_args_tooltip": {
-    "message": "入力欄に既に内容がある場合、{{args}} はその内容で置換されます（クリップボードは読み取りません）。入力欄が空の場合は、クリップボードの内容で置換されます。"
+    "message": "入力欄に内容があればその内容で、空ならクリップボードの内容で {{args}} を置換します。"
   },
   "options_modal_auto_paste_label": {
     "message": "クリップボード内容を自動貼り付け"

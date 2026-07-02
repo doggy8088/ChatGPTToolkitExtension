@@ -96,7 +96,7 @@
         "message": "Variable:"
     },
     "options_modal_prompt_args_tooltip": {
-        "message": "If the input box already has content, {{args}} is replaced with that content (the clipboard is not read); if the input box is empty, clipboard content is used instead."
+        "message": "Replaced with the input box content if it is not empty; otherwise with clipboard content."
     },
     "options_modal_auto_paste_label": {
         "message": "Auto paste clipboard content"

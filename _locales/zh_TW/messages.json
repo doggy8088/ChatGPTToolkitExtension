@@ -96,7 +96,7 @@
         "message": "可用變數："
     },
     "options_modal_prompt_args_tooltip": {
-        "message": "若輸入框已有內容，{{args}} 會以輸入框內容取代（不讀取剪貼簿）；若輸入框為空，則以剪貼簿內容取代。"
+        "message": "輸入框已有內容時，以輸入框內容取代 {{args}}；為空時則以剪貼簿內容取代。"
     },
     "options_modal_auto_paste_label": {
         "message": "自動貼上剪貼簿內容"
