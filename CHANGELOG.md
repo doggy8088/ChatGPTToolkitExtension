@@ -1,5 +1,24 @@
 # Changelog
 
+- 0.46.0 (2026/09/11)
+
+  - Chore
+    - 將擴充套件版本由 `0.45.0` 升級為 `0.46.0`。
+    - 同步更新 `options.html` 頁尾顯示版本為 `0.46.0`。
+
+  - New features
+    - None
+
+  - Bug fixes
+    - 修正 ChatGPT 初始按鈕出現在非首頁頁面（例如 Project 頁面 `/g/g-p-…/project`），與頁面原有標題及操作按鈕重疊、影響原生功能操作的問題：
+      - 初始按鈕的顯示判斷由「排除清單」改為「白名單」，僅在 ChatGPT 首頁（路徑為 `/`）顯示初始按鈕。
+      - 其餘所有頁面（Project、GPTs、`/gpts`、`/library`、`/codex`、`/scheduled`、`/deep-research` 等）一律不注入初始按鈕；若因頁面切換（SPA 導航）殘留舊的按鈕列，也會自動移除並還原標題位移。
+      - 追問按鈕（follow-up buttons）與 Gemini 的初始按鈕行為不受此變更影響。
+      - 補強測試：新增 Project、GPTs、Library、Codex 等非根路徑頁面的測試案例，確保初始按鈕不會被注入。
+
+  - Breaking changes
+    - None
+
 - 0.45.0 (2026/07/03)
 
   - Chore

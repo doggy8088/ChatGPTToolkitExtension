@@ -362,8 +362,16 @@ describe('chatgpt.com DOM snapshot', () => {
     }
   });
 
-  test('skips initial buttons on excluded chatgpt pages', async () => {
-    for (const pathname of ['/scheduled', '/deep-research']) {
+  test('skips initial buttons on non-root chatgpt pages', async () => {
+    for (const pathname of [
+      '/scheduled',
+      '/deep-research',
+      '/g/g-p-6aa3bbc864c08191a8dd67f0585b6b07-tie-wen-chan-sheng-qi/project',
+      '/g/g-abc123-some-gpt',
+      '/gpts',
+      '/library',
+      '/codex',
+    ]) {
       setChatGPTLocation(pathname);
       document.documentElement.innerHTML = `
         <head></head>

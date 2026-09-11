@@ -25,15 +25,12 @@ type MarkmapInstanceHandle = {
 export function initChatGPT(ctx: ContentContext) {
   const { state, debug } = ctx;
   const CLIPBOARD_ARGS_PLACEHOLDER = '{{args}}';
-  const INITIAL_BUTTONS_EXCLUDED_PATHS = ['/scheduled', '/deep-research'];
-
-  function isInitialButtonsExcludedPage() {
-    return (
-      location.hostname === 'chatgpt.com' &&
-      INITIAL_BUTTONS_EXCLUDED_PATHS.some(
-        (path) => location.pathname === path || location.pathname.startsWith(`${path}/`)
-      )
-    );
+  // Initial buttons are only allowed on the ChatGPT home page (root path).
+  // Every other page (projects, GPTs, scheduled, deep-research, library, ...) is excluded
+  // because the injected bar interferes with the page's own controls.
+  function isInitialButtonsAllowedPage() {
+    const pathname = (location.pathname || '/').replace(/\/+$/, '') || '/';
+    return pathname === '/';
   }
 
   function isElementVisible(el: HTMLElement | null) {
@@ -630,7 +627,7 @@ export function initChatGPT(ctx: ContentContext) {
     function rebuild_initial_buttons() {
       const existing = document.getElementById('custom-chatgpt-initial-buttons');
 
-      if (isInitialButtonsExcludedPage()) {
+      if (!isInitialButtonsAllowedPage()) {
         existing?.remove();
         resetInitialButtonsHeadingShift();
         return;
