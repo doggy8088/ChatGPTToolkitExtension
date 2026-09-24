@@ -79,6 +79,32 @@ describe('PromptsStorageService', () => {
       })();
     });
 
+    test('should keep a deleted default prompt deleted on the next load', () => {
+      return (async () => {
+        const first = await PromptsStorageService.loadPrompts();
+        const withoutReview = first.filter((prompt) => !(prompt.initial === true && prompt.title === '評論'));
+        await PromptsStorageService.savePrompts(withoutReview);
+
+        const second = await PromptsStorageService.loadPrompts();
+        expect(second).toEqual(withoutReview);
+        expect(chromeStorage.getRaw()[STORAGE_KEY]).toEqual(withoutReview);
+      })();
+    });
+
+    test('should add the review prompt once for users upgrading without migration records', () => {
+      return (async () => {
+        const custom: CustomPrompt[] = [{ enabled: true, title: '自訂', prompt: '內容' }];
+        await PromptsStorageService.savePrompts(custom);
+
+        const upgraded = await PromptsStorageService.loadPrompts();
+        expect(upgraded).toEqual([...custom, getReviewPrompt()]);
+        expect(chromeStorage.getRaw()['chatgpttoolkit.promptMigrations']).toEqual(['add-review-prompt']);
+
+        await PromptsStorageService.savePrompts(custom);
+        expect(await PromptsStorageService.loadPrompts()).toEqual(custom);
+      })();
+    });
+
     test('should load prompts from localStorage', () => {
       return (async () => {
         const testPrompts: CustomPrompt[] = [
@@ -182,6 +208,42 @@ describe('PromptsStorageService', () => {
       expect(() => PromptsStorageService.importPrompts(jsonString)).toThrow('必須包含 title 和 prompt');
     });
 
+    test('should throw a localized error for invalid JSON instead of a SyntaxError', () => {
+      expect(() => PromptsStorageService.importPrompts('{not json')).toThrow('options_import_error_invalid_json');
+    });
+
+    test('should throw a localized error for empty input', () => {
+      expect(() => PromptsStorageService.importPrompts('   ')).toThrow('options_import_error_empty');
+    });
+
+    test('should reject null and non-object items with a helpful error', () => {
+      for (const items of [[null], [42], ['text'], [[]]]) {
+        expect(() => PromptsStorageService.importPrompts(JSON.stringify(items))).toThrow('options_import_error_invalid_item');
+      }
+    });
+
+    test('should reject non-string or blank title/prompt fields', () => {
+      const invalid = [
+        [{ title: 1, prompt: 'Test' }],
+        [{ title: 'Test', prompt: { text: 'x' } }],
+        [{ title: '   ', prompt: 'Test' }],
+        [{ title: 'Test', prompt: '' }],
+      ];
+      for (const items of invalid) {
+        expect(() => PromptsStorageService.importPrompts(JSON.stringify(items))).toThrow('必須包含 title 和 prompt');
+      }
+    });
+
+    test('should validate every item, not just the first', () => {
+      const items = [{ title: 'OK', prompt: 'OK' }, null];
+      expect(() => PromptsStorageService.importPrompts(JSON.stringify(items))).toThrow('options_import_error_invalid_item');
+    });
+
+    test('should keep the stored shape (including unknown fields) of valid prompts', () => {
+      const items = [{ enabled: false, title: 'T', prompt: 'P', futureField: [1] }];
+      expect(PromptsStorageService.importPrompts(JSON.stringify(items))).toEqual(items as unknown as CustomPrompt[]);
+    });
+
     test('should accept prompts with optional fields', () => {
       const validPrompts: CustomPrompt[] = [
         {
@@ -199,6 +261,39 @@ describe('PromptsStorageService', () => {
 
       const imported = PromptsStorageService.importPrompts(jsonString);
       expect(imported).toEqual(validPrompts);
+    });
+  });
+
+  describe('getDefaultPrompts', () => {
+    test('should return deep copies of DEFAULT_PROMPTS', () => {
+      const snapshot = JSON.stringify(DEFAULT_PROMPTS);
+      const first = PromptsStorageService.getDefaultPrompts();
+      expect(first).toEqual(DEFAULT_PROMPTS);
+
+      first[0].enabled = false;
+      first[0].title = 'mutated';
+      first.pop();
+
+      expect(JSON.stringify(DEFAULT_PROMPTS)).toBe(snapshot);
+      expect(PromptsStorageService.getDefaultPrompts()).toEqual(DEFAULT_PROMPTS);
+      expect(PromptsStorageService.getDefaultPrompts()[0]).not.toBe(DEFAULT_PROMPTS[0]);
+    });
+  });
+
+  describe('readStoredPrompts', () => {
+    test('should return null when nothing is stored, without seeding defaults', () => {
+      return (async () => {
+        expect(await PromptsStorageService.readStoredPrompts()).toBeNull();
+        expect(chromeStorage.getRaw()[STORAGE_KEY]).toBeUndefined();
+      })();
+    });
+
+    test('should return the stored array as-is', () => {
+      return (async () => {
+        const stored: CustomPrompt[] = [{ enabled: true, title: 'Only', prompt: 'One' }];
+        await (globalThis as any).chrome.storage.local.set({ [STORAGE_KEY]: stored });
+        expect(await PromptsStorageService.readStoredPrompts()).toEqual(stored);
+      })();
     });
   });
 });

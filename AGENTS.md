@@ -3,9 +3,10 @@
 ## Project Structure and Module Organization
 This is a Chrome extension (MV3) with TypeScript sources.
 - `src/options/`: Options page UI and storage services.
-- `src/content/`: Content script entry (`index.ts`) and per-site modules in `sites/`.
+- `src/content/`: Content script entry (`index.ts`), shared prompt helpers (`prompts.ts`) and per-site modules in `sites/`.
+- `src/shared/`: Code used by both the options page and content scripts (e.g. `promptMigrations.ts`).
 - `scripts/`: Built content script (`content.js`) plus vendored libraries (markmap, d3).
-- `dist/`: Built options bundle (`options.js`).
+- `dist/`: Built options bundles (`options.js`, `theme-init.js`).
 - `tests/`: Bun and Node unit tests.
 - `_locales/`, `images/`, `manifest.json`, `options.html`: extension assets and configuration.
 - `scripts/content-utils.js`: shared helper used by the content script; keep load order in `manifest.json` (utils before content).

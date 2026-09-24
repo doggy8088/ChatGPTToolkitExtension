@@ -1,747 +1,2455 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-Hant-TW">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
     <title data-i18n="options_page_title" data-i18n-args="chatgpttoolkit_name"></title>
+    <link rel="icon" href="images/icon-32.png">
+    <!-- Applies the stored theme before first paint (classic script, must stay synchronous). -->
+    <script src="dist/theme-init.js"></script>
     <style>
-        * {
+        /* ------------------------------------------------------------------
+           Design tokens
+           ------------------------------------------------------------------ */
+        :root,
+        :root[data-theme="light"] {
+            color-scheme: light;
+            --canvas: #f3f6f5;
+            --surface: #ffffff;
+            --surface-sunken: #f2f4f3;
+            --surface-hover: #e9eeec;
+            --raised: #ffffff;
+            --ink: #10201a;
+            --ink-2: #5a6a64;
+            --ink-3: #7f8d88;
+            --line: #e1e7e4;
+            --line-strong: #cbd5d0;
+            --accent: #10a37f;
+            --accent-ink: #0b7d62;
+            --accent-soft: #e3f4ee;
+            --accent-soft-ink: #0a6b53;
+            --primary-bg: #0b7d62;
+            --primary-bg-hover: #096a53;
+            --primary-fg: #ffffff;
+            --danger: #c8323c;
+            --danger-hover: #ad2831;
+            --danger-fg: #ffffff;
+            --danger-soft: #fcebec;
+            --warning-ink: #7a5200;
+            --warning-soft: #fdf3dc;
+            --switch-off: #c3cdc8;
+            --send-bg: #10201a;
+            --send-fg: #ffffff;
+            --tooltip-bg: #10201a;
+            --tooltip-fg: #f3f6f5;
+            --toast-bg: #10201a;
+            --toast-fg: #eef3f1;
+            --toast-success: #3dd6a8;
+            --toast-error: #ff8a8a;
+            --header-bg: rgba(243, 246, 245, 0.84);
+            --backdrop: rgba(10, 22, 18, 0.42);
+            --focus: #10a37f;
+            --shadow-sm: 0 1px 2px rgba(16, 32, 26, 0.06);
+            --shadow-md: 0 1px 2px rgba(16, 32, 26, 0.05), 0 10px 24px -12px rgba(16, 32, 26, 0.16);
+            --shadow-lg: 0 2px 6px rgba(10, 22, 18, 0.08), 0 28px 64px -20px rgba(10, 22, 18, 0.32);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                color-scheme: dark;
+                --canvas: #0e1311;
+                --surface: #161c1a;
+                --surface-sunken: #1d2421;
+                --surface-hover: #252e2b;
+                --raised: #2a3430;
+                --ink: #e6eeea;
+                --ink-2: #95a39d;
+                --ink-3: #6f7d78;
+                --line: #26302c;
+                --line-strong: #37433e;
+                --accent: #1fb88f;
+                --accent-ink: #3dd6a8;
+                --accent-soft: #0f2a22;
+                --accent-soft-ink: #4fdcb0;
+                --primary-bg: #1fb88f;
+                --primary-bg-hover: #2bc89d;
+                --primary-fg: #04140e;
+                --danger: #ff7b7b;
+                --danger-hover: #ff9696;
+                --danger-fg: #2a0b0d;
+                --danger-soft: #3a1a1c;
+                --warning-ink: #f2c46b;
+                --warning-soft: #30260f;
+                --switch-off: #3a4642;
+                --send-bg: #e6eeea;
+                --send-fg: #0e1311;
+                --tooltip-bg: #e6eeea;
+                --tooltip-fg: #10201a;
+                --toast-bg: #e6eeea;
+                --toast-fg: #10201a;
+                --toast-success: #0b7d62;
+                --toast-error: #c8323c;
+                --header-bg: rgba(14, 19, 17, 0.82);
+                --backdrop: rgba(0, 0, 0, 0.6);
+                --focus: #3dd6a8;
+                --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+                --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 24px -12px rgba(0, 0, 0, 0.6);
+                --shadow-lg: 0 0 0 1px rgba(255, 255, 255, 0.04), 0 28px 64px -20px rgba(0, 0, 0, 0.8);
+            }
+        }
+
+        :root[data-theme="dark"] {
+            color-scheme: dark;
+            --canvas: #0e1311;
+            --surface: #161c1a;
+            --surface-sunken: #1d2421;
+            --surface-hover: #252e2b;
+            --raised: #2a3430;
+            --ink: #e6eeea;
+            --ink-2: #95a39d;
+            --ink-3: #6f7d78;
+            --line: #26302c;
+            --line-strong: #37433e;
+            --accent: #1fb88f;
+            --accent-ink: #3dd6a8;
+            --accent-soft: #0f2a22;
+            --accent-soft-ink: #4fdcb0;
+            --primary-bg: #1fb88f;
+            --primary-bg-hover: #2bc89d;
+            --primary-fg: #04140e;
+            --danger: #ff7b7b;
+            --danger-hover: #ff9696;
+            --danger-fg: #2a0b0d;
+            --danger-soft: #3a1a1c;
+            --warning-ink: #f2c46b;
+            --warning-soft: #30260f;
+            --switch-off: #3a4642;
+            --send-bg: #e6eeea;
+            --send-fg: #0e1311;
+            --tooltip-bg: #e6eeea;
+            --tooltip-fg: #10201a;
+            --toast-bg: #e6eeea;
+            --toast-fg: #10201a;
+            --toast-success: #0b7d62;
+            --toast-error: #c8323c;
+            --header-bg: rgba(14, 19, 17, 0.82);
+            --backdrop: rgba(0, 0, 0, 0.6);
+            --focus: #3dd6a8;
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+            --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 24px -12px rgba(0, 0, 0, 0.6);
+            --shadow-lg: 0 0 0 1px rgba(255, 255, 255, 0.04), 0 28px 64px -20px rgba(0, 0, 0, 0.8);
+        }
+
+        /* Group identity colors: initial buttons are green, follow-up buttons are indigo. */
+        :root,
+        :root[data-theme="light"] {
+            --initial: #10a37f;
+            --initial-ink: #0a6b53;
+            --initial-soft: #e3f4ee;
+            --initial-line: #a8dcc9;
+            --initial-strong: #0b7d62;
+            --initial-strong-hover: #096a53;
+            --initial-on: #ffffff;
+            --followup: #6259e0;
+            --followup-ink: #4038b0;
+            --followup-soft: #eeedfd;
+            --followup-line: #c9c5f6;
+            --followup-strong: #4f46c8;
+            --followup-strong-hover: #4038b0;
+            --followup-on: #ffffff;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                --initial: #1fb88f;
+                --initial-ink: #4fdcb0;
+                --initial-soft: #0f2a22;
+                --initial-line: #1d5847;
+                --initial-strong: #1fb88f;
+                --initial-strong-hover: #2bc89d;
+                --initial-on: #04140e;
+                --followup: #8f88ff;
+                --followup-ink: #b3aeff;
+                --followup-soft: #1d1b3a;
+                --followup-line: #3c3878;
+                --followup-strong: #9d97ff;
+                --followup-strong-hover: #b0abff;
+                --followup-on: #120f33;
+            }
+        }
+
+        :root[data-theme="dark"] {
+            --initial: #1fb88f;
+            --initial-ink: #4fdcb0;
+            --initial-soft: #0f2a22;
+            --initial-line: #1d5847;
+            --initial-strong: #1fb88f;
+            --initial-strong-hover: #2bc89d;
+            --initial-on: #04140e;
+            --followup: #8f88ff;
+            --followup-ink: #b3aeff;
+            --followup-soft: #1d1b3a;
+            --followup-line: #3c3878;
+            --followup-strong: #9d97ff;
+            --followup-strong-hover: #b0abff;
+            --followup-on: #120f33;
+        }
+
+        :root {
+            --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+                "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+            --font-display: ui-rounded, "SF Pro Rounded", var(--font-sans);
+            --font-mono: ui-monospace, "SF Mono", SFMono-Regular, "Cascadia Mono", "JetBrains Mono", Menlo, Consolas,
+                "Liberation Mono", monospace;
+            --radius-sm: 8px;
+            --radius-md: 10px;
+            --radius-lg: 16px;
+            --radius-composer: 18px;
+        }
+
+        :root:lang(ja) {
+            --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
+                "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI", Meiryo, sans-serif;
+        }
+
+        /* ------------------------------------------------------------------
+           Base
+           ------------------------------------------------------------------ */
+        *,
+        *::before,
+        *::after {
             box-sizing: border-box;
-            margin: 0;
-            padding: 0;
+        }
+
+        html {
+            -webkit-text-size-adjust: 100%;
+            scrollbar-gutter: stable;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
-            background: #f5f5f5;
-            padding: 20px;
-            line-height: 1.6;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            padding: 30px;
-        }
-
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 28px;
-        }
-
-        .subtitle {
-            color: #666;
-            margin-bottom: 0;
-            font-size: 14px;
-        }
-
-        .header {
+            margin: 0;
+            min-height: 100vh;
             display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
+            flex-direction: column;
+            background: var(--canvas);
+            color: var(--ink);
+            font: 14px/1.5 var(--font-sans);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body:has(dialog[open]) {
+            overflow: hidden;
+        }
+
+        [hidden] {
+            display: none !important;
+        }
+
+        h1,
+        h2,
+        p {
+            margin: 0;
+        }
+
+        button,
+        input,
+        textarea {
+            font: inherit;
+            color: inherit;
+        }
+
+        button {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :focus-visible {
+            outline: 2px solid var(--focus);
+            outline-offset: 2px;
+        }
+
+        .sr-only {
+            position: absolute !important;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0 0 0 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        .icon-sprite {
+            position: absolute;
+            width: 0;
+            height: 0;
+            overflow: hidden;
+        }
+
+        .icon {
+            width: 18px;
+            height: 18px;
+            flex: none;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 1.8;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        kbd {
+            display: inline-block;
+            min-width: 20px;
+            padding: 3px 6px;
+            border: 1px solid var(--line-strong);
+            border-bottom-width: 2px;
+            border-radius: 5px;
+            background: var(--surface);
+            color: var(--ink-2);
+            font: 600 11px/1 var(--font-mono);
+            text-align: center;
+        }
+
+        /* ------------------------------------------------------------------
+           Buttons
+           ------------------------------------------------------------------ */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            height: 36px;
+            padding: 0 14px;
+            border: 1px solid transparent;
+            border-radius: var(--radius-md);
+            background: transparent;
+            font-size: 13.5px;
+            font-weight: 600;
+            line-height: 1;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+        }
+
+        .btn:disabled {
+            opacity: 0.55;
+            cursor: default;
+        }
+
+        .btn--primary {
+            background: var(--primary-bg);
+            color: var(--primary-fg);
+        }
+
+        .btn--primary:hover:not(:disabled) {
+            background: var(--primary-bg-hover);
+        }
+
+        .btn--secondary {
+            background: var(--surface);
+            border-color: var(--line-strong);
+            color: var(--ink);
+        }
+
+        .btn--secondary:hover:not(:disabled) {
+            background: var(--surface-hover);
+        }
+
+        .btn--ghost {
+            color: var(--ink-2);
+        }
+
+        .btn--ghost:hover:not(:disabled) {
+            background: var(--surface-hover);
+            color: var(--ink);
+        }
+
+        .btn--ghost-danger {
+            color: var(--danger);
+        }
+
+        .btn--ghost-danger:hover:not(:disabled) {
+            background: var(--danger-soft);
+            color: var(--danger);
+        }
+
+        .btn--danger {
+            background: var(--danger);
+            color: var(--danger-fg);
+        }
+
+        .btn--danger:hover:not(:disabled) {
+            background: var(--danger-hover);
+        }
+
+        .btn--sm {
+            height: 30px;
+            padding: 0 10px;
+            gap: 6px;
+            border-radius: var(--radius-sm);
+            font-size: 12.5px;
+        }
+
+        .btn--sm .icon {
+            width: 15px;
+            height: 15px;
+        }
+
+        .icon-btn {
+            position: relative;
+            display: inline-grid;
+            place-items: center;
+            flex: none;
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            border: 0;
+            border-radius: var(--radius-sm);
+            background: transparent;
+            color: var(--ink-2);
+            cursor: pointer;
+            transition: background-color 0.15s, color 0.15s;
+        }
+
+        .icon-btn:hover:not(:disabled):not([aria-disabled="true"]) {
+            background: var(--surface-hover);
+            color: var(--ink);
+        }
+
+        .icon-btn--danger:hover:not(:disabled) {
+            background: var(--danger-soft);
+            color: var(--danger);
+        }
+
+        .icon-btn:disabled,
+        .icon-btn[aria-disabled="true"] {
+            cursor: default;
+        }
+
+        .icon-btn:disabled .icon,
+        .icon-btn[aria-disabled="true"] .icon {
+            opacity: 0.32;
+        }
+
+        /* Tooltips read from data-tooltip (set from i18n). */
+        .has-tooltip {
+            position: relative;
+        }
+
+        .has-tooltip::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: calc(100% + 6px);
+            left: 50%;
+            z-index: 5;
+            padding: 5px 8px;
+            border-radius: 6px;
+            background: var(--tooltip-bg);
+            color: var(--tooltip-fg);
+            font: 500 12px/1.3 var(--font-sans);
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transform: translate(-50%, 3px);
+            transition: opacity 0.12s ease, transform 0.12s ease;
+        }
+
+        .has-tooltip:not([data-tooltip])::after,
+        .has-tooltip[data-tooltip=""]::after {
+            display: none;
+        }
+
+        .has-tooltip:hover::after {
+            opacity: 1;
+            transform: translate(-50%, 0);
+            transition-delay: 0.35s;
+        }
+
+        .has-tooltip:focus-visible::after {
+            opacity: 1;
+            transform: translate(-50%, 0);
+        }
+
+        .has-tooltip-end::after {
+            left: auto;
+            right: 0;
+            transform: translate(0, 3px);
+        }
+
+        .has-tooltip-end:hover::after,
+        .has-tooltip-end:focus-visible::after {
+            transform: translate(0, 0);
+        }
+
+        .has-tooltip-below::after {
+            top: calc(100% + 6px);
+            bottom: auto;
+        }
+
+        /* ------------------------------------------------------------------
+           Switch (checkbox role="switch")
+           ------------------------------------------------------------------ */
+        .switch {
+            -webkit-appearance: none;
+            appearance: none;
+            position: relative;
+            flex: none;
+            width: 38px;
+            height: 22px;
+            margin: 0;
+            border-radius: 999px;
+            background: var(--switch-off);
+            cursor: pointer;
+            transition: background-color 0.18s ease;
+        }
+
+        .switch::before {
+            content: "";
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #ffffff;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+            transition: transform 0.2s cubic-bezier(0.3, 0.7, 0.4, 1);
+        }
+
+        .switch:checked {
+            background: var(--accent);
+        }
+
+        .switch:checked::before {
+            transform: translateX(16px);
+        }
+
+        /* ------------------------------------------------------------------
+           Header
+           ------------------------------------------------------------------ */
+        .app-header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: var(--header-bg);
+            -webkit-backdrop-filter: saturate(1.5) blur(14px);
+            backdrop-filter: saturate(1.5) blur(14px);
+            border-bottom: 1px solid var(--line);
+        }
+
+        .app-header__inner {
+            display: flex;
+            align-items: center;
             gap: 16px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 12px 24px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
+        .brand__logo {
+            width: 36px;
+            height: 36px;
+            flex: none;
+        }
+
+        .brand__text {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .brand__name,
+        .brand__title {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .brand__name {
+            color: var(--ink-2);
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+        }
+
+        .brand__title {
+            font-family: var(--font-display);
+            font-size: 18px;
+            font-weight: 700;
+            line-height: 1.25;
+            letter-spacing: -0.01em;
+        }
+
+        .header-tools {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: none;
         }
 
         .header-actions {
             display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            justify-content: flex-end;
+            align-items: center;
+            gap: 2px;
         }
 
-	        .prompt-groups {
-	            margin-top: 10px;
-	        }
-
-	        .prompt-tabs {
-	            display: flex;
-	            align-items: flex-end;
-	            justify-content: space-between;
-	            gap: 12px;
-	            border-bottom: 1px solid #dee2e6;
-                flex-wrap: wrap;
-	        }
-
-            .prompt-tablist {
-                display: flex;
-                align-items: flex-end;
-                gap: 0;
-                padding-left: 0;
-            }
-
-	        button.prompt-tab {
-	            background: #e9ecef;
-	            color: #333;
-	            border: 1px solid #dee2e6;
-	            border-bottom: 1px solid #dee2e6;
-	            padding: 10px 16px;
-	            border-radius: 10px 10px 0 0;
-	            font-size: 13px;
-	            font-weight: 600;
-	            margin: 0 0 -1px 0;
-	            transition: background 0.15s, border-color 0.15s, color 0.15s;
-	        }
-
-	        button.prompt-tab + button.prompt-tab {
-	            margin-left: -1px;
-	        }
-
-	        button.prompt-tab:hover {
-	            background: #dee2e6;
-	        }
-
-	        button.prompt-tab.active {
-	            background: #fff;
-	            color: #111;
-	            border-color: #dee2e6;
-	            border-bottom-color: #fff;
-	            z-index: 2;
-	        }
-
-	        button.prompt-tab:focus-visible {
-	            outline: 2px solid #10a37f;
-	            outline-offset: 2px;
-	        }
-
-	        .tab-count {
-	            margin-left: 6px;
-	            opacity: 0.85;
-	            font-size: 12px;
-	        }
-
-	        .prompt-panel {
-	            border: 1px solid #dee2e6;
-	            border-radius: 0 0 10px 10px;
-	            background: #fff;
-	            padding: 12px 16px 16px;
-	            margin-top: -1px;
-	        }
-
-	        .tab-panel[hidden] {
-	            display: none;
-	        }
-
-	        .tab-panel .prompts-list {
-	            margin-top: 12px;
-	        }
-
-        #importText.drag-over {
-            outline: 2px dashed #10a37f;
-            outline-offset: 2px;
-            background: #f0fffa;
+        .header-divider {
+            width: 1px;
+            height: 20px;
+            margin: 0 6px;
+            background: var(--line);
         }
 
-        button {
-            background: #10a37f;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background 0.2s;
-        }
-
-        button:hover {
-            background: #0d8f6f;
-        }
-
-        button.secondary {
-            background: #6c757d;
-        }
-
-        button.secondary:hover {
-            background: #5a6268;
-        }
-
-        button.danger {
-            background: #dc3545;
-        }
-
-        button.danger:hover {
-            background: #c82333;
-        }
-
-        .prompts-list {
-            margin-top: 20px;
-        }
-
-        .prompt-item {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 6px;
-            padding: 15px;
-            margin-bottom: 15px;
-            transition: box-shadow 0.2s;
-        }
-
-        .prompt-item:hover {
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-        }
-
-        .prompt-header {
-            display: grid;
-            grid-template-columns: 40px minmax(0, 1fr) auto;
-            align-items: start;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-
-        .prompt-icon {
-            font-size: 24px;
-            width: 40px;
-            text-align: center;
-        }
-
-        .prompt-title {
-            flex: 1;
-            font-size: 18px;
-            font-weight: 600;
-            color: #333;
+        .theme-switch {
+            display: inline-flex;
+            gap: 2px;
             min-width: 0;
-            line-height: 1.3;
-            word-break: break-word;
+            margin: 0;
+            padding: 3px;
+            border: 1px solid var(--line);
+            border-radius: var(--radius-md);
+            background: var(--surface-sunken);
         }
 
-        .prompt-badges {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            justify-content: flex-end;
-            align-items: center;
-        }
-
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 4px 10px;
-            border-radius: 999px;
-            font-size: 11px;
-            font-weight: 600;
-            letter-spacing: 0.2px;
-            border: 1px solid #d7dde3;
-            background: #f3f4f6;
-            color: #5f6b76;
-            white-space: nowrap;
-        }
-
-        .badge.is-off {
-            background: #f3f4f6;
-            color: #9aa2ad;
-            border-color: #e1e6eb;
-        }
-
-        .badge.status.is-on {
-            background: #d4f4e4;
-            color: #0f5f3f;
-            border-color: #b5e8d2;
-        }
-
-        .badge.auto-submit.is-on {
-            background: #fff3bf;
-            color: #7a5b00;
-            border-color: #ffe08a;
-        }
-
-        .badge.auto-paste.is-on {
-            background: #e8eef4;
-            color: #364152;
-            border-color: #d5dde5;
-        }
-
-        .prompt-content {
-            margin-top: 10px;
-            padding: 10px;
-            background: white;
-            border-radius: 4px;
-            border: 1px solid #e9ecef;
-        }
-
-        .prompt-field {
-            margin-bottom: 8px;
-            font-size: 13px;
-        }
-
-        .prompt-field label {
-            font-weight: 600;
-            color: #495057;
-            margin-right: 5px;
-        }
-
-        .prompt-field-value {
-            color: #6c757d;
-            word-break: break-word;
-        }
-
-        .prompt-text {
-            white-space: pre-wrap;
-            background: #f8f9fa;
-            padding: 8px;
-            border-radius: 3px;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            margin-top: 5px;
-        }
-
-        .prompt-actions {
-            margin-top: 10px;
-            display: flex;
-            gap: 8px;
-        }
-
-        .prompt-actions button {
-            padding: 6px 12px;
-            font-size: 12px;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            overflow: auto;
-        }
-
-        .modal.active {
-            display: block;
-        }
-
-        .modal-content {
-            background: white;
-            margin: 4% auto;
-            padding: 24px;
-            border-radius: 8px;
-            max-width: 760px;
-            width: min(92vw, 760px);
-            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-        }
-
-        .modal-header h2 {
-            font-size: 20px;
-            color: #333;
-        }
-
-        .close-btn {
-            background: none;
-            color: #666;
-            font-size: 26px;
-            padding: 0;
+        .theme-switch__option {
+            position: relative;
+            display: grid;
+            place-items: center;
             width: 30px;
-            height: 30px;
-            line-height: 1;
+            height: 28px;
+            border-radius: 7px;
+            color: var(--ink-2);
+            cursor: pointer;
+            transition: background-color 0.15s, color 0.15s, box-shadow 0.15s;
+        }
+
+        .theme-switch__option:hover {
+            color: var(--ink);
+        }
+
+        .theme-switch__option:has(input:checked) {
+            background: var(--raised);
+            color: var(--ink);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .theme-switch__option:has(input:focus-visible) {
+            outline: 2px solid var(--focus);
+            outline-offset: 1px;
+        }
+
+        .theme-switch__input {
+            -webkit-appearance: none;
+            appearance: none;
+            position: absolute;
+            inset: 0;
+            margin: 0;
+            opacity: 0;
             cursor: pointer;
         }
 
-        .close-btn:hover {
-            color: #333;
+        .theme-switch .icon {
+            width: 16px;
+            height: 16px;
         }
 
-        #promptModal .close-btn {
+        #resetBtn.has-tooltip::after {
             display: none;
         }
 
-        .form-group {
-            margin-bottom: 14px;
+        /* ------------------------------------------------------------------
+           Page + toolbar
+           ------------------------------------------------------------------ */
+        .page {
+            flex: 1 0 auto;
+            width: 100%;
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 28px 24px 48px;
         }
 
-        .form-group label {
-            display: block;
-            margin-bottom: 6px;
-            font-weight: 600;
-            color: #333;
-            font-size: 13px;
+        .page-intro {
+            max-width: 62ch;
+            margin-bottom: 22px;
+            color: var(--ink-2);
         }
 
-        .form-group-header {
+        .toolbar {
             display: flex;
+            flex-wrap: wrap;
             align-items: center;
             justify-content: space-between;
-            gap: 10px;
-            margin-bottom: 6px;
-            flex-wrap: wrap;
+            gap: 12px;
         }
 
-        .form-group-header label {
-            margin-bottom: 0;
+        .tab__label {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        .form-inline-hint {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 11px;
-            color: #6c757d;
-            white-space: nowrap;
-        }
-
-        .form-inline-code {
-            font-family: 'Courier New', monospace;
-            font-size: 11px;
-            color: #364152;
-            background: #f1f3f5;
-            border: 1px solid #e1e6eb;
+        .tab__count {
+            display: inline-grid;
+            flex: none;
+            place-items: center;
+            min-width: 22px;
+            height: 20px;
+            padding: 0 7px;
             border-radius: 999px;
-            padding: 1px 8px;
+            background: var(--line);
+            color: var(--ink-2);
+            font-size: 12px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
         }
 
-        button.form-inline-code {
-            cursor: pointer;
-            line-height: 1.4;
+        /* Every surface of a group (type card, list, add button, dialog) shares its color. */
+        [data-group="initial"] {
+            --group: var(--initial);
+            --group-ink: var(--initial-ink);
+            --group-soft: var(--initial-soft);
+            --group-line: var(--initial-line);
+            --group-strong: var(--initial-strong);
+            --group-strong-hover: var(--initial-strong-hover);
+            --group-on: var(--initial-on);
         }
 
-        button.form-inline-code:hover {
-            background: #e9ecef;
+        [data-group="followUp"] {
+            --group: var(--followup);
+            --group-ink: var(--followup-ink);
+            --group-soft: var(--followup-soft);
+            --group-line: var(--followup-line);
+            --group-strong: var(--followup-strong);
+            --group-strong-hover: var(--followup-strong-hover);
+            --group-on: var(--followup-on);
         }
 
-        button.form-inline-code:focus-visible {
-            outline: 2px solid #10a37f;
-            outline-offset: 2px;
-        }
-        .form-group input[type="text"],
-        .form-group textarea {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ced4da;
-            border-radius: 4px;
-            font-size: 13px;
-            font-family: inherit;
+        :root {
+            --art-frame: var(--surface);
+            --art-line: var(--line-strong);
+            --art-muted: var(--line-strong);
         }
 
-        .form-group textarea {
-            min-height: 90px;
-            resize: vertical;
-            font-family: 'Courier New', monospace;
-        }
-
-        .form-group input[type="checkbox"] {
-            margin-right: 8px;
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-        }
-
-        .checkbox-label {
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-            margin-bottom: 6px;
-        }
-
-        .form-help {
-            font-size: 11px;
-            color: #6c757d;
-            margin-top: 4px;
-        }
-
-        .form-row {
+        .group-tabs {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 12px;
             margin-bottom: 14px;
         }
 
-        .form-row .form-group {
-            margin-bottom: 0;
-        }
-
-        .modal-actions {
+        .group-tab {
             display: flex;
-            gap: 10px;
-            justify-content: flex-end;
-            margin-top: 16px;
             align-items: center;
-            flex-wrap: wrap;
+            gap: 14px;
+            min-width: 0;
+            padding: 12px 16px 12px 12px;
+            border: 1px solid var(--line);
+            border-radius: var(--radius-lg);
+            background: var(--surface);
+            color: var(--ink-2);
+            text-align: start;
+            cursor: pointer;
+            box-shadow: var(--shadow-sm);
+            transition: border-color 0.15s, background-color 0.15s, box-shadow 0.15s;
         }
 
-        .modal-actions-right {
+        .group-tab:hover {
+            border-color: var(--group-line);
+        }
+
+        .group-tab[aria-selected="true"] {
+            border-color: var(--group);
+            background: var(--group-soft);
+            box-shadow: 0 0 0 1px var(--group), var(--shadow-sm);
+        }
+
+        .group-tab:focus-visible {
+            outline: 2px solid var(--focus);
+            outline-offset: 2px;
+        }
+
+        .group-tab__art {
+            flex: none;
+            width: 76px;
+            height: 52px;
+        }
+
+        .group-tab[aria-selected="false"] .group-tab__art {
+            opacity: 0.75;
+        }
+
+        .group-tab__text {
             display: flex;
-            gap: 10px;
+            flex-direction: column;
+            gap: 3px;
+            min-width: 0;
         }
 
-        .modal-checkbox {
+        .group-tab__title {
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 13px;
-            font-weight: 600;
-            color: #333;
-            cursor: pointer;
-            margin-right: auto;
+            min-width: 0;
+            color: var(--ink);
+            font-size: 15px;
+            font-weight: 700;
         }
 
-        .modal-checkbox input[type="checkbox"] {
-            margin-right: 0;
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
+        .group-tab__dot {
+            flex: none;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: var(--group);
         }
 
-        .is-hidden {
-            display: none;
+        .group-tab__desc {
+            color: var(--ink-2);
+            font-size: 12.5px;
+            line-height: 1.45;
         }
 
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: #6c757d;
+        .group-tab[aria-selected="true"] .tab__count {
+            background: var(--group-strong);
+            color: var(--group-on);
         }
 
-        .empty-state-icon {
-            font-size: 48px;
-            margin-bottom: 15px;
+        .btn--group {
+            background: var(--group-strong);
+            color: var(--group-on);
         }
 
-        .empty-state-text {
-            font-size: 16px;
-            margin-bottom: 20px;
+        .btn--group:hover {
+            background: var(--group-strong-hover);
         }
 
-        .toast-container {
-            position: fixed;
-            right: 24px;
-            bottom: 24px;
+        .toolbar__actions {
             display: flex;
-            flex-direction: column;
-            gap: 10px;
-            z-index: 1100;
-            max-width: min(360px, calc(100vw - 32px));
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            flex: 1 1 300px;
+            min-width: 0;
+        }
+
+        .search {
+            position: relative;
+            flex: 0 1 260px;
+            min-width: 0;
+        }
+
+        .search > .icon {
+            position: absolute;
+            top: 50%;
+            left: 11px;
+            width: 16px;
+            height: 16px;
+            color: var(--ink-3);
+            transform: translateY(-50%);
             pointer-events: none;
         }
 
-        .toast-message {
-            pointer-events: auto;
-            padding: 12px 14px;
-            border-radius: 8px;
-            background: #ffffff;
-            color: #1f2937;
-            border: 1px solid #d7dde3;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+        .search__input {
+            width: 100%;
+            height: 36px;
+            padding: 0 36px 0 34px;
+            border: 1px solid var(--line-strong);
+            border-radius: var(--radius-md);
+            background: var(--surface);
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+
+        .search__input::placeholder {
+            color: var(--ink-3);
+        }
+
+        .search__kbd {
+            position: absolute;
+            top: 50%;
+            right: 9px;
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
+
+        .search__input:focus ~ .search__kbd,
+        .search__input:not(:placeholder-shown) ~ .search__kbd {
+            display: none;
+        }
+
+        .input:focus,
+        .textarea:focus,
+        .search__input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 24%, transparent);
+        }
+
+        .tab-panel {
+            margin-top: 14px;
+        }
+
+        /* ------------------------------------------------------------------
+           Prompt cards
+           ------------------------------------------------------------------ */
+        .prompt-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .prompt-card {
+            display: grid;
+            grid-template-columns: 44px minmax(0, 1fr) auto;
+            grid-template-areas:
+                "icon head actions"
+                "icon body body";
+            column-gap: 14px;
+            row-gap: 12px;
+            padding: 16px;
+            border: 1px solid var(--line);
+            border-radius: var(--radius-lg);
+            background: var(--surface);
+            box-shadow: var(--shadow-sm);
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+
+        .tab-panel .prompt-card {
+            position: relative;
+        }
+
+        .tab-panel .prompt-card::before {
+            content: "";
+            position: absolute;
+            top: 14px;
+            bottom: 14px;
+            left: -1px;
+            width: 3px;
+            border-radius: 0 3px 3px 0;
+            background: var(--group);
+        }
+
+        .tab-panel .prompt-card__icon {
+            border-color: var(--group-line);
+            background: var(--group-soft);
+        }
+
+        .prompt-card:hover,
+        .prompt-card:focus-within {
+            border-color: var(--line-strong);
+        }
+
+        .prompt-card:hover {
+            box-shadow: var(--shadow-md);
+        }
+
+        .prompt-card__icon {
+            grid-area: icon;
+            display: grid;
+            place-items: center;
+            width: 44px;
+            height: 44px;
+            overflow: hidden;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: var(--surface-sunken);
+            font-size: 22px;
+            line-height: 1;
+            white-space: nowrap;
+        }
+
+        .prompt-card__icon svg,
+        .icon-input__preview svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .prompt-card__head {
+            grid-area: head;
+            align-self: center;
+            min-width: 0;
+        }
+
+        .prompt-card__title {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 4px 8px;
+            font-size: 15px;
+            font-weight: 650;
+            line-height: 1.35;
+            overflow-wrap: anywhere;
+        }
+
+        .prompt-card__alt {
+            display: -webkit-box;
+            margin-top: 2px;
+            overflow: hidden;
+            color: var(--ink-2);
             font-size: 13px;
-            line-height: 1.4;
-            transform: translateY(8px);
-            opacity: 0;
-            transition: opacity 0.2s ease, transform 0.2s ease;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow-wrap: anywhere;
         }
 
-        .toast-message.success {
-            border-left: 4px solid #10a37f;
+        .prompt-card__actions {
+            grid-area: actions;
+            align-self: start;
+            display: flex;
+            align-items: center;
+            gap: 2px;
         }
 
-        .toast-message.error {
-            border-left: 4px solid #dc3545;
-            background: #fff5f6;
+        .prompt-card__actions .btn--sm {
+            margin: 0 2px 0 4px;
         }
 
-        .toast-message.show {
-            opacity: 1;
-            transform: translateY(0);
+        .prompt-card__sep {
+            width: 1px;
+            height: 20px;
+            margin: 0 6px 0 10px;
+            background: var(--line);
         }
 
-        .toast-message.hide {
-            opacity: 0;
-            transform: translateY(8px);
+        .prompt-card.is-disabled .prompt-card__icon {
+            filter: grayscale(1);
+            opacity: 0.55;
         }
 
-        .page-footer {
-            margin-top: 30px;
+        .prompt-card.is-disabled .prompt-card__title-text,
+        .prompt-card.is-disabled .prompt-card__alt,
+        .prompt-card.is-disabled .composer {
+            opacity: 0.55;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            height: 20px;
+            padding: 0 8px;
+            border-radius: 999px;
+            font-size: 11.5px;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            white-space: nowrap;
+        }
+
+        .badge--muted {
+            border: 1px solid var(--line);
+            background: var(--surface-sunken);
+            color: var(--ink-2);
+        }
+
+        /* The signature: each prompt previewed inside a miniature ChatGPT composer. */
+        .composer {
+            grid-area: body;
+            padding: 12px 12px 10px 16px;
+            border: 1px solid var(--line);
+            border-radius: var(--radius-composer);
+            background: var(--surface-sunken);
+        }
+
+        .composer__text {
+            display: -webkit-box;
+            overflow: hidden;
+            color: var(--ink);
+            font-family: var(--font-mono);
+            font-size: 12.5px;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            -webkit-line-clamp: 4;
+            -webkit-box-orient: vertical;
+        }
+
+        .composer.is-expanded .composer__text {
+            display: block;
+            overflow: visible;
+            -webkit-line-clamp: unset;
+        }
+
+        .token {
+            padding: 1px 6px;
+            margin: 0 1px;
+            border-radius: 6px;
+            background: var(--accent-soft);
+            color: var(--accent-soft-ink);
+            font-weight: 600;
+            -webkit-box-decoration-break: clone;
+            box-decoration-break: clone;
+        }
+
+        /* Placeholder for the text inserted when the button runs: a neutral, dashed "slot" inside the
+           prompt text, so it doesn't read like the green "auto paste" setting badge in the footer. */
+        .token--slot {
+            padding: 1px 7px;
+            outline: 1px dashed var(--ink-3);
+            outline-offset: -1px;
+            background: var(--surface);
+            color: var(--ink-2);
+            font-family: var(--font-sans);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: help;
+        }
+
+        .token__icon {
+            width: 13px;
+            height: 13px;
+            margin-right: 4px;
+            vertical-align: -2px;
+        }
+
+        /* Footer = the prompt's behavior (auto paste, send mode), separated from the prompt text above. */
+        .composer__foot {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            min-height: 28px;
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px solid var(--line);
+        }
+
+        .composer__meta {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .composer__expand {
+            margin-left: -6px;
+            padding: 3px 6px;
+            border: 0;
+            border-radius: 6px;
+            background: transparent;
+            color: var(--accent-ink);
+            font-size: 12.5px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .composer__expand:hover {
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            height: 24px;
+            padding: 0 9px 0 7px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .chip .icon {
+            width: 14px;
+            height: 14px;
+        }
+
+        .chip--paste {
+            background: var(--accent-soft);
+            color: var(--accent-soft-ink);
+        }
+
+        .send-state {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex: none;
+            color: var(--ink-2);
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .send-state__button {
+            display: grid;
+            place-items: center;
+            width: 28px;
+            height: 28px;
+            border: 1.5px dashed var(--line-strong);
+            border-radius: 50%;
+            color: var(--ink-3);
+        }
+
+        .send-state__button .icon {
+            width: 15px;
+            height: 15px;
+            stroke-width: 2.2;
+        }
+
+        .send-state.is-auto {
+            color: var(--ink);
+        }
+
+        .send-state.is-auto .send-state__button {
+            border: 0;
+            background: var(--send-bg);
+            color: var(--send-fg);
+        }
+
+        /* ------------------------------------------------------------------
+           Empty state
+           ------------------------------------------------------------------ */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            padding: 44px 20px;
+            border: 1.5px dashed var(--line-strong);
+            border-radius: var(--radius-composer);
             text-align: center;
-            color: #8a8a8a;
+        }
+
+        .empty-state__art {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 8px;
+            width: 220px;
+            max-width: 100%;
+            height: 64px;
+            padding: 0 56px 0 18px;
+            border: 1px solid var(--line);
+            border-radius: var(--radius-composer);
+            background: var(--surface);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .empty-state__line {
+            height: 8px;
+            border-radius: 999px;
+            background: var(--line);
+        }
+
+        .empty-state__line--short {
+            width: 58%;
+        }
+
+        .empty-state__art .send-state__button {
+            position: absolute;
+            top: 50%;
+            right: 14px;
+            border: 0;
+            background: var(--send-bg);
+            color: var(--send-fg);
+            transform: translateY(-50%);
+        }
+
+        .empty-state__text {
+            max-width: 42ch;
+            color: var(--ink-2);
+            overflow-wrap: anywhere;
+        }
+
+        /* ------------------------------------------------------------------
+           Dialogs
+           ------------------------------------------------------------------ */
+        .modal {
+            width: min(640px, calc(100vw - 32px));
+            max-width: none;
+            max-height: calc(100dvh - 32px);
+            padding: 0;
+            overflow: visible;
+            border: 0;
+            background: transparent;
+            color: var(--ink);
+        }
+
+        .modal::backdrop {
+            background: var(--backdrop);
+            -webkit-backdrop-filter: blur(2px);
+            backdrop-filter: blur(2px);
+        }
+
+        .modal[open]::backdrop {
+            animation: fade-in 0.2s ease;
+        }
+
+        .modal[open] .modal__card {
+            animation: modal-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        @keyframes fade-in {
+            from {
+                opacity: 0;
+            }
+        }
+
+        @keyframes modal-in {
+            from {
+                opacity: 0;
+                transform: translateY(10px) scale(0.985);
+            }
+        }
+
+        .modal__card {
+            display: flex;
+            flex-direction: column;
+            max-height: calc(100dvh - 32px);
+            margin: 0;
+            overflow: hidden;
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            background: var(--surface);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .modal__header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 18px 16px 2px 24px;
+        }
+
+        .modal__title {
+            font-family: var(--font-display);
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+        }
+
+        .modal__body {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            min-height: 0;
+            padding: 16px 24px 22px;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+        }
+
+        /* Let the body scroll instead of squeezing its sections: `overflow: hidden`
+           children (like .switch-list) would otherwise shrink and clip their last rows. */
+        .modal__body > * {
+            flex-shrink: 0;
+        }
+
+        /* Edit dialog: fields on the left, behavior switches in a side panel on the right,
+           so every option stays in view on laptop-height screens without scrolling. */
+        #promptModal {
+            width: min(940px, calc(100vw - 32px));
+        }
+
+        .prompt-editor {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(250px, 296px);
+            align-items: start;
+            gap: 16px 24px;
+        }
+
+        .modal--grouped .modal__card {
+            position: relative;
+        }
+
+        .modal--grouped .modal__card::before {
+            content: "";
+            position: absolute;
+            inset: 0 0 auto;
+            height: 4px;
+            background: var(--group);
+        }
+
+        .modal--grouped .modal__title::before {
+            content: "";
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            margin-inline-end: 9px;
+            border-radius: 50%;
+            background: var(--group);
+            vertical-align: 0.05em;
+        }
+
+        .type-picker {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            min-width: 0;
+            margin: 0;
+            padding: 0;
+            border: 0;
+        }
+
+        .type-picker__legend {
+            margin-bottom: 6px;
+            padding: 0;
+            color: var(--ink-2);
+            font-size: 12.5px;
+            font-weight: 600;
+        }
+
+        .type-option {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+            padding: 8px 12px 8px 8px;
+            border: 1px solid var(--line-strong);
+            border-radius: 14px;
+            background: var(--surface);
+            cursor: pointer;
+            transition: border-color 0.15s, background-color 0.15s, box-shadow 0.15s;
+        }
+
+        .type-option:hover {
+            border-color: var(--group-line);
+        }
+
+        .type-option:has(.type-option__input:checked) {
+            border-color: var(--group);
+            background: var(--group-soft);
+            box-shadow: 0 0 0 1px var(--group);
+        }
+
+        .type-option:has(.type-option__input:focus-visible) {
+            outline: 2px solid var(--focus);
+            outline-offset: 2px;
+        }
+
+        .type-option__input {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .type-option__art {
+            flex: none;
+            width: 58px;
+            height: 40px;
+        }
+
+        .type-option:not(:has(.type-option__input:checked)) .type-option__art {
+            filter: grayscale(1);
+            opacity: 0.7;
+        }
+
+        .type-option__text {
+            display: flex;
+            flex: 1 1 auto;
+            flex-direction: column;
+            gap: 1px;
+            min-width: 0;
+        }
+
+        .type-option__title {
+            color: var(--ink);
+            font-size: 13.5px;
+            font-weight: 700;
+        }
+
+        .type-option__desc {
+            color: var(--ink-2);
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .type-option__check {
+            color: var(--group);
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+
+        .type-option:has(.type-option__input:checked) .type-option__check {
+            opacity: 1;
+        }
+
+        .prompt-editor__main {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            min-width: 0;
+        }
+
+        .prompt-editor .field-row {
+            row-gap: 6px;
+        }
+
+        .field-row__help {
+            grid-column: 1 / -1;
+        }
+
+        .prompt-editor__side {
+            position: sticky;
+            top: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 0;
+        }
+
+        .prompt-editor__side-title {
+            margin: 0;
+            color: var(--ink-2);
+            font-size: 12.5px;
+            font-weight: 600;
+            line-height: 21px;
+        }
+
+        .prompt-editor .switch-row {
+            align-items: flex-start;
+            gap: 12px;
+            padding: 11px 12px;
+        }
+
+        .prompt-editor .switch-row .switch {
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        /* The prompt box absorbs the height difference between screens: it takes what the
+           viewport leaves after the dialog chrome and the other fields. */
+        .prompt-editor .prompt-editor__textarea {
+            height: clamp(120px, calc(100dvh - 540px), 340px);
+            min-height: 120px;
+        }
+
+        .modal__footer {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 14px 24px;
+            border-top: 1px solid var(--line);
+            background: var(--surface-sunken);
+        }
+
+        .modal__hint {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            color: var(--ink-2);
+            font-size: 12.5px;
+        }
+
+        .modal__actions {
+            display: flex;
+            gap: 8px;
+            margin-left: auto;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 0;
+        }
+
+        .field__label {
+            color: var(--ink);
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .field__head {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px 10px;
+            min-height: 26px;
+        }
+
+        .field__help {
+            color: var(--ink-2);
+            font-size: 12.5px;
+            line-height: 1.45;
+        }
+
+        .field-row {
+            display: grid;
+            grid-template-columns: minmax(0, 200px) minmax(0, 1fr);
+            gap: 16px;
+        }
+
+        .input,
+        .textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--line-strong);
+            border-radius: var(--radius-md);
+            background: var(--surface);
+            font-size: 14px;
+            line-height: 1.5;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+
+        .input {
+            height: 38px;
+        }
+
+        .input::placeholder,
+        .textarea::placeholder {
+            color: var(--ink-3);
+        }
+
+        .textarea {
+            min-height: 136px;
+            resize: vertical;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .icon-input {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .icon-input__preview {
+            display: grid;
+            place-items: center;
+            flex: none;
+            width: 38px;
+            height: 38px;
+            overflow: hidden;
+            border: 1px solid var(--line);
+            border-radius: var(--radius-md);
+            background: var(--surface-sunken);
+            font-size: 20px;
+            line-height: 1;
+            white-space: nowrap;
+        }
+
+        .args-hint {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--ink-2);
             font-size: 12px;
         }
 
-        @media (max-width: 720px) {
+        .args-hint__token {
+            padding: 4px 8px;
+            border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+            border-radius: 7px;
+            background: var(--accent-soft);
+            color: var(--accent-soft-ink);
+            font: 600 12px/1.2 var(--font-mono);
+            cursor: pointer;
+            transition: border-color 0.15s;
+        }
+
+        .args-hint__token:hover {
+            border-color: var(--accent);
+        }
+
+        .field__warning {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 8px 10px;
+            border-radius: var(--radius-md);
+            background: var(--warning-soft);
+            color: var(--warning-ink);
+            font-size: 12.5px;
+            line-height: 1.45;
+        }
+
+        .field__warning .icon {
+            width: 16px;
+            height: 16px;
+            margin-top: 1px;
+        }
+
+        .switch-list {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+        }
+
+        .switch-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 12px 14px;
+        }
+
+        .switch-row + .switch-row {
+            border-top: 1px solid var(--line);
+        }
+
+        .switch-row__text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 0;
+        }
+
+        .switch-row__label {
+            font-size: 13.5px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .switch-row__help {
+            color: var(--ink-2);
+            font-size: 12.5px;
+            line-height: 1.45;
+        }
+
+        .dropzone {
+            position: relative;
+        }
+
+        .dropzone .textarea {
+            min-height: 220px;
+            font-size: 12.5px;
+        }
+
+        .dropzone__overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 16px;
+            border: 2px dashed var(--accent);
+            border-radius: var(--radius-md);
+            background: color-mix(in srgb, var(--accent-soft) 92%, transparent);
+            color: var(--accent-soft-ink);
+            font-weight: 600;
+            text-align: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.15s;
+        }
+
+        .dropzone.is-drag-over .dropzone__overlay {
+            opacity: 1;
+        }
+
+        .dropzone__overlay .icon {
+            width: 28px;
+            height: 28px;
+        }
+
+        .modal--confirm {
+            width: min(420px, calc(100vw - 32px));
+        }
+
+        .confirm {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            padding: 24px 24px 20px;
+        }
+
+        .confirm__icon {
+            display: grid;
+            place-items: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: var(--accent-soft);
+            color: var(--accent-soft-ink);
+        }
+
+        .modal--confirm.is-danger .confirm__icon {
+            background: var(--danger-soft);
+            color: var(--danger);
+        }
+
+        .confirm__message {
+            font-size: 15px;
+            font-weight: 600;
+            line-height: 1.5;
+            overflow-wrap: anywhere;
+        }
+
+        .confirm__actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 6px;
+        }
+
+        /* ------------------------------------------------------------------
+           Toasts
+           ------------------------------------------------------------------ */
+        .toast-region {
+            position: fixed;
+            right: 24px;
+            bottom: 24px;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 8px;
+            width: min(380px, calc(100vw - 32px));
+            pointer-events: none;
+        }
+
+        .toast {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            max-width: 100%;
+            padding: 12px 16px 12px 14px;
+            border-radius: 12px;
+            background: var(--toast-bg);
+            color: var(--toast-fg);
+            box-shadow: var(--shadow-lg);
+            font-size: 13.5px;
+            line-height: 1.45;
+            opacity: 0;
+            transform: translateY(8px) scale(0.98);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            pointer-events: auto;
+        }
+
+        .toast.is-visible {
+            opacity: 1;
+            transform: none;
+        }
+
+        .toast__icon {
+            margin-top: 1px;
+        }
+
+        .toast--success .toast__icon {
+            color: var(--toast-success);
+        }
+
+        .toast--error .toast__icon {
+            color: var(--toast-error);
+        }
+
+        .toast__text {
+            overflow-wrap: anywhere;
+        }
+
+        /* ------------------------------------------------------------------
+           Footer
+           ------------------------------------------------------------------ */
+        .page-footer {
+            padding: 0 16px 28px;
+            color: var(--ink-2);
+            font-size: 12px;
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* ------------------------------------------------------------------
+           Motion
+           ------------------------------------------------------------------ */
+        ::view-transition-group(*) {
+            animation-duration: 0.22s;
+            animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        ::view-transition-old(root),
+        ::view-transition-new(root) {
+            animation: none;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                transition-delay: 0s !important;
+                scroll-behavior: auto !important;
+            }
+        }
+
+        /* ------------------------------------------------------------------
+           Responsive
+           ------------------------------------------------------------------ */
+        @media (max-width: 899px) {
+            #resetBtn .btn__label {
+                position: absolute;
+                width: 1px;
+                height: 1px;
+                overflow: hidden;
+                clip: rect(0 0 0 0);
+                white-space: nowrap;
+            }
+
+            #resetBtn {
+                width: 36px;
+                padding: 0;
+            }
+
+            #resetBtn.has-tooltip::after {
+                display: block;
+                left: auto;
+                right: 0;
+                transform: translate(0, 3px);
+            }
+
+            #resetBtn.has-tooltip:hover::after,
+            #resetBtn.has-tooltip:focus-visible::after {
+                transform: translate(0, 0);
+            }
+        }
+
+        @media (max-width: 759px) {
+            .app-header {
+                position: static;
+            }
+
+            .app-header__inner {
+                flex-wrap: wrap;
+                gap: 12px;
+                padding: 12px 16px;
+            }
+
+            .header-tools {
+                display: contents;
+            }
+
             .header-actions {
-                justify-content: flex-start;
+                order: 3;
+                flex-basis: 100%;
+                gap: 8px;
             }
 
-            .prompt-tabs {
-                align-items: flex-start;
+            .header-actions .btn {
+                flex: 1 1 0;
+                border-color: var(--line-strong);
+                background: var(--surface);
             }
 
-            .modal-content {
-                margin: 6% auto;
-                width: 94vw;
+            .header-actions #resetBtn {
+                flex: 0 0 36px;
             }
 
-            .form-row {
-                grid-template-columns: 1fr;
+            .header-divider {
+                display: none;
             }
 
-            .toast-container {
-                right: 12px;
-                bottom: 12px;
-                max-width: calc(100vw - 24px);
+            .page {
+                padding: 20px 16px 40px;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .prompt-card {
+                grid-template-columns: 40px minmax(0, 1fr);
+                grid-template-areas:
+                    "icon head"
+                    "body body"
+                    "actions actions";
+                column-gap: 12px;
+                padding: 14px;
+            }
+
+            .prompt-card__icon {
+                width: 40px;
+                height: 40px;
+                font-size: 20px;
+            }
+
+            .prompt-card__actions {
+                justify-content: flex-end;
+            }
+
+            .prompt-card__actions .switch {
+                margin-right: auto;
+            }
+
+            .prompt-card__sep {
+                display: none;
+            }
+
+            .composer {
+                padding-left: 14px;
+            }
+        }
+
+        @media (max-width: 560px) {
+            .toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .brand__title {
+                font-size: 16px;
+            }
+
+            .toolbar__actions {
+                flex: none;
+            }
+
+            .search {
+                flex: 1 1 auto;
+            }
+
+            .search__kbd,
+            .modal__hint {
+                display: none;
+            }
+
+            .field-row {
+                grid-template-columns: minmax(0, 1fr);
+            }
+
+            .modal__header {
+                padding: 16px 12px 0 20px;
+            }
+
+            .modal__body {
+                padding: 14px 20px 20px;
+            }
+
+            .modal__footer {
+                padding: 12px 20px;
+            }
+
+            .toast-region {
+                right: 16px;
+                bottom: 16px;
+                left: 16px;
+                align-items: stretch;
+                width: auto;
+            }
+        }
+
+        /* Short windows (typical laptops): tighten spacing and hide secondary hints. The hints
+           stay referenced by aria-describedby, so screen readers still announce them. */
+        @media (max-height: 760px) {
+            .modal__header {
+                padding-top: 12px;
+            }
+
+            .modal__body {
+                padding-top: 10px;
+                padding-bottom: 14px;
+            }
+
+            .modal__footer {
+                padding-top: 10px;
+                padding-bottom: 10px;
+            }
+
+            .prompt-editor__main {
+                gap: 10px;
+            }
+
+            .field__help--secondary {
+                display: none;
+            }
+
+            .type-option {
+                padding-block: 6px;
+            }
+
+            .type-option__art {
+                width: 46px;
+                height: 32px;
+            }
+
+            .prompt-editor .switch-row {
+                padding: 9px 12px;
+            }
+
+            .prompt-editor .prompt-editor__textarea {
+                height: clamp(96px, calc(100dvh - 440px), 340px);
+                min-height: 96px;
+            }
+        }
+
+        @media (max-width: 760px) {
+            .group-tab {
+                gap: 10px;
+                padding: 10px 12px 10px 10px;
+            }
+
+            .group-tab__art {
+                width: 56px;
+                height: 38px;
+            }
+        }
+
+        @media (max-width: 560px) {
+            .group-tabs {
+                gap: 8px;
+            }
+
+            .group-tab__art {
+                display: none;
+            }
+
+            .group-tab__title {
+                font-size: 14px;
+            }
+
+            .group-tab__desc {
+                font-size: 12px;
+            }
+
+            .type-picker {
+                grid-template-columns: minmax(0, 1fr);
+            }
+        }
+
+        /* Narrow windows: stack the behavior panel under the fields. */
+        @media (max-width: 759px) {
+            .prompt-editor {
+                grid-template-columns: minmax(0, 1fr);
+            }
+
+            .prompt-editor__side {
+                position: static;
+            }
+
+            .prompt-editor .prompt-editor__textarea {
+                height: clamp(110px, 28dvh, 260px);
             }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div>
-                <h1 id="optionsHeaderTitle" data-i18n="options_header_title" data-i18n-args="chatgpttoolkit_name"></h1>
-                <p class="subtitle" data-i18n="options_header_subtitle"></p>
+    <!-- Icon sprite: 24px grid, stroke icons referenced with <use href="#icon-…">. -->
+    <svg class="icon-sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+        <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+        <symbol id="icon-pencil" viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.83 2.83 0 0 0-4-4L4 16v4z"/><path d="m13.5 6.5 4 4"/></symbol>
+        <symbol id="icon-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6"/><path d="m6 7 1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12"/><path d="M9 7V4h6v3"/></symbol>
+        <symbol id="icon-chevron-up" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></symbol>
+        <symbol id="icon-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+        <symbol id="icon-import" viewBox="0 0 24 24"><path d="M12 3v11M7.5 9.5 12 14l4.5-4.5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></symbol>
+        <symbol id="icon-export" viewBox="0 0 24 24"><path d="M12 14V3M7.5 7.5 12 3l4.5 4.5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></symbol>
+        <symbol id="icon-restore" viewBox="0 0 24 24"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1L3.5 8.5"/><path d="M3.5 3.5v5h5"/></symbol>
+        <symbol id="icon-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></symbol>
+        <symbol id="icon-monitor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></symbol>
+        <symbol id="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/></symbol>
+        <symbol id="icon-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></symbol>
+        <symbol id="icon-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+        <symbol id="icon-text-cursor" viewBox="0 0 24 24"><path d="M9 4h1.5A1.5 1.5 0 0 1 12 5.5v13a1.5 1.5 0 0 1-1.5 1.5H9M15 4h-1.5A1.5 1.5 0 0 0 12 5.5v13a1.5 1.5 0 0 0 1.5 1.5H15M9.5 12h5"/></symbol>
+        <symbol id="icon-clipboard" viewBox="0 0 24 24"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/></symbol>
+        <symbol id="icon-arrow-up" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+        <symbol id="icon-file" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></symbol>
+        <symbol id="icon-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.7 2.7L16 9.8"/></symbol>
+        <symbol id="icon-alert-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.01"/></symbol>
+        <symbol id="icon-alert-triangle" viewBox="0 0 24 24"><path d="M10.3 4.3 2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 4.3a2 2 0 0 0-3.4 0z"/><path d="M12 9.5v4M12 17v.01"/></symbol>
+        <!-- Placement diagrams: where each button type appears on chatgpt.com. -->
+        <symbol id="art-initial" viewBox="0 0 76 52">
+            <rect x="0.75" y="0.75" width="74.5" height="50.5" rx="8" style="fill: var(--art-frame); stroke: var(--art-line)"/>
+            <rect x="24" y="10" width="28" height="4" rx="2" style="fill: var(--art-muted)"/>
+            <rect x="14" y="20" width="14" height="6.5" rx="3.25" style="fill: var(--group)"/>
+            <rect x="31" y="20" width="14" height="6.5" rx="3.25" style="fill: var(--group)"/>
+            <rect x="48" y="20" width="14" height="6.5" rx="3.25" style="fill: var(--group)"/>
+            <rect x="10" y="31" width="56" height="11" rx="5.5" style="fill: var(--art-frame); stroke: var(--art-muted)"/>
+        </symbol>
+        <symbol id="art-followup" viewBox="0 0 76 52">
+            <rect x="0.75" y="0.75" width="74.5" height="50.5" rx="8" style="fill: var(--art-frame); stroke: var(--art-line)"/>
+            <rect x="44" y="7" width="24" height="6.5" rx="3.25" style="fill: var(--art-muted)"/>
+            <rect x="8" y="17" width="44" height="3" rx="1.5" style="fill: var(--art-muted)"/>
+            <rect x="8" y="23" width="34" height="3" rx="1.5" style="fill: var(--art-muted)"/>
+            <rect x="8" y="30" width="13" height="6.5" rx="3.25" style="fill: var(--group)"/>
+            <rect x="24" y="30" width="13" height="6.5" rx="3.25" style="fill: var(--group)"/>
+            <rect x="40" y="30" width="13" height="6.5" rx="3.25" style="fill: var(--group)"/>
+            <rect x="8" y="41" width="60" height="6" rx="3" style="fill: var(--art-frame); stroke: var(--art-muted)"/>
+        </symbol>
+    </svg>
+
+    <header class="app-header">
+        <div class="app-header__inner">
+            <div class="brand">
+                <img class="brand__logo" src="images/icon-128.png" alt="" width="36" height="36">
+                <div class="brand__text">
+                    <p class="brand__name" data-i18n="chatgpttoolkit_name"></p>
+                    <h1 class="brand__title" data-i18n="options_header_heading"></h1>
+                </div>
             </div>
-            <div class="header-actions">
-                <button id="importBtn" class="secondary" data-i18n="options_button_import"></button>
-                <button id="exportBtn" class="secondary" data-i18n="options_button_export"></button>
-                <button id="resetBtn" class="danger" data-i18n="options_button_reset"></button>
+
+            <div class="header-tools">
+                <fieldset class="theme-switch">
+                    <legend class="sr-only" data-i18n="options_theme_label"></legend>
+                    <label class="theme-switch__option" data-i18n-title="options_theme_system">
+                        <input class="theme-switch__input" type="radio" name="theme" value="system" checked>
+                        <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-monitor"/></svg>
+                        <span class="sr-only" data-i18n="options_theme_system"></span>
+                    </label>
+                    <label class="theme-switch__option" data-i18n-title="options_theme_light">
+                        <input class="theme-switch__input" type="radio" name="theme" value="light">
+                        <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-sun"/></svg>
+                        <span class="sr-only" data-i18n="options_theme_light"></span>
+                    </label>
+                    <label class="theme-switch__option" data-i18n-title="options_theme_dark">
+                        <input class="theme-switch__input" type="radio" name="theme" value="dark">
+                        <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-moon"/></svg>
+                        <span class="sr-only" data-i18n="options_theme_dark"></span>
+                    </label>
+                </fieldset>
+
+                <div class="header-actions" role="group" data-i18n-aria-label="options_data_actions_label">
+                    <button type="button" id="importBtn" class="btn btn--ghost">
+                        <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-import"/></svg>
+                        <span class="btn__label" data-i18n="options_button_import"></span>
+                    </button>
+                    <button type="button" id="exportBtn" class="btn btn--ghost">
+                        <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-export"/></svg>
+                        <span class="btn__label" data-i18n="options_button_export"></span>
+                    </button>
+                    <span class="header-divider" aria-hidden="true"></span>
+                    <button type="button" id="resetBtn" class="btn btn--ghost btn--ghost-danger has-tooltip has-tooltip-below" data-i18n-aria-label="options_button_reset">
+                        <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-restore"/></svg>
+                        <span class="btn__label" data-i18n="options_button_reset"></span>
+                    </button>
+                </div>
             </div>
         </div>
+    </header>
 
-        <div id="statusMessage" class="toast-container" aria-live="polite"></div>
+    <main id="main" class="page">
+        <p class="page-intro" data-i18n="options_header_subtitle"></p>
 
-	        <div class="prompt-groups" data-i18n-aria-label="options_prompt_groups_label">
-	            <div class="prompt-tabs">
-                    <div class="prompt-tablist" role="tablist" data-i18n-aria-label="options_prompt_tablist_label">
-	                    <button type="button" id="tabInitialBtn" class="prompt-tab active" role="tab" aria-selected="true" aria-controls="panelInitial" tabindex="0">
-	                        <span data-i18n="options_tab_initial"></span><span id="tabInitialCount" class="tab-count"></span>
-	                    </button>
-	                    <button type="button" id="tabFollowUpBtn" class="prompt-tab" role="tab" aria-selected="false" aria-controls="panelFollowUp" tabindex="-1">
-	                        <span data-i18n="options_tab_followup"></span><span id="tabFollowUpCount" class="tab-count"></span>
-	                    </button>
-                    </div>
-                    <button id="addPromptBtn" data-i18n="options_button_add_prompt"></button>
-	            </div>
-
-	            <div class="prompt-panel">
-	                <div id="panelInitial" class="tab-panel" role="tabpanel" aria-labelledby="tabInitialBtn">
-	                    <div id="promptsListInitial" class="prompts-list"></div>
-	                </div>
-	                <div id="panelFollowUp" class="tab-panel" role="tabpanel" aria-labelledby="tabFollowUpBtn" aria-hidden="true" hidden>
-	                    <div id="promptsListFollowUp" class="prompts-list"></div>
-	                </div>
-	            </div>
-	        </div>
-
-            <footer class="page-footer">
-                <span data-i18n="options_footer_version_label"></span><span id="appVersion">0.46.0</span>
-            </footer>
-	    </div>
-
-    <!-- Edit/Add Prompt Modal -->
-    <div id="promptModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modalTitle" data-i18n="options_modal_title_add_prompt"></h2>
-                <button class="close-btn" id="closeModalBtn">&times;</button>
-            </div>
-
-            <form id="promptForm">
-                <div class="form-group is-hidden">
-                    <label for="promptInitial">
-                        <div class="checkbox-label">
-                            <input type="checkbox" id="promptInitial">
-                            <span data-i18n="options_modal_initial_label"></span>
-                        </div>
-                    </label>
-                    <div class="form-help" data-i18n="options_modal_initial_help"></div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="promptIcon" data-i18n="options_modal_icon_label"></label>
-                        <input type="text" id="promptIcon" data-i18n-placeholder="options_modal_icon_placeholder">
-                        <div class="form-help" data-i18n="options_modal_icon_help"></div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="promptTitle" data-i18n="options_modal_title_label"></label>
-                        <input type="text" id="promptTitle" required data-i18n-placeholder="options_modal_title_placeholder">
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="promptAltText" data-i18n="options_modal_alt_label"></label>
-                    <input type="text" id="promptAltText" data-i18n-placeholder="options_modal_alt_placeholder">
-                </div>
-
-                <div class="form-group">
-                    <div class="form-group-header">
-                        <label for="promptText" data-i18n="options_modal_prompt_label"></label>
-                        <span id="promptArgsHint" class="form-inline-hint is-hidden" aria-hidden="true">
-                            <span data-i18n="options_modal_prompt_args_label"></span>
-                            <button type="button" id="promptArgsInsert" class="form-inline-code" data-i18n-title="options_modal_prompt_args_tooltip">{{args}}</button>
+        <section class="prompt-groups" data-i18n-aria-label="options_prompt_groups_label">
+            <div class="group-tabs" role="tablist" data-i18n-aria-label="options_prompt_tablist_label">
+                <button type="button" id="tabInitialBtn" class="group-tab" data-group="initial" role="tab" aria-selected="true" aria-controls="panelInitial" aria-describedby="tabInitialDesc" tabindex="0">
+                    <svg class="group-tab__art" aria-hidden="true" focusable="false"><use href="#art-initial"/></svg>
+                    <span class="group-tab__text">
+                        <span class="group-tab__title">
+                            <span class="group-tab__dot" aria-hidden="true"></span>
+                            <span class="tab__label" data-i18n="options_tab_initial"></span>
+                            <span id="tabInitialCount" class="tab__count"></span>
                         </span>
+                        <span id="tabInitialDesc" class="group-tab__desc" data-i18n="options_tab_initial_desc"></span>
+                    </span>
+                </button>
+                <button type="button" id="tabFollowUpBtn" class="group-tab" data-group="followUp" role="tab" aria-selected="false" aria-controls="panelFollowUp" aria-describedby="tabFollowUpDesc" tabindex="-1">
+                    <svg class="group-tab__art" aria-hidden="true" focusable="false"><use href="#art-followup"/></svg>
+                    <span class="group-tab__text">
+                        <span class="group-tab__title">
+                            <span class="group-tab__dot" aria-hidden="true"></span>
+                            <span class="tab__label" data-i18n="options_tab_followup"></span>
+                            <span id="tabFollowUpCount" class="tab__count"></span>
+                        </span>
+                        <span id="tabFollowUpDesc" class="group-tab__desc" data-i18n="options_tab_followup_desc"></span>
+                    </span>
+                </button>
+            </div>
+
+            <div class="toolbar">
+                <div class="toolbar__actions">
+                    <div class="search" role="search">
+                        <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-search"/></svg>
+                        <input type="search" id="promptSearch" class="search__input" autocomplete="off" spellcheck="false" aria-controls="panelInitial panelFollowUp" data-i18n-placeholder="options_search_placeholder" data-i18n-aria-label="options_search_label">
+                        <kbd class="search__kbd" aria-hidden="true">/</kbd>
                     </div>
-                    <textarea id="promptText" required data-i18n-placeholder="options_modal_prompt_placeholder"></textarea>
-                    <div class="form-help" data-i18n="options_modal_prompt_help"></div>
+                    <button type="button" id="addPromptBtn" class="btn btn--primary btn--group" data-group="initial">
+                        <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-plus"/></svg>
+                        <span id="addPromptLabel"></span>
+                    </button>
                 </div>
+            </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="promptAutoPaste">
-                            <div class="checkbox-label">
-                                <input type="checkbox" id="promptAutoPaste">
-                                <span data-i18n="options_modal_auto_paste_label"></span>
-                            </div>
-                        </label>
-                        <div class="form-help" data-i18n="options_modal_auto_paste_help"></div>
-                    </div>
+            <span id="reorderDisabledHint" class="sr-only" data-i18n="options_reorder_disabled_filtering"></span>
+            <div id="panelInitial" class="tab-panel" data-group="initial" role="tabpanel" aria-labelledby="tabInitialBtn">
+                <div id="promptsListInitial"></div>
+            </div>
+            <div id="panelFollowUp" class="tab-panel" data-group="followUp" role="tabpanel" aria-labelledby="tabFollowUpBtn" hidden>
+                <div id="promptsListFollowUp"></div>
+            </div>
+        </section>
+    </main>
 
-                    <div class="form-group">
-                        <label for="promptAutoSubmit">
-                            <div class="checkbox-label">
-                                <input type="checkbox" id="promptAutoSubmit">
-                                <span data-i18n="options_modal_auto_submit_label"></span>
-                            </div>
-                        </label>
-                        <div class="form-help" data-i18n="options_modal_auto_submit_help"></div>
-                    </div>
-                </div>
+    <footer class="page-footer">
+        <span data-i18n="options_footer_version_label"></span><span id="appVersion">0.46.0</span>
+    </footer>
 
-                <div class="modal-actions">
-                    <label class="modal-checkbox" for="promptEnabled">
-                        <input type="checkbox" id="promptEnabled" checked>
-                        <span data-i18n="options_modal_enabled_label"></span>
+    <div id="statusMessage" class="toast-region" aria-live="polite"></div>
+
+    <!-- Add / edit prompt -->
+    <dialog id="promptModal" class="modal modal--grouped" data-group="initial" aria-labelledby="modalTitle">
+        <form id="promptForm" class="modal__card">
+            <div class="modal__header">
+                <h2 id="modalTitle" class="modal__title"></h2>
+                <button type="button" id="closeModalBtn" class="icon-btn" data-i18n-aria-label="options_modal_close">
+                    <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-x"/></svg>
+                </button>
+            </div>
+
+            <div class="modal__body prompt-editor">
+                <fieldset class="type-picker">
+                    <legend class="type-picker__legend" data-i18n="options_modal_type_label"></legend>
+                    <label class="type-option" data-group="initial">
+                        <input type="radio" name="promptGroup" value="initial" class="type-option__input">
+                        <svg class="type-option__art" aria-hidden="true" focusable="false"><use href="#art-initial"/></svg>
+                        <span class="type-option__text">
+                            <span class="type-option__title" data-i18n="options_tab_initial"></span>
+                            <span class="type-option__desc" data-i18n="options_type_initial_short"></span>
+                        </span>
+                        <svg class="icon type-option__check" aria-hidden="true" focusable="false"><use href="#icon-check-circle"/></svg>
                     </label>
-                    <div class="modal-actions-right">
-                        <button type="button" class="secondary" id="cancelBtn" data-i18n="options_modal_cancel_button"></button>
-                        <button type="submit" data-i18n="options_modal_save_button"></button>
+                    <label class="type-option" data-group="followUp">
+                        <input type="radio" name="promptGroup" value="followUp" class="type-option__input">
+                        <svg class="type-option__art" aria-hidden="true" focusable="false"><use href="#art-followup"/></svg>
+                        <span class="type-option__text">
+                            <span class="type-option__title" data-i18n="options_tab_followup"></span>
+                            <span class="type-option__desc" data-i18n="options_type_followup_short"></span>
+                        </span>
+                        <svg class="icon type-option__check" aria-hidden="true" focusable="false"><use href="#icon-check-circle"/></svg>
+                    </label>
+                </fieldset>
+
+                <div class="prompt-editor__main">
+                    <div class="field-row">
+                        <div class="field">
+                            <label class="field__label" for="promptIcon" data-i18n="options_modal_icon_label"></label>
+                            <div class="icon-input">
+                                <span id="promptIconPreview" class="icon-input__preview" aria-hidden="true"></span>
+                                <input type="text" id="promptIcon" class="input" autocomplete="off" aria-describedby="promptIconHelp" data-i18n-placeholder="options_modal_icon_placeholder">
+                            </div>
+                        </div>
+
+                        <div class="field">
+                            <label class="field__label" for="promptTitle" data-i18n="options_modal_title_label"></label>
+                            <input type="text" id="promptTitle" class="input" required autocomplete="off" data-i18n-placeholder="options_modal_title_placeholder">
+                        </div>
+
+                        <p id="promptIconHelp" class="field__help field-row__help field__help--secondary" data-i18n="options_modal_icon_help"></p>
+                    </div>
+
+                    <div class="field">
+                        <label class="field__label" for="promptAltText" data-i18n="options_modal_alt_label"></label>
+                        <input type="text" id="promptAltText" class="input" autocomplete="off" data-i18n-placeholder="options_modal_alt_placeholder">
+                    </div>
+
+                    <div class="field field--grow">
+                        <div class="field__head">
+                            <label class="field__label" for="promptText" data-i18n="options_modal_prompt_label"></label>
+                            <span id="promptArgsHint" class="args-hint" hidden>
+                                <span data-i18n="options_modal_prompt_args_label"></span>
+                                <button type="button" id="promptArgsInsert" class="args-hint__token" data-i18n-title="options_modal_prompt_args_tooltip">{{args}}</button>
+                            </span>
+                        </div>
+                        <textarea id="promptText" class="textarea prompt-editor__textarea" required spellcheck="false" aria-describedby="promptTextHelp" data-i18n-placeholder="options_modal_prompt_placeholder"></textarea>
+                        <p id="promptTextHelp" class="field__help field__help--secondary" data-i18n="options_modal_prompt_help"></p>
+                        <p id="promptArgsWarning" class="field__warning" hidden>
+                            <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-alert-triangle"/></svg>
+                            <span data-i18n="options_modal_args_without_autopaste"></span>
+                        </p>
                     </div>
                 </div>
-            </form>
+
+                <section class="prompt-editor__side" aria-labelledby="promptBehaviorTitle">
+                    <h3 id="promptBehaviorTitle" class="prompt-editor__side-title" data-i18n="options_modal_behavior_title"></h3>
+                    <div class="switch-list">
+                        <div class="switch-row">
+                            <div class="switch-row__text">
+                                <label class="switch-row__label" for="promptEnabled" data-i18n="options_modal_enabled_label"></label>
+                            </div>
+                            <input type="checkbox" id="promptEnabled" class="switch" role="switch" checked>
+                        </div>
+                        <div class="switch-row">
+                            <div class="switch-row__text">
+                                <label class="switch-row__label" for="promptAutoSubmit" data-i18n="options_modal_auto_submit_label"></label>
+                                <p id="promptAutoSubmitHelp" class="switch-row__help" data-i18n="options_modal_auto_submit_help"></p>
+                            </div>
+                            <input type="checkbox" id="promptAutoSubmit" class="switch" role="switch" aria-describedby="promptAutoSubmitHelp">
+                        </div>
+                        <div class="switch-row">
+                            <div class="switch-row__text">
+                                <label class="switch-row__label" for="promptAutoPaste" data-i18n="options_modal_auto_paste_label"></label>
+                                <p id="promptAutoPasteHelp" class="switch-row__help" data-i18n="options_modal_auto_paste_help"></p>
+                            </div>
+                            <input type="checkbox" id="promptAutoPaste" class="switch" role="switch" aria-describedby="promptAutoPasteHelp">
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <div class="modal__footer">
+                <p id="saveShortcutHint" class="modal__hint"></p>
+                <div class="modal__actions">
+                    <button type="button" id="cancelBtn" class="btn btn--secondary" data-i18n="options_modal_cancel_button"></button>
+                    <button type="submit" id="promptSaveBtn" class="btn btn--primary btn--group" data-i18n="options_modal_save_button"></button>
+                </div>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Import -->
+    <dialog id="importModal" class="modal" aria-labelledby="importTitle">
+        <div class="modal__card">
+            <div class="modal__header">
+                <h2 id="importTitle" class="modal__title" data-i18n="options_import_title"></h2>
+                <button type="button" id="closeImportModalBtn" class="icon-btn" data-i18n-aria-label="options_modal_close">
+                    <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-x"/></svg>
+                </button>
+            </div>
+
+            <div class="modal__body">
+                <div class="field">
+                    <div class="field__head">
+                        <label class="field__label" for="importText" data-i18n="options_import_label"></label>
+                        <button type="button" id="chooseImportFileBtn" class="btn btn--secondary btn--sm">
+                            <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-file"/></svg>
+                            <span data-i18n="options_import_choose_file"></span>
+                        </button>
+                    </div>
+                    <div id="importDropzone" class="dropzone">
+                        <textarea id="importText" class="textarea" spellcheck="false" aria-describedby="importHelp" data-i18n-placeholder="options_import_placeholder"></textarea>
+                        <div class="dropzone__overlay" aria-hidden="true">
+                            <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-import"/></svg>
+                            <span data-i18n="options_import_drop_hint"></span>
+                        </div>
+                    </div>
+                    <p id="importHelp" class="field__help" data-i18n="options_import_help"></p>
+                    <input type="file" id="importFileInput" accept=".json,application/json" hidden>
+                </div>
+            </div>
+
+            <div class="modal__footer">
+                <div class="modal__actions">
+                    <button type="button" id="cancelImportBtn" class="btn btn--secondary" data-i18n="options_import_cancel_button"></button>
+                    <button type="button" id="confirmImportBtn" class="btn btn--primary" data-i18n="options_import_confirm_button"></button>
+                </div>
+            </div>
         </div>
-    </div>
+    </dialog>
 
-    <!-- Import Modal -->
-    <div id="importModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 data-i18n="options_import_title"></h2>
-                <button class="close-btn" id="closeImportModalBtn">&times;</button>
+    <!-- Confirmation (delete, reset, import, discard changes) -->
+    <dialog id="confirmDialog" class="modal modal--confirm" role="alertdialog" aria-labelledby="confirmDialogMessage">
+        <div class="modal__card confirm">
+            <div class="confirm__icon" aria-hidden="true">
+                <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-alert-circle"/></svg>
             </div>
-
-            <div class="form-group">
-                <label for="importText" data-i18n="options_import_label"></label>
-                <textarea id="importText" style="min-height: 200px;" data-i18n-placeholder="options_import_placeholder"></textarea>
-                <div class="form-help" data-i18n="options_import_help"></div>
-            </div>
-
-            <div class="modal-actions">
-                <button type="button" class="secondary" id="cancelImportBtn" data-i18n="options_import_cancel_button"></button>
-                <button type="button" id="confirmImportBtn" data-i18n="options_import_confirm_button"></button>
+            <p id="confirmDialogMessage" class="confirm__message"></p>
+            <div class="confirm__actions">
+                <button type="button" id="confirmDialogCancelBtn" class="btn btn--secondary"></button>
+                <button type="button" id="confirmDialogOkBtn" class="btn btn--primary"></button>
             </div>
         </div>
-    </div>
+    </dialog>
 
     <script type="module" src="dist/options.js"></script>
 </body>

@@ -581,3 +581,321 @@ describe('chatgpt.com DOM snapshot', () => {
     }
   });
 });
+
+// Markup modelled on the logged-in chatgpt.com app shell (2026-09): a `form[data-chatgpt-composer]`
+// composer with a ProseMirror editor, turns keyed by `data-turn-key`, messages keyed by
+// `data-content-search-unit-key`, and the assistant action bar rendered next to the message column.
+function renderAppShellConversation(options: {
+  actionBar?: boolean;
+  composerButton?: string;
+  editForm?: boolean;
+  codeLanguage?: string;
+} = {}) {
+  const {
+    actionBar = true,
+    composerButton = '<button type="submit" aria-label="Send"></button>',
+    editForm = false,
+    codeLanguage = 'Markdown',
+  } = options;
+
+  document.documentElement.innerHTML = `
+    <head></head>
+    <body>
+      <main data-app-shell-main-surface="browser">
+        <div data-thread-find-target="conversation">
+          <div data-turn-key="u1">
+            <div data-content-search-turn-key="fallback-turn-0">
+              <div><div><div id="turn-column">
+                <div>
+                  <div id="user-section">
+                    <h4>You said:</h4>
+                    <div data-chatgpt-search-unit-key="fallback-turn-0:0:user">
+                      <div data-content-search-unit-key="fallback-turn-0:0:user">
+                        <div data-user-message-bubble="true"><div id="user-text" dir="auto">Hello there</div></div>
+                        <div>
+                          <span><button type="button" id="copy-message" aria-label="Copy message"></button></span>
+                          <span><button type="button" id="edit-message" aria-label="Edit message"></button></span>
+                        </div>
+                      </div>
+                    </div>
+                    ${
+                      editForm
+                        ? `<form id="edit-form">
+                            <div id="edit-editor" contenteditable="true" role="textbox" data-composer-markdown="" aria-label="Edit message"><p>Hello there</p></div>
+                            <button type="button" id="edit-send">Send</button>
+                          </form>`
+                        : ''
+                    }
+                  </div>
+                  <div>
+                    <div data-content-search-unit-key="fallback-turn-0:2:assistant">
+                      <h4 data-conversation-role="assistant">ChatGPT said:</h4>
+                      <div data-markdown-text-style="assistant-message">
+                        <div data-markdown-copy="code-block" id="code-block">
+                          <div data-markdown-copy="exclude">
+                            <div>${codeLanguage}</div>
+                            <div><div><span><button type="button" aria-label="Copy"></button></span></div></div>
+                          </div>
+                          <div dir="ltr" id="code-content"><code># Fruits\n- Apple</code></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                ${
+                  actionBar
+                    ? `<div id="action-bar">
+                        <span><button type="button" aria-label="Copy"></button></span>
+                        <button type="button" aria-label="Regenerate response"></button>
+                      </div>`
+                    : ''
+                }
+              </div></div></div>
+            </div>
+          </div>
+        </div>
+        <form id="composer" data-composer-placement="thread" data-chatgpt-composer="">
+          <div id="composer-editor" contenteditable="true" role="textbox" data-composer-markdown="" aria-label="Ask ChatGPT"><p></p></div>
+          ${composerButton}
+        </form>
+      </main>
+    </body>
+  `;
+
+  document.querySelectorAll('form').forEach((form) => {
+    form.addEventListener('submit', (event) => event.preventDefault());
+  });
+}
+
+const followUpPrompt = {
+  enabled: true,
+  title: '繼續',
+  prompt: '請繼續',
+  autoSubmit: true,
+};
+
+describe('chatgpt.com app shell (2026)', () => {
+  beforeEach(() => {
+    setChatGPTLocation('/c/abc');
+  });
+
+  afterEach(() => {
+    Object.defineProperty(globalThis, 'location', {
+      configurable: true,
+      value: originalLocation,
+    });
+  });
+
+  test('injects theme-aware initial buttons into the home composer', async () => {
+    setChatGPTLocation('/');
+    document.documentElement.innerHTML = `
+      <head></head>
+      <body>
+        <main>
+          <div><h1>Ready when you are.</h1></div>
+          <form data-composer-placement="home" data-chatgpt-composer="">
+            <div contenteditable="true" role="textbox" data-composer-markdown=""><p></p></div>
+            <button type="button" aria-label="Start Voice"></button>
+          </form>
+        </main>
+      </body>
+    `;
+    const restoreChrome = installChromeStub([
+      { enabled: true, initial: true, title: '總結', prompt: '請總結：', altText: '總結內容' },
+    ]);
+
+    try {
+      withPatchedTimers(() => {
+        initChatGPT(createContentContext());
+      });
+      await flushAsyncWork();
+
+      const bar = document.getElementById('custom-chatgpt-initial-buttons');
+      expect(bar?.parentElement?.matches('form[data-chatgpt-composer]')).toBe(true);
+      const button = bar?.querySelector<HTMLButtonElement>('button.chatgpttoolkit-btn');
+      expect(button?.textContent).toBe('總結');
+      expect(button?.title).toBe('總結內容');
+      // Colors come from currentColor instead of a `.dark` class the new app no longer sets.
+      expect(document.getElementById('custom-chatgpt-button-styles')?.textContent).toContain('currentColor');
+    } finally {
+      restoreChrome();
+    }
+  });
+
+  test('hides initial buttons while a reply is streaming', async () => {
+    setChatGPTLocation('/');
+    document.documentElement.innerHTML = `
+      <head></head>
+      <body>
+        <main>
+          <form data-composer-placement="home" data-chatgpt-composer="">
+            <div contenteditable="true" role="textbox" data-composer-markdown=""><p></p></div>
+            <button type="button" aria-label="Stop"></button>
+          </form>
+        </main>
+      </body>
+    `;
+    const restoreChrome = installChromeStub([
+      { enabled: true, initial: true, title: '總結', prompt: '請總結：' },
+    ]);
+
+    try {
+      withPatchedTimers(() => {
+        initChatGPT(createContentContext());
+      });
+      await flushAsyncWork();
+
+      expect(document.getElementById('custom-chatgpt-initial-buttons')).toBeNull();
+    } finally {
+      restoreChrome();
+    }
+  });
+
+  test('adds follow-up buttons after the assistant action bar', async () => {
+    renderAppShellConversation();
+    const restoreChrome = installChromeStub([followUpPrompt]);
+
+    try {
+      withPatchedTimers(() => {
+        initChatGPT(createContentContext());
+      });
+      await flushAsyncWork();
+
+      const area = document.getElementById('custom-chatgpt-magic-box-buttons');
+      expect(area).not.toBeNull();
+      expect(area?.parentElement?.id).toBe('turn-column');
+      expect(area?.previousElementSibling?.id).toBe('action-bar');
+      expect(area?.textContent).toContain('繼續');
+      // Prompts without altText must not get an "undefined" tooltip.
+      expect(area?.querySelector('button')?.hasAttribute('title')).toBe(false);
+    } finally {
+      restoreChrome();
+    }
+  });
+
+  test('waits for the action bar before adding follow-up buttons', async () => {
+    renderAppShellConversation({ actionBar: false });
+    const restoreChrome = installChromeStub([followUpPrompt]);
+
+    try {
+      withPatchedTimers(() => {
+        initChatGPT(createContentContext());
+      });
+      await flushAsyncWork();
+
+      expect(document.getElementById('custom-chatgpt-magic-box-buttons')).toBeNull();
+    } finally {
+      restoreChrome();
+    }
+  });
+
+  test('skips follow-up buttons while the stop button is shown', async () => {
+    renderAppShellConversation({ composerButton: '<button type="button" aria-label="Stop"></button>' });
+    const restoreChrome = installChromeStub([followUpPrompt]);
+
+    try {
+      withPatchedTimers(() => {
+        initChatGPT(createContentContext());
+      });
+      await flushAsyncWork();
+
+      expect(document.getElementById('custom-chatgpt-magic-box-buttons')).toBeNull();
+    } finally {
+      restoreChrome();
+    }
+  });
+
+  test('follow-up button fills and submits the composer, not an open inline edit form', async () => {
+    renderAppShellConversation({ editForm: true });
+    let composerSubmits = 0;
+    let editSends = 0;
+    document.querySelector('#composer button[type="submit"]')?.addEventListener('click', () => {
+      composerSubmits += 1;
+    });
+    document.getElementById('edit-send')?.addEventListener('click', () => {
+      editSends += 1;
+    });
+    const restoreChrome = installChromeStub([followUpPrompt]);
+
+    try {
+      withPatchedTimers(() => {
+        initChatGPT(createArgsResolutionContext());
+      });
+      await flushAsyncWork();
+
+      const button = document
+        .getElementById('custom-chatgpt-magic-box-buttons')
+        ?.querySelector<HTMLButtonElement>('button');
+      expect(button).not.toBeNull();
+
+      withPatchedTimers(() => {
+        button?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      });
+      await flushAsyncWork();
+      await flushAsyncWork();
+
+      expect(document.getElementById('composer-editor')?.textContent).toBe('請繼續');
+      expect(document.getElementById('edit-editor')?.textContent).toBe('Hello there');
+      expect(composerSubmits).toBe(1);
+      expect(editSends).toBe(0);
+    } finally {
+      restoreChrome();
+    }
+  });
+
+  test('double-clicking a sent message clicks its edit button', async () => {
+    renderAppShellConversation();
+    let edits = 0;
+    let copies = 0;
+    document.getElementById('edit-message')?.addEventListener('click', () => {
+      edits += 1;
+    });
+    document.getElementById('copy-message')?.addEventListener('click', () => {
+      copies += 1;
+    });
+    const restoreChrome = installChromeStub([followUpPrompt]);
+
+    try {
+      withPatchedTimers(() => {
+        initChatGPT(createContentContext());
+      });
+      document.getElementById('user-text')?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+
+      expect(edits).toBe(1);
+      expect(copies).toBe(0);
+    } finally {
+      restoreChrome();
+    }
+  });
+
+  test('adds a mindmap toggle only to markdown code blocks', async () => {
+    renderAppShellConversation();
+    const restoreChrome = installChromeStub([followUpPrompt]);
+
+    try {
+      withPatchedTimers(() => {
+        initChatGPT(createContentContext());
+      });
+      await flushAsyncWork();
+
+      const header = document.querySelector('#code-block [data-markdown-copy="exclude"]');
+      expect(header?.querySelector('button[aria-label="Mindmap"]')).not.toBeNull();
+    } finally {
+      restoreChrome();
+    }
+
+    renderAppShellConversation({ codeLanguage: 'Python' });
+    const restoreChromeAgain = installChromeStub([followUpPrompt]);
+
+    try {
+      withPatchedTimers(() => {
+        initChatGPT(createContentContext());
+      });
+      await flushAsyncWork();
+
+      expect(document.querySelector('button[aria-label="Mindmap"]')).toBeNull();
+    } finally {
+      restoreChromeAgain();
+    }
+  });
+});

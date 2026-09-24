@@ -68,7 +68,14 @@ export function createContentContext(): ContentContext | null {
 
   function fillTextareaAndDispatchInput(textarea: HTMLTextAreaElement | null, text: string) {
     if (!textarea) return;
-    textarea.value = text;
+    // Use the prototype setter so frameworks that track the value on the instance
+    // (React-style controlled inputs) notice the change.
+    const valueSetter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+    if (valueSetter) {
+      valueSetter.call(textarea, text);
+    } else {
+      textarea.value = text;
+    }
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
@@ -122,16 +129,16 @@ export function createContentContext(): ContentContext | null {
               clipboardData: dataTransfer,
             });
 
-            console.log('觸發貼上事件', pasteEvent);
+            if (debug) console.log('觸發貼上事件', pasteEvent);
             targetElement.dispatchEvent(pasteEvent);
-            console.log('模擬貼上圖片成功');
+            if (debug) console.log('模擬貼上圖片成功');
 
             return true;
           }
         }
       }
 
-      console.log('剪貼簿中沒有圖片');
+      if (debug) console.log('剪貼簿中沒有圖片');
       return false;
     } catch (error) {
       console.error('抓取剪貼簿圖片失敗:', error);

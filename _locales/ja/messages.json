@@ -8,23 +8,44 @@
   "chatgpttoolkit_author": {
     "message": "Will 保哥"
   },
+  "content_mindmap_button": {
+    "message": "マインドマップ"
+  },
+  "options_lang_tag": {
+    "message": "ja"
+  },
   "options_page_title": {
     "message": "$1 - オプション"
   },
-  "options_header_title": {
-    "message": "$1 - カスタムプロンプト管理"
+  "options_header_heading": {
+    "message": "カスタムプロンプト管理"
   },
   "options_header_subtitle": {
     "message": "ChatGPT の会話に表示されるカスタムプロンプトボタンを管理します。"
   },
+  "options_theme_label": {
+    "message": "テーマ"
+  },
+  "options_theme_system": {
+    "message": "システム設定に合わせる"
+  },
+  "options_theme_light": {
+    "message": "ライト"
+  },
+  "options_theme_dark": {
+    "message": "ダーク"
+  },
+  "options_data_actions_label": {
+    "message": "バックアップと復元"
+  },
   "options_button_import": {
-    "message": "📥 インポート"
+    "message": "インポート"
   },
   "options_button_export": {
-    "message": "📤 エクスポート"
+    "message": "エクスポート"
   },
   "options_button_reset": {
-    "message": "🔄 設定をリセット"
+    "message": "デフォルトに戻す"
   },
   "options_prompt_groups_label": {
     "message": "プロンプトボタンのカテゴリ"
@@ -36,31 +57,43 @@
     "message": "初期ボタン"
   },
   "options_tab_followup": {
-    "message": "追問ボタン"
+    "message": "フォローアップボタン"
   },
-  "options_button_add_prompt": {
-    "message": "➕ プロンプトを追加"
+  "options_tab_initial_desc": {
+    "message": "ChatGPT のホーム画面で、会話を始める前に表示されます。"
   },
-  "options_modal_title_add_prompt": {
-    "message": "プロンプトを追加"
+  "options_tab_followup_desc": {
+    "message": "ChatGPT の最新の回答の下に表示され、ワンクリックで続けて質問できます。"
+  },
+  "options_search_label": {
+    "message": "プロンプトを検索"
+  },
+  "options_search_placeholder": {
+    "message": "プロンプトを検索"
+  },
+  "options_search_no_results": {
+    "message": "「$1」に一致するプロンプトはありません"
+  },
+  "options_search_clear": {
+    "message": "検索をクリア"
+  },
+  "options_reorder_disabled_filtering": {
+    "message": "並べ替えるには検索をクリアしてください"
   },
   "options_modal_title_add_initial": {
     "message": "初期ボタンを追加"
   },
   "options_modal_title_add_followup": {
-    "message": "追問ボタンを追加"
+    "message": "フォローアップボタンを追加"
   },
   "options_modal_title_edit_initial": {
     "message": "初期ボタンを編集"
   },
   "options_modal_title_edit_followup": {
-    "message": "追問ボタンを編集"
+    "message": "フォローアップボタンを編集"
   },
-  "options_modal_initial_label": {
-    "message": "初期ボタン（会話開始前に表示）"
-  },
-  "options_modal_initial_help": {
-    "message": "未チェックの場合、ChatGPT の応答後にボタンが表示されます。"
+  "options_modal_close": {
+    "message": "閉じる"
   },
   "options_modal_icon_label": {
     "message": "アイコン（絵文字または SVG）"
@@ -98,6 +131,9 @@
   "options_modal_prompt_args_tooltip": {
     "message": "入力欄に内容があればその内容で、空ならクリップボードの内容で {{args}} を置換します。"
   },
+  "options_modal_args_without_autopaste": {
+    "message": "{{args}} は「クリップボード内容を自動貼り付け」がオンのときだけ置き換えられます。"
+  },
   "options_modal_auto_paste_label": {
     "message": "クリップボード内容を自動貼り付け"
   },
@@ -113,11 +149,29 @@
   "options_modal_enabled_label": {
     "message": "このプロンプトを有効化"
   },
+  "options_modal_behavior_title": {
+    "message": "ボタンの動作"
+  },
+  "options_modal_type_label": {
+    "message": "ボタンの種類"
+  },
+  "options_type_initial_short": {
+    "message": "新しいチャットで、入力欄の上に表示"
+  },
+  "options_type_followup_short": {
+    "message": "回答のたびに、回答の下に表示"
+  },
   "options_modal_cancel_button": {
     "message": "キャンセル"
   },
   "options_modal_save_button": {
     "message": "保存"
+  },
+  "options_modal_save_shortcut": {
+    "message": "$1 で保存"
+  },
+  "options_validation_required": {
+    "message": "この項目を入力してください"
   },
   "options_import_title": {
     "message": "プロンプトをインポート"
@@ -129,7 +183,13 @@
     "message": "[{\"enabled\": true, \"title\": \"要約\", ...}]"
   },
   "options_import_help": {
-    "message": "エクスポート機能から取得した JSON を貼り付けてください"
+    "message": "エクスポート機能で取得した JSON を貼り付けるか、.json ファイルを選択またはドロップしてください"
+  },
+  "options_import_choose_file": {
+    "message": "ファイルを選択"
+  },
+  "options_import_drop_hint": {
+    "message": ".json ファイルをドロップしてインポート"
   },
   "options_import_cancel_button": {
     "message": "キャンセル"
@@ -150,13 +210,16 @@
     "message": "初期ボタンがまだありません"
   },
   "options_empty_followup": {
-    "message": "追問ボタンがまだありません"
-  },
-  "options_empty_add_button": {
-    "message": "プロンプトを追加"
+    "message": "フォローアップボタンがまだありません"
   },
   "options_confirm_delete_prompt": {
-    "message": "このプロンプトを削除しますか？"
+    "message": "「$1」を削除しますか？この操作は元に戻せません。"
+  },
+  "options_confirm_delete_button": {
+    "message": "削除"
+  },
+  "options_status_prompt_deleted": {
+    "message": "プロンプトを削除しました。"
   },
   "options_status_export_success": {
     "message": "エクスポートしました！"
@@ -164,14 +227,29 @@
   "options_confirm_import": {
     "message": "$1 件のプロンプトをインポートしますか？既存の設定は上書きされます。"
   },
+  "options_status_import_success": {
+    "message": "$1 件のプロンプトをインポートしました。"
+  },
   "options_status_import_error": {
     "message": "インポートに失敗しました：$1"
   },
   "options_confirm_reset": {
-    "message": "設定をリセットしますか？すべてのカスタムプロンプトが削除されます。"
+    "message": "デフォルトのプロンプトに戻しますか？すべてのカスタムプロンプトが置き換えられます。"
+  },
+  "options_confirm_reset_button": {
+    "message": "デフォルトに戻す"
+  },
+  "options_confirm_discard_changes": {
+    "message": "保存していない変更を破棄しますか？"
+  },
+  "options_confirm_discard_button": {
+    "message": "破棄"
+  },
+  "options_confirm_keep_editing": {
+    "message": "編集を続ける"
   },
   "options_status_reset_success": {
-    "message": "設定をリセットしました。"
+    "message": "デフォルトのプロンプトに戻しました。"
   },
   "options_status_file_read_error": {
     "message": "ファイルの読み込みに失敗しました：$1"
@@ -179,11 +257,11 @@
   "options_badge_auto_submit": {
     "message": "自動送信"
   },
+  "options_badge_manual_submit": {
+    "message": "手動送信"
+  },
   "options_badge_auto_paste": {
     "message": "自動貼り付け"
-  },
-  "options_badge_enabled": {
-    "message": "有効"
   },
   "options_badge_disabled": {
     "message": "無効"
@@ -191,34 +269,43 @@
   "options_prompt_title_fallback": {
     "message": "(無題)"
   },
-  "options_prompt_alt_label": {
-    "message": "ツールチップ："
+  "options_preview_slot": {
+    "message": "貼り付け内容"
   },
-  "options_prompt_content_label": {
-    "message": "プロンプト："
+  "options_preview_slot_hint": {
+    "message": "ボタンを押すと、ChatGPT の入力欄の文字（空の場合はクリップボードの内容）がここに入ります。"
+  },
+  "options_prompt_expand": {
+    "message": "もっと見る"
+  },
+  "options_prompt_collapse": {
+    "message": "折りたたむ"
   },
   "options_action_edit": {
-    "message": "✏️ 編集"
-  },
-  "options_action_disable": {
-    "message": "🚫 無効化"
-  },
-  "options_action_enable": {
-    "message": "✅ 有効化"
+    "message": "編集"
   },
   "options_action_move_up": {
-    "message": "⬆️ 上へ"
+    "message": "上へ移動"
   },
   "options_action_move_down": {
-    "message": "⬇️ 下へ"
+    "message": "下へ移動"
   },
   "options_action_delete": {
-    "message": "🗑️ 削除"
+    "message": "削除"
   },
   "options_import_error_not_array": {
     "message": "インポートしたデータは配列形式である必要があります。"
   },
+  "options_import_error_empty": {
+    "message": "JSON データを貼り付けるか、ファイルを選択してください。"
+  },
+  "options_import_error_invalid_json": {
+    "message": "データが有効な JSON ではありません。"
+  },
+  "options_import_error_invalid_item": {
+    "message": "$1 件目のデータはプロンプトのオブジェクトではありません。"
+  },
   "options_import_error_missing_fields": {
-    "message": "各プロンプトには title と prompt が必要です。"
+    "message": "$1 件目のプロンプトには文字列の title と prompt が必要です。"
   }
 }

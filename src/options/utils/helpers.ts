@@ -1,38 +1,30 @@
 /**
- * Helper function to safely get property with default value
- * Returns the property value if it exists (even if undefined), otherwise returns defaultValue
+ * Delay before revoking a download's object URL. Revoking synchronously right after `click()` can
+ * cancel the download before the browser has started reading the blob.
  */
-export function getProperty<T, K extends keyof T, D>(
-  obj: T,
-  key: K,
-  defaultValue: D
-): T[K] | D {
-  return Object.prototype.hasOwnProperty.call(obj, key) ? obj[key] : defaultValue;
-}
+export const OBJECT_URL_REVOKE_DELAY_MS = 1000;
 
 /**
- * Escape HTML to prevent XSS (efficient character replacement)
+ * Download data as a file.
  */
-export function escapeHtml(text: string | undefined | null): string {
-  if (!text) return '';
-  return String(text).replace(/[&<>"']/g, char => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
-  }[char] || char));
-}
-
-/**
- * Download data as a file
- */
-export function downloadFile(data: string, filename: string, mimeType: string): void {
+export function downloadFile(
+  data: string,
+  filename: string,
+  mimeType: string,
+  revokeDelayMs: number = OBJECT_URL_REVOKE_DELAY_MS
+): void {
   const blob = new Blob([data], { type: mimeType });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
   link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
+  link.rel = 'noopener';
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  try {
+    link.click();
+  } finally {
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), revokeDelayMs);
+  }
 }

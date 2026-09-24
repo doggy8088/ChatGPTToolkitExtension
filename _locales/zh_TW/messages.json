@@ -8,23 +8,44 @@
     "chatgpttoolkit_author": {
         "message": "Will 保哥"
     },
+    "content_mindmap_button": {
+        "message": "心智圖"
+    },
+    "options_lang_tag": {
+        "message": "zh-Hant-TW"
+    },
     "options_page_title": {
         "message": "$1 - 選項"
     },
-    "options_header_title": {
-        "message": "$1 - 自訂提示管理"
+    "options_header_heading": {
+        "message": "自訂提示管理"
     },
     "options_header_subtitle": {
         "message": "管理您的自訂提示按鈕，這些按鈕會顯示在 ChatGPT 對話中"
     },
+    "options_theme_label": {
+        "message": "佈景主題"
+    },
+    "options_theme_system": {
+        "message": "跟隨系統"
+    },
+    "options_theme_light": {
+        "message": "淺色"
+    },
+    "options_theme_dark": {
+        "message": "深色"
+    },
+    "options_data_actions_label": {
+        "message": "備份與還原"
+    },
     "options_button_import": {
-        "message": "📥 匯入"
+        "message": "匯入"
     },
     "options_button_export": {
-        "message": "📤 匯出"
+        "message": "匯出"
     },
     "options_button_reset": {
-        "message": "🔄 重置設定"
+        "message": "還原預設值"
     },
     "options_prompt_groups_label": {
         "message": "提示按鈕分類"
@@ -38,11 +59,26 @@
     "options_tab_followup": {
         "message": "追問按鈕"
     },
-    "options_button_add_prompt": {
-        "message": "➕ 新增提示"
+    "options_tab_initial_desc": {
+        "message": "顯示在 ChatGPT 首頁，開始對話前使用。"
     },
-    "options_modal_title_add_prompt": {
-        "message": "新增提示"
+    "options_tab_followup_desc": {
+        "message": "顯示在 ChatGPT 最新回覆下方，一鍵即可追問。"
+    },
+    "options_search_label": {
+        "message": "搜尋提示"
+    },
+    "options_search_placeholder": {
+        "message": "搜尋提示"
+    },
+    "options_search_no_results": {
+        "message": "沒有符合「$1」的提示"
+    },
+    "options_search_clear": {
+        "message": "清除搜尋"
+    },
+    "options_reorder_disabled_filtering": {
+        "message": "清除搜尋後才能調整順序"
     },
     "options_modal_title_add_initial": {
         "message": "新增初始按鈕"
@@ -56,11 +92,8 @@
     "options_modal_title_edit_followup": {
         "message": "編輯追問按鈕"
     },
-    "options_modal_initial_label": {
-        "message": "初始按鈕（在對話開始前顯示）"
-    },
-    "options_modal_initial_help": {
-        "message": "未勾選時，按鈕會在 ChatGPT 回應後顯示"
+    "options_modal_close": {
+        "message": "關閉"
     },
     "options_modal_icon_label": {
         "message": "圖示 (Emoji 或 SVG)"
@@ -98,6 +131,9 @@
     "options_modal_prompt_args_tooltip": {
         "message": "輸入框已有內容時，以輸入框內容取代 {{args}}；為空時則以剪貼簿內容取代。"
     },
+    "options_modal_args_without_autopaste": {
+        "message": "只有開啟「自動貼上剪貼簿內容」時，{{args}} 才會被取代。"
+    },
     "options_modal_auto_paste_label": {
         "message": "自動貼上剪貼簿內容"
     },
@@ -113,11 +149,29 @@
     "options_modal_enabled_label": {
         "message": "啟用此提示"
     },
+    "options_modal_behavior_title": {
+        "message": "按鈕行為"
+    },
+    "options_modal_type_label": {
+        "message": "按鈕類型"
+    },
+    "options_type_initial_short": {
+        "message": "新對話時，顯示在輸入框上方"
+    },
+    "options_type_followup_short": {
+        "message": "每次回覆完成後，顯示在回覆下方"
+    },
     "options_modal_cancel_button": {
         "message": "取消"
     },
     "options_modal_save_button": {
         "message": "儲存"
+    },
+    "options_modal_save_shortcut": {
+        "message": "按 $1 儲存"
+    },
+    "options_validation_required": {
+        "message": "請填寫此欄位"
     },
     "options_import_title": {
         "message": "匯入提示"
@@ -129,7 +183,13 @@
         "message": "[{\"enabled\": true, \"title\": \"總結\", ...}]"
     },
     "options_import_help": {
-        "message": "貼上從匯出功能取得的 JSON 資料"
+        "message": "貼上從匯出功能取得的 JSON 資料，或選擇、拖放 .json 檔案"
+    },
+    "options_import_choose_file": {
+        "message": "選擇檔案"
+    },
+    "options_import_drop_hint": {
+        "message": "放開即可匯入 .json 檔案"
     },
     "options_import_cancel_button": {
         "message": "取消"
@@ -152,11 +212,14 @@
     "options_empty_followup": {
         "message": "尚未建立任何追問按鈕"
     },
-    "options_empty_add_button": {
-        "message": "新增提示"
-    },
     "options_confirm_delete_prompt": {
-        "message": "確定要刪除此提示嗎？"
+        "message": "確定要刪除「$1」嗎？此動作無法復原。"
+    },
+    "options_confirm_delete_button": {
+        "message": "刪除"
+    },
+    "options_status_prompt_deleted": {
+        "message": "已刪除提示"
     },
     "options_status_export_success": {
         "message": "匯出成功！"
@@ -164,14 +227,29 @@
     "options_confirm_import": {
         "message": "確定要匯入 $1 個提示嗎？這會覆蓋現有的設定。"
     },
+    "options_status_import_success": {
+        "message": "已匯入 $1 個提示"
+    },
     "options_status_import_error": {
         "message": "匯入失敗：$1"
     },
     "options_confirm_reset": {
-        "message": "確定要重置設定嗎？這會清除所有自訂提示。"
+        "message": "確定要還原為預設提示嗎？這會取代您所有的自訂提示。"
+    },
+    "options_confirm_reset_button": {
+        "message": "還原預設值"
+    },
+    "options_confirm_discard_changes": {
+        "message": "要捨棄尚未儲存的變更嗎？"
+    },
+    "options_confirm_discard_button": {
+        "message": "捨棄"
+    },
+    "options_confirm_keep_editing": {
+        "message": "繼續編輯"
     },
     "options_status_reset_success": {
-        "message": "已重置設定"
+        "message": "已還原預設提示"
     },
     "options_status_file_read_error": {
         "message": "讀取檔案失敗：$1"
@@ -179,11 +257,11 @@
     "options_badge_auto_submit": {
         "message": "自動送出"
     },
+    "options_badge_manual_submit": {
+        "message": "手動送出"
+    },
     "options_badge_auto_paste": {
         "message": "自動貼上"
-    },
-    "options_badge_enabled": {
-        "message": "已啟用"
     },
     "options_badge_disabled": {
         "message": "已停用"
@@ -191,34 +269,43 @@
     "options_prompt_title_fallback": {
         "message": "(無標題)"
     },
-    "options_prompt_alt_label": {
-        "message": "提示文字:"
+    "options_preview_slot": {
+        "message": "貼上內容"
     },
-    "options_prompt_content_label": {
-        "message": "提示內容:"
+    "options_preview_slot_hint": {
+        "message": "按下按鈕時，這裡會填入 ChatGPT 輸入框中的文字；輸入框為空時改用剪貼簿內容。"
+    },
+    "options_prompt_expand": {
+        "message": "顯示更多"
+    },
+    "options_prompt_collapse": {
+        "message": "收合"
     },
     "options_action_edit": {
-        "message": "✏️ 編輯"
-    },
-    "options_action_disable": {
-        "message": "🚫 停用"
-    },
-    "options_action_enable": {
-        "message": "✅ 啟用"
+        "message": "編輯"
     },
     "options_action_move_up": {
-        "message": "⬆️ 上移"
+        "message": "上移"
     },
     "options_action_move_down": {
-        "message": "⬇️ 下移"
+        "message": "下移"
     },
     "options_action_delete": {
-        "message": "🗑️ 刪除"
+        "message": "刪除"
     },
     "options_import_error_not_array": {
         "message": "匯入的資料必須是陣列格式"
     },
+    "options_import_error_empty": {
+        "message": "請先貼上 JSON 資料或選擇檔案"
+    },
+    "options_import_error_invalid_json": {
+        "message": "資料不是有效的 JSON 格式"
+    },
+    "options_import_error_invalid_item": {
+        "message": "第 $1 筆資料不是有效的提示物件"
+    },
     "options_import_error_missing_fields": {
-        "message": "每個提示必須包含 title 和 prompt 欄位"
+        "message": "第 $1 筆提示必須包含 title 和 prompt 文字欄位"
     }
 }

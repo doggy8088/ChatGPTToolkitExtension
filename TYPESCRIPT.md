@@ -6,16 +6,31 @@ This project now uses TypeScript with Bun for building and testing.
 
 ```
 src/
+├── shared/
+│   └── promptMigrations.ts   # One-time stored-prompt migrations (options page + content scripts)
+├── content/
+│   ├── index.ts              # Content script entry, picks the site module
+│   ├── context.ts            # Shared helpers (URL params, editor filling, retries)
+│   ├── editorText.ts         # Read composer text while keeping line breaks
+│   ├── prompts.ts            # Load/select prompts, {{args}} resolution (ChatGPT + Gemini)
+│   └── sites/                # One module per supported site
 └── options/
-    ├── models/          # Data models and types
+    ├── models/               # Data models and types
     │   └── CustomPrompt.ts
-    ├── services/        # Business logic services
+    ├── services/             # Storage (chrome.storage.local), import/export
     │   └── PromptsStorageService.ts
-    ├── ui/              # UI components
-    │   ├── OptionsUIController.ts
-    │   └── PromptRenderer.ts
-    ├── utils/           # Utility functions
-    │   └── helpers.ts
+    ├── ui/                   # UI components
+    │   ├── OptionsUIController.ts  # Toasts, confirm dialog
+    │   ├── PromptRenderer.ts       # Prompt cards and empty states
+    │   ├── ThemeSwitcher.ts        # System / light / dark switch
+    │   └── icons.ts                # Icon sprite helper
+    ├── utils/
+    │   ├── helpers.ts        # downloadFile()
+    │   ├── i18n.ts           # chrome.i18n wrapper
+    │   ├── promptIcon.ts     # Emoji/text icons, sanitized SVG icons
+    │   ├── promptList.ts     # Pure prompt-list operations (groups, move, form mapping)
+    │   └── theme.ts          # Theme preference parsing/persistence
+    ├── themeInit.ts          # Applies the stored theme before first paint (dist/theme-init.js)
     └── OptionsController.ts  # Main controller
 ```
 
@@ -38,7 +53,7 @@ bun install
 bun run build
 ```
 
-This compiles TypeScript files from `src/` to `dist/options.js`.
+This compiles `src/options/` to `dist/options.js` and `dist/theme-init.js`, and `src/content/` to `scripts/content.js`.
 
 ### Run Tests
 
@@ -73,17 +88,21 @@ This runs type checking, tests, and build in sequence.
 `src/options/models/CustomPrompt.ts` - Defines the CustomPrompt interface and DEFAULT_PROMPTS configuration.
 
 ### Services
-`src/options/services/PromptsStorageService.ts` - Handles all localStorage operations for custom prompts.
+`src/options/services/PromptsStorageService.ts` - Loads/saves prompts in `chrome.storage.local` (shared with the content scripts), runs pending migrations, validates imports.
+
+### Shared
+`src/shared/promptMigrations.ts` - Stored-prompt migrations. Each migration runs once; applied ids are kept under `chatgpttoolkit.promptMigrations`, so a default prompt the user deletes stays deleted.
 
 ### UI Controllers
-- `src/options/ui/OptionsUIController.ts` - Manages UI state and user feedback
-- `src/options/ui/PromptRenderer.ts` - Renders prompt list items with proper HTML escaping
+- `src/options/ui/OptionsUIController.ts` - Toast notifications and the confirm dialog
+- `src/options/ui/PromptRenderer.ts` - Builds prompt cards with DOM APIs (no HTML strings)
+- `src/options/ui/ThemeSwitcher.ts` - System / light / dark theme switch
 
 ### Utils
-`src/options/utils/helpers.ts` - Shared utility functions:
-- `getProperty()` - Safe property access with defaults
-- `escapeHtml()` - XSS protection
-- `downloadFile()` - File download helper
+- `src/options/utils/promptList.ts` - Pure functions over the prompt list (groups, reorder, form mapping)
+- `src/options/utils/promptIcon.ts` - Renders prompt icons; SVG markup is sanitized
+- `src/options/utils/theme.ts` - Theme preference parsing and persistence
+- `src/options/utils/helpers.ts` - `downloadFile()`
 
 ### Main Controller
 `src/options/OptionsController.ts` - Orchestrates all components and handles user interactions.
@@ -100,8 +119,10 @@ All TypeScript tests use Bun's built-in test runner with happy-dom for DOM simul
 ## Build Output
 
 The build process creates:
-- `dist/options.js` - Bundled JavaScript file for the browser
-- `dist/options.js.map` - Source map for debugging
+- `dist/options.js` - Options page bundle (ES module)
+- `dist/theme-init.js` - Tiny classic script loaded in `<head>` to apply the saved theme before first paint
+- `scripts/content.js` - Content script bundle (IIFE)
+- `*.map` - Source maps for debugging
 
 ## Type Safety
 

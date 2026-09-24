@@ -1,21 +1,15 @@
 import type { ContentContext } from '../context';
 import { extractPromptEditorText } from '../editorText';
-
-interface PromptItem {
-  enabled?: boolean;
-  initial?: boolean;
-  svgIcon?: string;
-  title?: string;
-  altText?: string;
-  prompt?: string;
-  autoPaste?: boolean;
-  autoSubmit?: boolean;
-}
-
-interface ReadyPrompt extends PromptItem {
-  title: string;
-  prompt: string;
-}
+import {
+  CUSTOM_PROMPTS_KEY,
+  getLocaleDefaultFollowUpPrompts,
+  getReadyPromptsSignature,
+  loadCustomPrompts,
+  resolveAutoPastePrompt,
+  selectReadyPrompts,
+  type PromptItem,
+  type ReadyPrompt,
+} from '../prompts';
 
 interface InitialButtonsMountTarget {
   container: HTMLElement;
@@ -26,8 +20,6 @@ export function initGemini(ctx: ContentContext) {
   if (location.hostname !== 'gemini.google.com') return false;
 
   const { state, debug } = ctx;
-  const CUSTOM_PROMPTS_KEY = 'chatgpttoolkit.customPrompts';
-  const CLIPBOARD_ARGS_PLACEHOLDER = '{{args}}';
   const GEMINI_EDITOR_SELECTORS = [
     'chat-window .textarea',
     'input-container rich-textarea .ql-editor',
@@ -68,14 +60,6 @@ export function initGemini(ctx: ContentContext) {
     ctx.fillContentEditableWithParagraphs(editorDiv, promptText);
     editorDiv.dispatchEvent(new Event('input', { bubbles: true }));
     editorDiv.focus();
-  }
-
-  function readClipboardTextSafely() {
-    if (!navigator.clipboard?.readText) return Promise.resolve('');
-    return navigator.clipboard.readText().catch((error) => {
-      if (debug) console.warn('[ChatGPTToolkit][gemini] clipboard read failed', error);
-      return '';
-    });
   }
 
   function getPromptEditorText() {
@@ -251,27 +235,16 @@ export function initGemini(ctx: ContentContext) {
       }
 
       if (autoPasteEnabled) {
-        const editorText = getPromptEditorText().trim();
-        const resolveArgsText = editorText
-          ? Promise.resolve(editorText)
-          : readClipboardTextSafely().then((text) => text.trim());
-        resolveArgsText.then((trimmed) => {
-          const hasArgsPlaceholder = item.prompt.includes(CLIPBOARD_ARGS_PLACEHOLDER);
-          const nextPrompt = hasArgsPlaceholder
-            ? item.prompt.split(CLIPBOARD_ARGS_PLACEHOLDER).join(trimmed)
-            : trimmed
-              ? item.prompt + trimmed
-              : item.prompt;
+        void resolveAutoPastePrompt(item.prompt, getPromptEditorText(), debug, 'gemini').then((resolved) => {
           if (debug) {
             console.log(`[ChatGPTToolkit][gemini] ${label} button args resolved`, {
               title: item.title,
-              argsSource: editorText ? 'editor' : 'clipboard',
-              trimmedLength: trimmed.length,
-              hasArgsPlaceholder,
-              nextPromptLength: nextPrompt.length,
+              argsSource: resolved.argsSource,
+              argsLength: resolved.argsLength,
+              nextPromptLength: resolved.prompt.length,
             });
           }
-          fillPrompt(nextPrompt, autoSubmitEnabled);
+          fillPrompt(resolved.prompt, autoSubmitEnabled);
         });
       } else {
         fillPrompt(item.prompt, autoSubmitEnabled);
@@ -303,170 +276,20 @@ export function initGemini(ctx: ContentContext) {
     });
   }
 
-  function getDefaultReviewPrompt(): PromptItem {
-    return {
-      enabled: true,
-      initial: true,
-      svgIcon: '💬',
-      title: '評論',
-      altText: '評論剪貼簿內容並提出改進建議',
-      prompt: '請評論以下內容，指出優缺點並提供改進建議：\n\n',
-      autoPaste: true,
-      autoSubmit: true,
-    };
-  }
-
-  function ensurePromptExists(prompts: PromptItem[], promptToEnsure?: PromptItem | null) {
-    if (!Array.isArray(prompts)) return { prompts, changed: false };
-    if (!promptToEnsure || !promptToEnsure.title) return { prompts, changed: false };
-
-    const title = String(promptToEnsure.title).trim();
-    const exists = prompts.some((p) => {
-      if (!p) return false;
-      const isInitial = Object.prototype.hasOwnProperty.call(p, 'initial') ? p.initial === true : false;
-      return isInitial === true && String(p.title || '').trim() === title;
-    });
-
-    if (exists) return { prompts, changed: false };
-    return { prompts: [...prompts, { ...promptToEnsure }], changed: true };
-  }
-
-  function safeParseJsonArray(str?: string | null): PromptItem[] | null {
-    if (!str) return null;
-    try {
-      const parsed = JSON.parse(str);
-      return Array.isArray(parsed) ? (parsed as PromptItem[]) : null;
-    } catch {
-      return null;
-    }
-  }
-
-  function chromeStorageGet(key: string) {
-    try {
-      if (!chrome?.storage?.local) return Promise.resolve(undefined);
-      return new Promise<unknown>((resolve) =>
-        chrome.storage.local.get([key], (result) => resolve(result?.[key]))
-      );
-    } catch {
-      return Promise.resolve(undefined);
-    }
-  }
-
-  function chromeStorageSet(key: string, value: unknown) {
-    try {
-      if (!chrome?.storage?.local) return Promise.resolve(false);
-      return new Promise<boolean>((resolve) =>
-        chrome.storage.local.set({ [key]: value }, () => resolve(true))
-      );
-    } catch {
-      return Promise.resolve(false);
-    }
-  }
-
-  async function loadCustomPromptsFromExtensionStorageWithMigration() {
-    const stored = await chromeStorageGet(CUSTOM_PROMPTS_KEY);
-    if (Array.isArray(stored)) {
-      const migrated = ensurePromptExists(stored as PromptItem[], getDefaultReviewPrompt());
-      if (migrated.changed) await chromeStorageSet(CUSTOM_PROMPTS_KEY, migrated.prompts);
-      return migrated.prompts;
-    }
-
-    const legacy = safeParseJsonArray(localStorage.getItem(CUSTOM_PROMPTS_KEY));
-    if (legacy) {
-      const migrated = ensurePromptExists(legacy, getDefaultReviewPrompt());
-      await chromeStorageSet(CUSTOM_PROMPTS_KEY, migrated.prompts);
-      return migrated.prompts;
-    }
-
-    return null;
-  }
-
-  function buildInitialButtonsFromPrompts(prompts?: PromptItem[] | null) {
-    const results: ReadyPrompt[] = [];
-    (prompts || []).forEach((item) => {
-      const hasEnabled = Object.prototype.hasOwnProperty.call(item, 'enabled');
-      const isItemEnabled = !hasEnabled || item.enabled === true;
-      const isItemInitial = Object.prototype.hasOwnProperty.call(item, 'initial')
-        ? item.initial === true
-        : false;
-
-      if (isItemEnabled && isItemInitial && !!item.title && !!item.prompt) {
-        results.push(item as ReadyPrompt);
-      }
-    });
-    return results;
-  }
-
   void (async () => {
     let initialManualSubmitText: ReadyPrompt[] = [];
     let followUpManualSubmitText: ReadyPrompt[] = [];
-    let localeDefaultManualSubmitText: ReadyPrompt[] = [];
+    const localeDefaultManualSubmitText = getLocaleDefaultFollowUpPrompts(chrome.i18n?.getUILanguage());
     let lastResponse: Element | undefined;
     let initialButtonsSignature = '';
     let shiftedInitialHeading: HTMLElement | null = null;
 
-    const currentLocale = chrome.i18n?.getUILanguage();
-    if (currentLocale) {
-      if (currentLocale === 'zh-TW') {
-        localeDefaultManualSubmitText.push({ title: '舉例說明', prompt: '請舉例說明' });
-        localeDefaultManualSubmitText.push({ title: '提供細節', prompt: '請提供更多細節說明' });
-        localeDefaultManualSubmitText.push({
-          title: '翻譯成繁中',
-          prompt: '請將上述回應內容翻譯成臺灣常用的正體中文',
-        });
-        localeDefaultManualSubmitText.push({
-          title: '翻譯成英文',
-          prompt: 'Please translate the above response into English.',
-        });
-      } else if (currentLocale === 'ja') {
-        localeDefaultManualSubmitText.push({ title: '例えば', prompt: '例を挙げて説明して' });
-        localeDefaultManualSubmitText.push({ title: '詳細説明', prompt: 'もっと詳細に説明して' });
-        localeDefaultManualSubmitText.push({
-          title: '日本語に翻訳',
-          prompt: '上述の返答内容を日本語に翻訳して',
-        });
-        localeDefaultManualSubmitText.push({
-          title: '英語に翻訳',
-          prompt: 'Please translate the above response into English.',
-        });
-      } else {
-        localeDefaultManualSubmitText.push({
-          title: 'More Examples',
-          prompt: 'Could you please provide me with more examples?',
-        });
-        localeDefaultManualSubmitText.push({
-          title: 'More Details',
-          prompt: 'Could you please provide me with more details?',
-        });
-        localeDefaultManualSubmitText.push({
-          title: 'Translate to English',
-          prompt: 'Please translate the above response into English.',
-        });
-      }
-    }
-
     followUpManualSubmitText = [...localeDefaultManualSubmitText];
 
-    function buildFollowUpButtonsFromPrompts(prompts?: PromptItem[] | null) {
-      const results: ReadyPrompt[] = [];
-      (prompts || []).forEach((item) => {
-        const hasEnabled = Object.prototype.hasOwnProperty.call(item, 'enabled');
-        const isItemEnabled = !hasEnabled || item.enabled === true;
-        const isItemInitial = Object.prototype.hasOwnProperty.call(item, 'initial')
-          ? item.initial === true
-          : false;
-
-        if (isItemEnabled && !isItemInitial && !!item.title && !!item.prompt) {
-          results.push(item as ReadyPrompt);
-        }
-      });
-      return results;
-    }
-
-    const customPrompts = await loadCustomPromptsFromExtensionStorageWithMigration();
+    const customPrompts = await loadCustomPrompts();
     if (Array.isArray(customPrompts)) {
-      initialManualSubmitText = buildInitialButtonsFromPrompts(customPrompts);
-      followUpManualSubmitText = buildFollowUpButtonsFromPrompts(customPrompts);
+      initialManualSubmitText = selectReadyPrompts(customPrompts, true);
+      followUpManualSubmitText = selectReadyPrompts(customPrompts, false);
     }
 
     let mutationObserverTimer: ReturnType<typeof setTimeout> | undefined;
@@ -641,18 +464,6 @@ export function initGemini(ctx: ContentContext) {
       setInitialButtonsHeadingShift(null, 0);
     }
 
-    function getReadyPromptsSignature(items: ReadyPrompt[]) {
-      return JSON.stringify(
-        items.map((item) => ({
-          title: item.title,
-          prompt: item.prompt,
-          altText: item.altText || '',
-          autoPaste: item.autoPaste === true,
-          autoSubmit: item.autoSubmit === true,
-        }))
-      );
-    }
-
     function rebuildInitialButtons() {
       const existing = document.getElementById('custom-gemini-initial-buttons');
 
@@ -679,7 +490,8 @@ export function initGemini(ctx: ContentContext) {
 
       const barEl = bar as HTMLDivElement;
       const nextSignature = getReadyPromptsSignature(initialManualSubmitText);
-      const shouldRebuildButtons = nextSignature !== initialButtonsSignature;
+      // A freshly created bar (the old one was removed by the page or a settings change) is empty.
+      const shouldRebuildButtons = !existing || nextSignature !== initialButtonsSignature;
       if (shouldRebuildButtons && barEl.style.visibility !== 'hidden') {
         barEl.style.visibility = 'hidden';
       }
@@ -853,12 +665,9 @@ export function initGemini(ctx: ContentContext) {
         const change = changes?.[CUSTOM_PROMPTS_KEY];
         if (!change) return;
 
-        const nextInitial = Array.isArray(change.newValue)
-          ? buildInitialButtonsFromPrompts(change.newValue as PromptItem[])
-          : [];
-        const nextFollowUp = Array.isArray(change.newValue)
-          ? buildFollowUpButtonsFromPrompts(change.newValue as PromptItem[])
-          : [...localeDefaultManualSubmitText];
+        const nextPrompts = Array.isArray(change.newValue) ? (change.newValue as PromptItem[]) : null;
+        const nextInitial = nextPrompts ? selectReadyPrompts(nextPrompts, true) : [];
+        const nextFollowUp = nextPrompts ? selectReadyPrompts(nextPrompts, false) : [...localeDefaultManualSubmitText];
         initialManualSubmitText = nextInitial;
         followUpManualSubmitText = nextFollowUp;
 

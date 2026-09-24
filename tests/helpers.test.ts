@@ -1,66 +1,64 @@
-import { describe, test, expect } from 'bun:test';
-import { escapeHtml, getProperty } from '../src/options/utils/helpers';
+import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
+import { downloadFile } from '../src/options/utils/helpers';
+import { ensureHappyDom } from './utils/happyDom';
+
+ensureHappyDom();
 
 describe('helpers', () => {
-  describe('escapeHtml', () => {
-    test('should escape HTML special characters', () => {
-      expect(escapeHtml('<script>alert("xss")</script>'))
-        .toBe('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;');
+  describe('downloadFile', () => {
+    const originalCreate = URL.createObjectURL;
+    const originalRevoke = URL.revokeObjectURL;
+    const originalClick = HTMLAnchorElement.prototype.click;
+
+    let revoked: string[] = [];
+    let clicks: Array<{ href: string; download: string; connected: boolean }> = [];
+    let blobs: Blob[] = [];
+    let urlCounter = 0;
+    const lastUrl = () => `blob:test-${urlCounter}`;
+
+    beforeEach(() => {
+      revoked = [];
+      clicks = [];
+      blobs = [];
+      URL.createObjectURL = ((blob: Blob) => {
+        blobs.push(blob);
+        urlCounter += 1;
+        return lastUrl();
+      }) as typeof URL.createObjectURL;
+      URL.revokeObjectURL = ((url: string) => {
+        revoked.push(url);
+      }) as typeof URL.revokeObjectURL;
+      HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement) {
+        clicks.push({ href: this.getAttribute('href') || '', download: this.download, connected: this.isConnected });
+      };
     });
 
-    test('should escape ampersands', () => {
-      expect(escapeHtml('Tom & Jerry')).toBe('Tom &amp; Jerry');
+    afterEach(() => {
+      URL.createObjectURL = originalCreate;
+      URL.revokeObjectURL = originalRevoke;
+      HTMLAnchorElement.prototype.click = originalClick;
     });
 
-    test('should escape single quotes', () => {
-      expect(escapeHtml("It's a test")).toBe('It&#39;s a test');
+    test('clicks an attached anchor with the file name and removes it afterwards', () => {
+      downloadFile('[]', 'prompts.json', 'application/json', 5);
+
+      expect(clicks).toEqual([{ href: lastUrl(), download: 'prompts.json', connected: true }]);
+      expect(document.querySelector('a[download]')).toBeNull();
+      expect(blobs[0].type).toBe('application/json');
     });
 
-    test('should handle empty string', () => {
-      expect(escapeHtml('')).toBe('');
+    test('defers revoking the object URL until after the download started', async () => {
+      downloadFile('{"a":1}', 'data.json', 'application/json', 5);
+      const url = lastUrl();
+      expect(revoked).not.toContain(url);
+
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      expect(revoked).toContain(url);
     });
 
-    test('should handle null and undefined', () => {
-      expect(escapeHtml(null)).toBe('');
-      expect(escapeHtml(undefined)).toBe('');
-    });
-
-    test('should handle strings without special characters', () => {
-      expect(escapeHtml('Hello World')).toBe('Hello World');
-    });
-  });
-
-  describe('getProperty', () => {
-    test('should return property value if it exists', () => {
-      const obj = { enabled: true, title: 'Test' };
-      expect(getProperty(obj, 'enabled', false)).toBe(true);
-      expect(getProperty(obj, 'title', '')).toBe('Test');
-    });
-
-    test('should return default value if property does not exist', () => {
-      const obj = { enabled: true } as any;
-      expect(getProperty(obj, 'title', 'Default')).toBe('Default');
-    });
-
-    test('should return actual value even if undefined (hasOwnProperty behavior)', () => {
-      const obj = { enabled: undefined } as any;
-      // hasOwnProperty returns true for properties with undefined values
-      expect(getProperty(obj, 'enabled', true)).toBe(undefined);
-    });
-
-    test('should handle boolean false values correctly', () => {
-      const obj = { enabled: false };
-      expect(getProperty(obj, 'enabled', true)).toBe(false);
-    });
-
-    test('should handle number zero values correctly', () => {
-      const obj = { count: 0 };
-      expect(getProperty(obj, 'count', 10)).toBe(0);
-    });
-
-    test('should handle empty string values correctly', () => {
-      const obj = { text: '' };
-      expect(getProperty(obj, 'text', 'default')).toBe('');
+    test('writes the provided data into the blob', async () => {
+      downloadFile('hello', 'a.txt', 'text/plain', 5);
+      expect(await blobs[0].text()).toBe('hello');
     });
   });
 });

@@ -37,6 +37,14 @@ const targets = [
     naming: { entry: 'options.js' },
   },
   {
+    // Classic script loaded synchronously in options.html <head> to apply the theme before first paint.
+    name: 'theme-init',
+    entrypoints: ['./src/options/themeInit.ts'],
+    outdir: './dist',
+    format: 'iife',
+    naming: { entry: 'theme-init.js' },
+  },
+  {
     name: 'content',
     entrypoints: ['./src/content/index.ts'],
     outdir: './scripts',

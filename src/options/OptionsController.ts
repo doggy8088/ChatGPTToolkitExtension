@@ -1,107 +1,210 @@
 import type { CustomPrompt } from './models/CustomPrompt';
-import { DEFAULT_PROMPTS } from './models/CustomPrompt';
-import { PromptsStorageService } from './services/PromptsStorageService';
-import { OptionsUIController } from './ui/OptionsUIController';
-import { PromptRenderer } from './ui/PromptRenderer';
-import { getProperty, downloadFile } from './utils/helpers';
+import { PROMPTS_STORAGE_KEY, PromptsStorageService } from './services/PromptsStorageService';
+import { OptionsUIController, onDialogBackdropClick } from './ui/OptionsUIController';
+import { PromptRenderer, type PromptCardCallbacks } from './ui/PromptRenderer';
+import { ThemeSwitcher } from './ui/ThemeSwitcher';
+import { downloadFile } from './utils/helpers';
 import { getMessage } from './utils/i18n';
+import { renderPromptIcon } from './utils/promptIcon';
+import {
+  ARGS_PLACEHOLDER,
+  arePromptListsEqual,
+  buildPromptFromForm,
+  countByGroup,
+  getGroupItems,
+  getPromptFormValues,
+  getPromptGroup,
+  insertPromptAtTop,
+  matchesPromptQuery,
+  movePromptWithinGroup,
+  removePromptAt,
+  replacePromptAt,
+  setPromptEnabledAt,
+  type PromptFormValues,
+  type PromptGroup,
+} from './utils/promptList';
+
+interface EditingState {
+  mode: 'add' | 'edit';
+  /** Starts as the active tab (add) or the edited prompt's group (edit); the type picker can change it. */
+  group: PromptGroup;
+  index: number;
+}
+
+interface FocusRequest {
+  index?: number;
+  selectors: string[];
+}
+
+interface GroupElements {
+  tab: HTMLButtonElement;
+  count: HTMLElement;
+  panel: HTMLElement;
+  list: HTMLElement;
+}
+
+type ViewTransitionDocument = { startViewTransition?: (update: () => void) => unknown };
+
+const GROUPS: readonly PromptGroup[] = ['initial', 'followUp'];
+const EXPORT_FILENAME = 'chatgpt-toolkit-prompts.json';
+const MAX_TRACKED_WRITES = 20;
+
+const byId = <T extends HTMLElement = HTMLElement>(id: string): T => {
+  const node = document.getElementById(id);
+  if (!node) throw new Error(`options.html is missing #${id}`);
+  return node as T;
+};
+
+const errorMessage = (error: unknown): string => (error instanceof Error ? error.message : String(error));
 
 /**
- * Main controller for the options page
+ * Main controller for the options page.
  */
-export class OptionsController {
+class OptionsController {
   private customPrompts: CustomPrompt[] = [];
-  private editingIndex: number = -1;
-  private ui: OptionsUIController;
-  private renderer: PromptRenderer;
-  private activeTab: 'initial' | 'followUp' = 'initial';
+  private activeTab: PromptGroup = 'initial';
+  private searchQuery = '';
+  private editing: EditingState | null = null;
+  private formSnapshot = '';
+  private isSaving = false;
+  private isImporting = false;
 
-  // DOM Elements
+  /** External storage changes that arrived while a dialog was open. */
+  private pendingExternalPrompts: CustomPrompt[] | null = null;
+  /** Serialized snapshots this page wrote, used to ignore our own `storage.onChanged` echoes. */
+  private readonly ownWrites: string[] = [];
+  private saveChain: Promise<unknown> = Promise.resolve();
+
+  private readonly expandedPrompts = new WeakSet<CustomPrompt>();
+  private readonly transitionKeys = new WeakMap<CustomPrompt, string>();
+  private transitionKeyCounter = 0;
+  private pendingFocus: FocusRequest | null = null;
+  private overflowFrame = 0;
+
+  private readonly ui: OptionsUIController;
+  private readonly renderer = new PromptRenderer();
+
+  private groups!: Record<PromptGroup, GroupElements>;
+  private searchInput!: HTMLInputElement;
+  private addPromptBtn!: HTMLButtonElement;
+  private addPromptLabel!: HTMLElement;
+
+  private promptModal!: HTMLDialogElement;
   private promptForm!: HTMLFormElement;
-  private promptModal!: HTMLElement;
-  private importModal!: HTMLElement;
   private modalTitle!: HTMLElement;
-  
-  private promptEnabled!: HTMLInputElement;
-  private promptInitial!: HTMLInputElement;
   private promptIcon!: HTMLInputElement;
+  private promptIconPreview!: HTMLElement;
   private promptTitle!: HTMLInputElement;
   private promptAltText!: HTMLInputElement;
   private promptText!: HTMLTextAreaElement;
-  private promptAutoPaste!: HTMLInputElement;
-  private promptAutoSubmit!: HTMLInputElement;
   private promptArgsHint!: HTMLElement;
   private promptArgsInsert!: HTMLButtonElement;
+  private promptArgsWarning!: HTMLElement;
+  private promptAutoPaste!: HTMLInputElement;
+  private promptAutoSubmit!: HTMLInputElement;
+  private promptEnabled!: HTMLInputElement;
+  private promptSaveBtn!: HTMLButtonElement;
+  private promptGroupInputs!: HTMLInputElement[];
+
+  private importModal!: HTMLDialogElement;
   private importText!: HTMLTextAreaElement;
+  private importDropzone!: HTMLElement;
+  private importFileInput!: HTMLInputElement;
 
-  private panelInitial!: HTMLElement;
-  private panelFollowUp!: HTMLElement;
-  private promptsListInitial!: HTMLElement;
-  private promptsListFollowUp!: HTMLElement;
-
-  private tabInitialBtn!: HTMLButtonElement;
-  private tabFollowUpBtn!: HTMLButtonElement;
-  private tabInitialCount!: HTMLElement;
-  private tabFollowUpCount!: HTMLElement;
+  private readonly cardCallbacks: PromptCardCallbacks = {
+    onEdit: (index) => this.openEditModal(index),
+    onToggle: (index, enabled) => this.togglePrompt(index, enabled),
+    onMove: (index, direction) => this.movePrompt(index, direction),
+    onDelete: (index) => void this.deletePrompt(index),
+    onExpandedChange: (index, expanded) => {
+      const prompt = this.customPrompts[index];
+      if (!prompt) return;
+      if (expanded) {
+        this.expandedPrompts.add(prompt);
+      } else {
+        this.expandedPrompts.delete(prompt);
+      }
+    },
+  };
 
   constructor() {
-    this.ui = new OptionsUIController('statusMessage');
-    this.renderer = new PromptRenderer();
+    this.ui = new OptionsUIController('statusMessage', 'confirmDialog');
   }
 
-  /**
-   * Initialize the controller
-   */
   async init(): Promise<void> {
     this.initializeDOM();
     this.applyI18n();
+    new ThemeSwitcher().init();
     this.attachEventListeners();
-    await this.loadPrompts();
+    this.listenForStorageChanges();
+    this.updateTabsUI();
+    this.customPrompts = await PromptsStorageService.loadPrompts();
     this.renderPrompts();
   }
 
-  /**
-   * Initialize DOM element references
-   */
+  // ---------------------------------------------------------------------------
+  // Setup
+  // ---------------------------------------------------------------------------
+
   private initializeDOM(): void {
-    this.promptForm = document.getElementById('promptForm') as HTMLFormElement;
-    this.promptModal = document.getElementById('promptModal')!;
-    this.importModal = document.getElementById('importModal')!;
-    this.modalTitle = document.getElementById('modalTitle')!;
-    
-    this.promptEnabled = document.getElementById('promptEnabled') as HTMLInputElement;
-    this.promptInitial = document.getElementById('promptInitial') as HTMLInputElement;
-    this.promptIcon = document.getElementById('promptIcon') as HTMLInputElement;
-    this.promptTitle = document.getElementById('promptTitle') as HTMLInputElement;
-    this.promptAltText = document.getElementById('promptAltText') as HTMLInputElement;
-    this.promptText = document.getElementById('promptText') as HTMLTextAreaElement;
-    this.promptAutoPaste = document.getElementById('promptAutoPaste') as HTMLInputElement;
-    this.promptAutoSubmit = document.getElementById('promptAutoSubmit') as HTMLInputElement;
-    this.promptArgsHint = document.getElementById('promptArgsHint') as HTMLElement;
-    this.promptArgsInsert = document.getElementById('promptArgsInsert') as HTMLButtonElement;
-    this.importText = document.getElementById('importText') as HTMLTextAreaElement;
+    this.groups = {
+      initial: {
+        tab: byId<HTMLButtonElement>('tabInitialBtn'),
+        count: byId('tabInitialCount'),
+        panel: byId('panelInitial'),
+        list: byId('promptsListInitial'),
+      },
+      followUp: {
+        tab: byId<HTMLButtonElement>('tabFollowUpBtn'),
+        count: byId('tabFollowUpCount'),
+        panel: byId('panelFollowUp'),
+        list: byId('promptsListFollowUp'),
+      },
+    };
+    this.searchInput = byId<HTMLInputElement>('promptSearch');
+    this.addPromptBtn = byId<HTMLButtonElement>('addPromptBtn');
+    this.addPromptLabel = byId('addPromptLabel');
 
-    this.panelInitial = document.getElementById('panelInitial')!;
-    this.panelFollowUp = document.getElementById('panelFollowUp')!;
-    this.promptsListInitial = document.getElementById('promptsListInitial')!;
-    this.promptsListFollowUp = document.getElementById('promptsListFollowUp')!;
+    this.promptModal = byId<HTMLDialogElement>('promptModal');
+    this.promptForm = byId<HTMLFormElement>('promptForm');
+    this.modalTitle = byId('modalTitle');
+    this.promptIcon = byId<HTMLInputElement>('promptIcon');
+    this.promptIconPreview = byId('promptIconPreview');
+    this.promptTitle = byId<HTMLInputElement>('promptTitle');
+    this.promptAltText = byId<HTMLInputElement>('promptAltText');
+    this.promptText = byId<HTMLTextAreaElement>('promptText');
+    this.promptArgsHint = byId('promptArgsHint');
+    this.promptArgsInsert = byId<HTMLButtonElement>('promptArgsInsert');
+    this.promptArgsWarning = byId('promptArgsWarning');
+    this.promptAutoPaste = byId<HTMLInputElement>('promptAutoPaste');
+    this.promptAutoSubmit = byId<HTMLInputElement>('promptAutoSubmit');
+    this.promptEnabled = byId<HTMLInputElement>('promptEnabled');
+    this.promptSaveBtn = byId<HTMLButtonElement>('promptSaveBtn');
+    this.promptGroupInputs = Array.from(
+      this.promptForm.querySelectorAll<HTMLInputElement>('input[name="promptGroup"]')
+    );
 
-    this.tabInitialBtn = document.getElementById('tabInitialBtn') as HTMLButtonElement;
-    this.tabFollowUpBtn = document.getElementById('tabFollowUpBtn') as HTMLButtonElement;
-    this.tabInitialCount = document.getElementById('tabInitialCount')!;
-    this.tabFollowUpCount = document.getElementById('tabFollowUpCount')!;
+    this.importModal = byId<HTMLDialogElement>('importModal');
+    this.importText = byId<HTMLTextAreaElement>('importText');
+    this.importDropzone = byId('importDropzone');
+    this.importFileInput = byId<HTMLInputElement>('importFileInput');
   }
 
   private applyI18n(): void {
+    const lang = getMessage('options_lang_tag');
+    if (lang && lang !== 'options_lang_tag') {
+      document.documentElement.lang = lang;
+    }
+
     this.applyI18nText();
     this.applyI18nPlaceholders();
     this.applyI18nAriaLabels();
     this.applyI18nTitles();
+    this.renderShortcutHint();
   }
 
   private applyI18nText(): void {
-    const elements = document.querySelectorAll<HTMLElement>('[data-i18n]');
-    elements.forEach((element) => {
+    document.querySelectorAll<HTMLElement>('[data-i18n]').forEach((element) => {
       const key = element.dataset.i18n;
       if (!key) return;
       element.textContent = getMessage(key, this.resolveI18nArgs(element.dataset.i18nArgs));
@@ -109,8 +212,7 @@ export class OptionsController {
   }
 
   private applyI18nPlaceholders(): void {
-    const elements = document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('[data-i18n-placeholder]');
-    elements.forEach((element) => {
+    document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('[data-i18n-placeholder]').forEach((element) => {
       const key = element.dataset.i18nPlaceholder;
       if (!key) return;
       element.placeholder = getMessage(key, this.resolveI18nArgs(element.dataset.i18nArgs));
@@ -118,17 +220,17 @@ export class OptionsController {
   }
 
   private applyI18nAriaLabels(): void {
-    const elements = document.querySelectorAll<HTMLElement>('[data-i18n-aria-label]');
-    elements.forEach((element) => {
+    document.querySelectorAll<HTMLElement>('[data-i18n-aria-label]').forEach((element) => {
       const key = element.dataset.i18nAriaLabel;
       if (!key) return;
-      element.setAttribute('aria-label', getMessage(key, this.resolveI18nArgs(element.dataset.i18nArgs)));
+      const label = getMessage(key, this.resolveI18nArgs(element.dataset.i18nArgs));
+      element.setAttribute('aria-label', label);
+      if (element.classList.contains('has-tooltip')) element.dataset.tooltip = label;
     });
   }
 
   private applyI18nTitles(): void {
-    const elements = document.querySelectorAll<HTMLElement>('[data-i18n-title]');
-    elements.forEach((element) => {
+    document.querySelectorAll<HTMLElement>('[data-i18n-title]').forEach((element) => {
       const key = element.dataset.i18nTitle;
       if (!key) return;
       element.title = getMessage(key, this.resolveI18nArgs(element.dataset.i18nArgs));
@@ -142,521 +244,774 @@ export class OptionsController {
     return parts.map((part) => getMessage(part));
   }
 
-  private isPromptInitial(prompt: CustomPrompt): boolean {
-    return Boolean(getProperty(prompt, 'initial', false));
+  /**
+   * "⌘ Enter to save" / "Ctrl Enter to save" with the keys rendered as <kbd>.
+   */
+  private renderShortcutHint(): void {
+    const hint = document.getElementById('saveShortcutHint');
+    if (!hint) return;
+
+    const isApple = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || '');
+    const keys = [isApple ? '⌘' : 'Ctrl', 'Enter'];
+    const marker = '';
+    const [before, after = ''] = getMessage('options_modal_save_shortcut', marker).split(marker);
+    const keyNodes = keys.map((key) => {
+      const kbd = document.createElement('kbd');
+      kbd.textContent = key;
+      return kbd;
+    });
+    hint.replaceChildren(before, ...keyNodes, after);
   }
 
-  private getModalTitleKey(action: 'add' | 'edit', isInitial: boolean): string {
+  private attachEventListeners(): void {
+    this.addPromptBtn.addEventListener('click', () => this.openAddModal());
+    byId('importBtn').addEventListener('click', () => this.openImportModal());
+    byId('exportBtn').addEventListener('click', () => this.exportPrompts());
+    byId('resetBtn').addEventListener('click', () => void this.resetToDefaults());
+
+    this.attachTabListeners();
+    this.attachSearchListeners();
+    this.attachPromptModalListeners();
+    this.attachImportModalListeners();
+
+    // Re-measure clamped previews when the layout width changes.
+    window.addEventListener('resize', () => this.scheduleOverflowCheck());
+  }
+
+  private attachTabListeners(): void {
+    GROUPS.forEach((group) => {
+      const { tab } = this.groups[group];
+      tab.addEventListener('click', () => this.setActiveTab(group));
+      tab.addEventListener('keydown', (event) => {
+        const currentIndex = GROUPS.indexOf(this.activeTab);
+        let nextIndex: number;
+        switch (event.key) {
+          case 'ArrowLeft':
+            nextIndex = (currentIndex - 1 + GROUPS.length) % GROUPS.length;
+            break;
+          case 'ArrowRight':
+            nextIndex = (currentIndex + 1) % GROUPS.length;
+            break;
+          case 'Home':
+            nextIndex = 0;
+            break;
+          case 'End':
+            nextIndex = GROUPS.length - 1;
+            break;
+          default:
+            return;
+        }
+        event.preventDefault();
+        const next = GROUPS[nextIndex];
+        this.setActiveTab(next);
+        this.groups[next].tab.focus();
+      });
+    });
+  }
+
+  private attachSearchListeners(): void {
+    this.searchInput.addEventListener('input', () => {
+      this.searchQuery = this.searchInput.value;
+      this.renderPrompts();
+    });
+
+    this.searchInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && this.searchInput.value && !event.isComposing) {
+        event.preventDefault();
+        this.clearSearch();
+        this.renderPrompts();
+      }
+    });
+
+    // "/" focuses the search box, like many web apps.
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== '/' || event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
+      if (document.querySelector('dialog[open]')) return;
+      const target = event.target as HTMLElement | null;
+      if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) return;
+      event.preventDefault();
+      this.searchInput.focus();
+      this.searchInput.select();
+    });
+  }
+
+  private attachPromptModalListeners(): void {
+    this.promptForm.addEventListener('submit', (event) => void this.savePromptFromForm(event));
+    byId('cancelBtn').addEventListener('click', () => void this.requestClosePromptModal());
+    byId('closeModalBtn').addEventListener('click', () => void this.requestClosePromptModal());
+
+    // Escape: ask before discarding changes. Handling keydown (instead of only `cancel`) keeps the
+    // dialog open reliably, and IME composition (Chinese/Japanese input) is left alone.
+    this.promptModal.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape' || event.isComposing) return;
+      event.preventDefault();
+      void this.requestClosePromptModal();
+    });
+    this.promptModal.addEventListener('cancel', (event) => {
+      event.preventDefault();
+      void this.requestClosePromptModal();
+    });
+    onDialogBackdropClick(this.promptModal, () => void this.requestClosePromptModal());
+    this.promptModal.addEventListener('close', () => this.onPromptModalClosed());
+
+    // Ctrl/Cmd + Enter submits from any field.
+    this.promptForm.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' || !(event.ctrlKey || event.metaKey) || event.isComposing) return;
+      event.preventDefault();
+      this.promptForm.requestSubmit();
+    });
+
+    [this.promptTitle, this.promptText].forEach((field) => {
+      field.addEventListener('input', () => field.setCustomValidity(''));
+    });
+
+    this.promptGroupInputs.forEach((input) => {
+      input.addEventListener('change', () => {
+        if (input.checked) this.setEditingGroup(input.value === 'followUp' ? 'followUp' : 'initial');
+      });
+    });
+
+    this.promptIcon.addEventListener('input', () => this.updateIconPreview());
+    this.promptText.addEventListener('input', () => this.updateArgsUI());
+    this.promptAutoPaste.addEventListener('change', () => this.updateArgsUI());
+
+    // Keep the textarea's selection while clicking the {{args}} button.
+    this.promptArgsInsert.addEventListener('pointerdown', (event) => event.preventDefault());
+    this.promptArgsInsert.addEventListener('click', () => this.insertPromptArgsAtCursor());
+  }
+
+  private attachImportModalListeners(): void {
+    byId('closeImportModalBtn').addEventListener('click', () => this.importModal.close());
+    byId('cancelImportBtn').addEventListener('click', () => this.importModal.close());
+    byId('confirmImportBtn').addEventListener('click', () => void this.importFromText(this.importText.value));
+    byId('chooseImportFileBtn').addEventListener('click', () => this.importFileInput.click());
+    onDialogBackdropClick(this.importModal, () => this.importModal.close());
+
+    this.importModal.addEventListener('close', () => {
+      this.importText.value = '';
+      this.setDragOver(false);
+      this.flushPendingExternalPrompts();
+    });
+
+    this.importFileInput.addEventListener('change', () => {
+      const file = this.importFileInput.files?.[0];
+      // Reset so choosing the same file again still fires `change`.
+      this.importFileInput.value = '';
+      if (file) void this.importFromFile(file);
+    });
+
+    const hasFiles = (event: DragEvent): boolean => Array.from(event.dataTransfer?.types ?? []).includes('Files');
+
+    this.importText.addEventListener('dragenter', (event) => {
+      if (!hasFiles(event)) return;
+      event.preventDefault();
+      this.setDragOver(true);
+    });
+    this.importText.addEventListener('dragover', (event) => {
+      if (!hasFiles(event)) return;
+      event.preventDefault();
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+      this.setDragOver(true);
+    });
+    this.importText.addEventListener('dragleave', () => this.setDragOver(false));
+    this.importText.addEventListener('drop', (event) => {
+      if (!hasFiles(event)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      this.setDragOver(false);
+      const file = event.dataTransfer?.files?.[0];
+      if (file) void this.importFromFile(file);
+    });
+
+    // A file dropped anywhere else must not navigate away from the options page.
+    window.addEventListener('dragover', (event) => {
+      if (!hasFiles(event)) return;
+      event.preventDefault();
+      if (event.dataTransfer && event.target !== this.importText) event.dataTransfer.dropEffect = 'none';
+    });
+    window.addEventListener('drop', (event) => {
+      if (hasFiles(event)) event.preventDefault();
+    });
+  }
+
+  private listenForStorageChanges(): void {
+    try {
+      if (typeof chrome === 'undefined' || !chrome.storage?.onChanged) return;
+      chrome.storage.onChanged.addListener((changes, areaName) => {
+        if (areaName !== 'local') return;
+        const change = changes[PROMPTS_STORAGE_KEY];
+        if (!change || !Array.isArray(change.newValue)) return;
+        this.handleExternalPrompts(change.newValue as CustomPrompt[]);
+      });
+    } catch {
+      // Storage events are an enhancement; ignore when unavailable.
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Rendering
+  // ---------------------------------------------------------------------------
+
+  private renderPrompts(): void {
+    this.updateTabsUI();
+    this.updateTabCounts();
+    GROUPS.forEach((group) => this.renderGroup(group));
+    this.applyPendingFocus();
+    this.scheduleOverflowCheck();
+  }
+
+  private renderGroup(group: PromptGroup): void {
+    const { list } = this.groups[group];
+    const items = getGroupItems(this.customPrompts, group);
+    const query = this.searchQuery.trim();
+    const visible = query ? items.filter(({ prompt }) => matchesPromptQuery(prompt, query)) : items;
+
+    if (items.length === 0) {
+      list.replaceChildren(this.renderer.createEmptyState({
+        message: getMessage(group === 'initial' ? 'options_empty_initial' : 'options_empty_followup'),
+        actionLabel: getMessage(this.getModalTitleKey('add', group)),
+        actionIcon: 'plus',
+        onAction: () => this.openAddModal(group),
+      }));
+      return;
+    }
+
+    if (visible.length === 0) {
+      list.replaceChildren(this.renderer.createEmptyState({
+        message: getMessage('options_search_no_results', query),
+        actionLabel: getMessage('options_search_clear'),
+        actionVariant: 'secondary',
+        art: false,
+        onAction: () => {
+          this.clearSearch();
+          this.renderPrompts();
+          this.searchInput.focus();
+        },
+      }));
+      return;
+    }
+
+    const positions = new Map(items.map((item, position) => [item.index, position]));
+    const ol = document.createElement('ol');
+    ol.className = 'prompt-list';
+    visible.forEach(({ prompt, index }) => {
+      ol.append(this.renderer.createPromptCard({
+        prompt,
+        index,
+        position: positions.get(index) ?? 0,
+        groupSize: items.length,
+        reorderEnabled: !query,
+        expanded: this.expandedPrompts.has(prompt),
+        transitionName: this.getTransitionName(prompt),
+      }, this.cardCallbacks));
+    });
+    list.replaceChildren(ol);
+  }
+
+  private updateTabsUI(): void {
+    GROUPS.forEach((group) => {
+      const { tab, panel } = this.groups[group];
+      const isActive = group === this.activeTab;
+      tab.setAttribute('aria-selected', String(isActive));
+      tab.tabIndex = isActive ? 0 : -1;
+      panel.hidden = !isActive;
+    });
+    // The add button names (and takes the color of) the group it adds to.
+    this.addPromptBtn.dataset.group = this.activeTab;
+    this.addPromptLabel.textContent = getMessage(this.getModalTitleKey('add', this.activeTab));
+  }
+
+  private updateTabCounts(): void {
+    const counts = countByGroup(this.customPrompts);
+    GROUPS.forEach((group) => {
+      this.groups[group].count.textContent = String(counts[group]);
+    });
+  }
+
+  private setActiveTab(group: PromptGroup): void {
+    if (this.activeTab === group) return;
+    this.activeTab = group;
+    this.updateTabsUI();
+    this.scheduleOverflowCheck();
+  }
+
+  private scheduleOverflowCheck(): void {
+    window.cancelAnimationFrame(this.overflowFrame);
+    this.overflowFrame = window.requestAnimationFrame(() => {
+      this.renderer.updateOverflowToggles(this.groups[this.activeTab].panel);
+    });
+  }
+
+  private applyPendingFocus(): void {
+    const request = this.pendingFocus;
+    if (!request) return;
+    this.pendingFocus = null;
+
+    const panel = this.groups[this.activeTab].panel;
+    const card = request.index === undefined
+      ? null
+      : panel.querySelector<HTMLElement>(`.prompt-card[data-index="${request.index}"]`);
+
+    for (const selector of request.selectors) {
+      const target = card?.querySelector<HTMLElement>(selector);
+      if (target && !(target as HTMLButtonElement).disabled) {
+        target.focus();
+        target.scrollIntoView({ block: 'nearest' });
+        return;
+      }
+    }
+    this.addPromptBtn.focus();
+  }
+
+  /** Stable per-object names so reordering can animate with the View Transitions API. */
+  private getTransitionName(prompt: CustomPrompt): string {
+    let key = this.transitionKeys.get(prompt);
+    if (!key) {
+      key = `prompt-card-${++this.transitionKeyCounter}`;
+      this.transitionKeys.set(prompt, key);
+    }
+    return key;
+  }
+
+  /** Keep UI identity (animation name, expanded preview) when a prompt object is replaced. */
+  private carryOverIdentity(from: CustomPrompt | undefined, to: CustomPrompt): void {
+    if (!from) return;
+    const key = this.transitionKeys.get(from);
+    if (key) this.transitionKeys.set(to, key);
+    if (this.expandedPrompts.has(from)) this.expandedPrompts.add(to);
+  }
+
+  private withViewTransition(update: () => void): void {
+    const doc = document as unknown as ViewTransitionDocument;
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (typeof doc.startViewTransition !== 'function' || reduceMotion) {
+      update();
+      return;
+    }
+    doc.startViewTransition(update);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Persistence
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Queue a save. Saves run one at a time, in order, so rapid changes cannot overtake each other.
+   */
+  private enqueueSave(snapshot: CustomPrompt[]): Promise<boolean> {
+    const json = JSON.stringify(snapshot);
+    this.ownWrites.push(json);
+    if (this.ownWrites.length > MAX_TRACKED_WRITES) this.ownWrites.shift();
+
+    const run = this.saveChain.then(() => PromptsStorageService.savePrompts(snapshot));
+    this.saveChain = run.catch(() => false);
+
+    return run.catch(() => false).then((ok) => {
+      if (ok) {
+        // Our write supersedes anything that changed elsewhere while a dialog was open.
+        this.pendingExternalPrompts = null;
+      } else {
+        const index = this.ownWrites.indexOf(json);
+        if (index !== -1) this.ownWrites.splice(index, 1);
+        this.ui.showStatus(getMessage('options_status_save_error'), 'error');
+      }
+      return ok;
+    });
+  }
+
+  /**
+   * Apply a change immediately and save in the background (for inline list actions).
+   * On failure the list is re-synced from storage.
+   */
+  private applyChange(next: CustomPrompt[], options: { render?: boolean; animate?: boolean; focus?: FocusRequest } = {}): void {
+    // State updates synchronously so rapid follow-up actions always build on it; only the
+    // re-render may be deferred into a view transition.
+    this.customPrompts = next;
+    if (options.focus) this.pendingFocus = options.focus;
+    if (options.render !== false) {
+      if (options.animate) {
+        this.withViewTransition(() => this.renderPrompts());
+      } else {
+        this.renderPrompts();
+      }
+    }
+
+    void this.enqueueSave(next).then((ok) => {
+      if (!ok) void this.resyncFromStorage();
+    });
+  }
+
+  /**
+   * Save first and only then update the list (for dialog flows, so a failed save keeps the dialog open).
+   */
+  private async commitChange(next: CustomPrompt[]): Promise<boolean> {
+    const ok = await this.enqueueSave(next);
+    if (ok) this.customPrompts = next;
+    return ok;
+  }
+
+  private async resyncFromStorage(): Promise<void> {
+    await this.saveChain;
+    const stored = await PromptsStorageService.readStoredPrompts();
+    if (stored && !arePromptListsEqual(stored, this.customPrompts)) {
+      this.customPrompts = stored;
+      this.renderPrompts();
+    }
+  }
+
+  private handleExternalPrompts(next: CustomPrompt[]): void {
+    const json = JSON.stringify(next);
+    const ownIndex = this.ownWrites.indexOf(json);
+    if (ownIndex !== -1) {
+      this.ownWrites.splice(0, ownIndex + 1);
+      return;
+    }
+    if (json === JSON.stringify(this.customPrompts)) return;
+
+    // Never swap the list under an open dialog (edit form, confirmation, import).
+    if (document.querySelector('dialog[open]')) {
+      this.pendingExternalPrompts = next;
+      return;
+    }
+
+    this.customPrompts = next;
+    this.renderPrompts();
+  }
+
+  private flushPendingExternalPrompts(): void {
+    const next = this.pendingExternalPrompts;
+    if (!next || document.querySelector('dialog[open]')) return;
+    this.pendingExternalPrompts = null;
+    if (arePromptListsEqual(next, this.customPrompts)) return;
+    this.customPrompts = next;
+    this.renderPrompts();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Inline list actions
+  // ---------------------------------------------------------------------------
+
+  private togglePrompt(index: number, enabled: boolean): void {
+    const current = this.customPrompts[index];
+    if (!current) return;
+    const next = setPromptEnabledAt(this.customPrompts, index, enabled);
+    this.carryOverIdentity(current, next[index]);
+    // The card already reflects the new state; skip the re-render so the switch keeps focus and animates.
+    this.applyChange(next, { render: false });
+  }
+
+  private movePrompt(index: number, direction: -1 | 1): void {
+    if (this.searchQuery.trim()) return;
+    const result = movePromptWithinGroup(this.customPrompts, index, direction);
+    if (!result) return;
+
+    const same = direction === -1 ? '[data-action="move-up"]' : '[data-action="move-down"]';
+    const other = direction === -1 ? '[data-action="move-down"]' : '[data-action="move-up"]';
+    this.applyChange(result.prompts, { animate: true, focus: { index: result.index, selectors: [same, other] } });
+  }
+
+  private async deletePrompt(index: number): Promise<void> {
+    const prompt = this.customPrompts[index];
+    if (!prompt) return;
+
+    const title = (typeof prompt.title === 'string' && prompt.title.trim()) || getMessage('options_prompt_title_fallback');
+    const confirmed = await this.ui.confirm({
+      message: getMessage('options_confirm_delete_prompt', title),
+      confirmLabel: getMessage('options_confirm_delete_button'),
+      danger: true,
+    });
+    if (!confirmed) return;
+
+    const currentIndex = this.customPrompts.indexOf(prompt);
+    if (currentIndex === -1) return;
+
+    // Move focus to the next visible card of the group, else the previous one.
+    const query = this.searchQuery.trim();
+    const visible = getGroupItems(this.customPrompts, getPromptGroup(prompt))
+      .filter((item) => !query || matchesPromptQuery(item.prompt, query));
+    const position = visible.findIndex((item) => item.index === currentIndex);
+    const neighbour = visible[position + 1] ?? visible[position - 1];
+    const focusIndex = neighbour
+      ? (neighbour.index > currentIndex ? neighbour.index - 1 : neighbour.index)
+      : undefined;
+
+    this.applyChange(removePromptAt(this.customPrompts, currentIndex), {
+      focus: { index: focusIndex, selectors: ['[data-action="edit"]'] },
+    });
+    this.ui.showStatus(getMessage('options_status_prompt_deleted'), 'success');
+  }
+
+  private clearSearch(): void {
+    this.searchInput.value = '';
+    this.searchQuery = '';
+  }
+
+  // ---------------------------------------------------------------------------
+  // Add / edit dialog
+  // ---------------------------------------------------------------------------
+
+  private openAddModal(group: PromptGroup = this.activeTab): void {
+    this.setActiveTab(group);
+    this.openPromptModal({ mode: 'add', group, index: -1 });
+  }
+
+  private openEditModal(index: number): void {
+    const prompt = this.customPrompts[index];
+    if (!prompt) return;
+    this.openPromptModal({ mode: 'edit', group: getPromptGroup(prompt), index }, prompt);
+  }
+
+  private openPromptModal(state: EditingState, prompt?: CustomPrompt): void {
+    if (this.promptModal.open) return;
+    this.editing = state;
+    this.writeFormValues(getPromptFormValues(prompt));
+    this.setEditingGroup(state.group);
+    this.formSnapshot = this.serializeForm();
+    this.promptModal.showModal();
+    this.promptTitle.focus();
+  }
+
+  /**
+   * Apply the group chosen in the type picker: title, accent color and radio state follow it.
+   */
+  private setEditingGroup(group: PromptGroup): void {
+    if (!this.editing) return;
+    this.editing.group = group;
+    this.promptModal.dataset.group = group;
+    this.promptGroupInputs.forEach((input) => {
+      input.checked = input.value === group;
+    });
+    this.modalTitle.textContent = getMessage(this.getModalTitleKey(this.editing.mode, group));
+  }
+
+  private serializeForm(): string {
+    return JSON.stringify({ ...this.readFormValues(), group: this.editing?.group });
+  }
+
+  private getModalTitleKey(action: 'add' | 'edit', group: PromptGroup): string {
+    const isInitial = group === 'initial';
     if (action === 'add') {
       return isInitial ? 'options_modal_title_add_initial' : 'options_modal_title_add_followup';
     }
     return isInitial ? 'options_modal_title_edit_initial' : 'options_modal_title_edit_followup';
   }
 
-  private setModalTitle(action: 'add' | 'edit', isInitial: boolean): void {
-    this.modalTitle.textContent = getMessage(this.getModalTitleKey(action, isInitial));
+  private readFormValues(): PromptFormValues {
+    return {
+      svgIcon: this.promptIcon.value,
+      title: this.promptTitle.value,
+      altText: this.promptAltText.value,
+      prompt: this.promptText.value,
+      autoPaste: this.promptAutoPaste.checked,
+      autoSubmit: this.promptAutoSubmit.checked,
+      enabled: this.promptEnabled.checked,
+    };
   }
 
-  private updatePromptArgsHintVisibility(): void {
-    const shouldShow = this.promptAutoPaste.checked;
-    this.promptArgsHint.classList.toggle('is-hidden', !shouldShow);
-    this.promptArgsHint.setAttribute('aria-hidden', shouldShow ? 'false' : 'true');
+  private writeFormValues(values: PromptFormValues): void {
+    this.promptIcon.value = values.svgIcon;
+    this.promptTitle.value = values.title;
+    this.promptAltText.value = values.altText;
+    this.promptText.value = values.prompt;
+    this.promptAutoPaste.checked = values.autoPaste;
+    this.promptAutoSubmit.checked = values.autoSubmit;
+    this.promptEnabled.checked = values.enabled;
+    this.promptTitle.setCustomValidity('');
+    this.promptText.setCustomValidity('');
+    this.updateIconPreview();
+    this.updateArgsUI();
+  }
+
+  private isFormDirty(): boolean {
+    return this.editing !== null && this.serializeForm() !== this.formSnapshot;
+  }
+
+  private updateIconPreview(): void {
+    this.promptIconPreview.replaceChildren(renderPromptIcon(this.promptIcon.value));
+  }
+
+  private updateArgsUI(): void {
+    const autoPaste = this.promptAutoPaste.checked;
+    this.promptArgsHint.hidden = !autoPaste;
+    this.promptArgsWarning.hidden = autoPaste || !this.promptText.value.includes(ARGS_PLACEHOLDER);
   }
 
   private insertPromptArgsAtCursor(): void {
     if (!this.promptAutoPaste.checked) return;
 
-    const token = '{{args}}';
-    const start = this.promptText.selectionStart;
-    const end = this.promptText.selectionEnd;
-    const value = this.promptText.value;
-
-    this.promptText.value = value.slice(0, start) + token + value.slice(end);
-    const nextCursor = start + token.length;
-    this.promptText.selectionStart = nextCursor;
-    this.promptText.selectionEnd = nextCursor;
     this.promptText.focus();
-  }
+    // `insertText` keeps the edit on the textarea's undo stack; fall back when unsupported.
+    let inserted = false;
+    try {
+      inserted = document.execCommand('insertText', false, ARGS_PLACEHOLDER);
+    } catch {
+      inserted = false;
+    }
 
-  private updateTabsUI(): void {
-    const isInitial = this.activeTab === 'initial';
-    this.tabInitialBtn.classList.toggle('active', isInitial);
-    this.tabFollowUpBtn.classList.toggle('active', !isInitial);
-    this.tabInitialBtn.setAttribute('aria-selected', isInitial ? 'true' : 'false');
-    this.tabFollowUpBtn.setAttribute('aria-selected', !isInitial ? 'true' : 'false');
-    this.tabInitialBtn.tabIndex = isInitial ? 0 : -1;
-    this.tabFollowUpBtn.tabIndex = isInitial ? -1 : 0;
-
-    if (isInitial) {
-      this.panelInitial.removeAttribute('hidden');
-      this.panelInitial.setAttribute('aria-hidden', 'false');
-      this.panelFollowUp.setAttribute('hidden', '');
-      this.panelFollowUp.setAttribute('aria-hidden', 'true');
-    } else {
-      this.panelFollowUp.removeAttribute('hidden');
-      this.panelFollowUp.setAttribute('aria-hidden', 'false');
-      this.panelInitial.setAttribute('hidden', '');
-      this.panelInitial.setAttribute('aria-hidden', 'true');
+    if (!inserted) {
+      const { selectionStart, selectionEnd } = this.promptText;
+      this.promptText.setRangeText(ARGS_PLACEHOLDER, selectionStart, selectionEnd, 'end');
+      this.promptText.dispatchEvent(new Event('input', { bubbles: true }));
     }
   }
 
-  private updateTabCounts(): void {
-    const initialCount = this.customPrompts.filter(p => this.isPromptInitial(p)).length;
-    const followUpCount = this.customPrompts.length - initialCount;
-    this.tabInitialCount.textContent = `(${initialCount})`;
-    this.tabFollowUpCount.textContent = `(${followUpCount})`;
-  }
+  private async requestClosePromptModal(): Promise<void> {
+    if (!this.promptModal.open) return;
 
-  private setActiveTab(tab: 'initial' | 'followUp'): void {
-    this.activeTab = tab;
-    this.renderPrompts();
-  }
-
-  /**
-   * Load prompts from storage
-   */
-  private async loadPrompts(): Promise<void> {
-    this.customPrompts = await PromptsStorageService.loadPrompts();
-  }
-
-  /**
-   * Save prompts to storage
-   */
-  private async savePrompts(): Promise<boolean> {
-    const success = await PromptsStorageService.savePrompts(this.customPrompts);
-    if (success) {
-      this.ui.showStatus(getMessage('options_status_save_success'), 'success');
-    } else {
-      this.ui.showStatus(getMessage('options_status_save_error'), 'error');
-    }
-    return success;
-  }
-
-  /**
-   * Render all prompts
-   */
-  private renderPrompts(): void {
-    this.updateTabsUI();
-    this.updateTabCounts();
-
-    const initialItems = this.customPrompts
-      .map((prompt, index) => ({ prompt, index }))
-      .filter(({ prompt }) => this.isPromptInitial(prompt));
-
-    const followUpItems = this.customPrompts
-      .map((prompt, index) => ({ prompt, index }))
-      .filter(({ prompt }) => !this.isPromptInitial(prompt));
-
-    this.renderPromptsList(
-      this.promptsListInitial,
-      initialItems,
-      getMessage('options_empty_initial'),
-      'emptyStateAddBtnInitial',
-      () => {
-        this.setActiveTab('initial');
-        this.openAddModal();
-      }
-    );
-
-    this.renderPromptsList(
-      this.promptsListFollowUp,
-      followUpItems,
-      getMessage('options_empty_followup'),
-      'emptyStateAddBtnFollowUp',
-      () => {
-        this.setActiveTab('followUp');
-        this.openAddModal();
-      }
-    );
-  }
-
-  private renderPromptsList(
-    container: HTMLElement,
-    items: Array<{ prompt: CustomPrompt; index: number }>,
-    emptyMessage: string,
-    emptyButtonId: string,
-    onEmptyAdd: () => void
-  ): void {
-    container.innerHTML = '';
-
-    if (items.length === 0) {
-      container.innerHTML = this.renderer.createEmptyStateHTML(
-        emptyMessage,
-        getMessage('options_empty_add_button'),
-        emptyButtonId
-      );
-      const emptyBtn = document.getElementById(emptyButtonId);
-      emptyBtn?.addEventListener('click', onEmptyAdd);
-      return;
+    if (this.isFormDirty()) {
+      const discard = await this.ui.confirm({
+        message: getMessage('options_confirm_discard_changes'),
+        confirmLabel: getMessage('options_confirm_discard_button'),
+        cancelLabel: getMessage('options_confirm_keep_editing'),
+        danger: true,
+      });
+      if (!discard) return;
     }
 
-    items.forEach(({ prompt, index: indexInStorage }, indexInView) => {
-      const element = this.renderer.createPromptElement(
-        prompt,
-        indexInView,
-        items.length,
-        indexInStorage,
-        {
-          onEdit: (i) => this.editPrompt(i),
-          onToggle: (i) => this.togglePrompt(i),
-          onMoveUp: (i) => this.moveUp(i),
-          onMoveDown: (i) => this.moveDown(i),
-          onDelete: (i) => this.deletePrompt(i)
-        }
-      );
-      container.appendChild(element);
+    this.promptModal.close();
+  }
+
+  private onPromptModalClosed(): void {
+    this.editing = null;
+    this.formSnapshot = '';
+    this.writeFormValues(getPromptFormValues());
+    this.flushPendingExternalPrompts();
+  }
+
+  private validateForm(): boolean {
+    const requiredFields: Array<HTMLInputElement | HTMLTextAreaElement> = [this.promptTitle, this.promptText];
+    requiredFields.forEach((field) => {
+      field.setCustomValidity(field.value.trim() ? '' : getMessage('options_validation_required'));
     });
+    if (this.promptForm.checkValidity()) return true;
+    this.promptForm.reportValidity();
+    return false;
   }
 
-  /**
-   * Open modal for adding new prompt
-   */
-  private openAddModal(): void {
-    this.editingIndex = -1;
-    this.resetForm();
-    const isInitial = this.activeTab === 'initial';
-    this.promptInitial.checked = isInitial;
-    this.setModalTitle('add', isInitial);
-    this.promptModal.classList.add('active');
+  private async savePromptFromForm(event: SubmitEvent): Promise<void> {
+    event.preventDefault();
+    const state = this.editing;
+    if (!state || this.isSaving || !this.validateForm()) return;
+
+    const base = state.mode === 'edit' ? this.customPrompts[state.index] : undefined;
+    const prompt = buildPromptFromForm(this.readFormValues(), state.group, base);
+
+    let next: CustomPrompt[];
+    let index: number;
+    if (base && getPromptGroup(base) === state.group) {
+      next = replacePromptAt(this.customPrompts, state.index, prompt);
+      index = state.index;
+      this.carryOverIdentity(base, prompt);
+    } else if (base) {
+      // Moved to the other group: place it at the top of that group, like a new prompt.
+      ({ prompts: next, index } = insertPromptAtTop(removePromptAt(this.customPrompts, state.index), prompt));
+      this.carryOverIdentity(base, prompt);
+    } else {
+      ({ prompts: next, index } = insertPromptAtTop(this.customPrompts, prompt));
+    }
+
+    this.isSaving = true;
+    this.promptSaveBtn.disabled = true;
+    const ok = await this.commitChange(next);
+    this.isSaving = false;
+    this.promptSaveBtn.disabled = false;
+    if (!ok) return;
+
+    this.promptModal.close();
+    this.activeTab = state.group;
+    if (this.searchQuery.trim() && !matchesPromptQuery(prompt, this.searchQuery)) {
+      this.clearSearch();
+    }
+    this.pendingFocus = { index, selectors: ['[data-action="edit"]'] };
+    this.renderPrompts();
+    this.ui.showStatus(getMessage('options_status_save_success'), 'success');
   }
 
-  /**
-   * Edit existing prompt
-   */
-  private editPrompt(index: number): void {
-    this.editingIndex = index;
-    const prompt = this.customPrompts[index];
-    const isInitial = this.isPromptInitial(prompt);
+  // ---------------------------------------------------------------------------
+  // Import / export / reset
+  // ---------------------------------------------------------------------------
 
-    this.promptEnabled.checked = getProperty(prompt, 'enabled', true) as boolean;
-    this.promptInitial.checked = isInitial;
-    this.promptIcon.value = prompt.svgIcon || '';
-    this.promptTitle.value = prompt.title || '';
-    this.promptAltText.value = prompt.altText || '';
-    this.promptText.value = prompt.prompt || '';
-    this.promptAutoPaste.checked = getProperty(prompt, 'autoPaste', false) as boolean;
-    this.promptAutoSubmit.checked = getProperty(prompt, 'autoSubmit', false) as boolean;
-    this.updatePromptArgsHintVisibility();
-
-    this.setModalTitle('edit', isInitial);
-    this.promptModal.classList.add('active');
+  private openImportModal(): void {
+    if (this.importModal.open) return;
+    this.importText.value = '';
+    this.importModal.showModal();
+    this.importText.focus();
   }
 
-  /**
-   * Reset form to default values
-   */
-  private resetForm(): void {
-    this.promptForm.reset();
-    this.promptEnabled.checked = true;
-    this.promptInitial.checked = false;
-    this.promptAutoPaste.checked = false;
-    this.promptAutoSubmit.checked = false;
-    this.updatePromptArgsHintVisibility();
+  private setDragOver(isOver: boolean): void {
+    this.importDropzone.classList.toggle('is-drag-over', isOver);
   }
 
-  /**
-   * Close modal
-   */
-  private closeModal(): void {
-    this.promptModal.classList.remove('active');
-    this.resetForm();
+  private async importFromFile(file: File): Promise<void> {
+    let text: string;
+    try {
+      text = await file.text();
+    } catch (error) {
+      this.ui.showStatus(getMessage('options_status_file_read_error', errorMessage(error)), 'error');
+      return;
+    }
+    this.importText.value = text;
+    await this.importFromText(text);
   }
 
-  private insertPromptAtTop(newPrompt: CustomPrompt): void {
-    const isInitial = this.isPromptInitial(newPrompt);
-    const insertIndex = this.customPrompts.findIndex(
-      (prompt) => this.isPromptInitial(prompt) === isInitial
-    );
+  private async importFromText(text: string): Promise<void> {
+    if (this.isImporting) return;
 
-    if (insertIndex === -1) {
-      this.customPrompts.push(newPrompt);
+    let imported: CustomPrompt[];
+    try {
+      imported = PromptsStorageService.importPrompts(text);
+    } catch (error) {
+      this.ui.showStatus(getMessage('options_status_import_error', errorMessage(error)), 'error');
       return;
     }
 
-    this.customPrompts.splice(insertIndex, 0, newPrompt);
-  }
+    this.isImporting = true;
+    try {
+      const confirmed = await this.ui.confirm({
+        message: getMessage('options_confirm_import', String(imported.length)),
+        confirmLabel: getMessage('options_import_confirm_button'),
+      });
+      if (!confirmed || !(await this.commitChange(imported))) return;
 
-  /**
-   * Save prompt from form
-   */
-  private savePromptFromForm(event: Event): void {
-    event.preventDefault();
-
-    const newPrompt: CustomPrompt = {
-      enabled: this.promptEnabled.checked,
-      title: this.promptTitle.value.trim(),
-      prompt: this.promptText.value
-    };
-
-    if (this.promptInitial.checked) {
-      newPrompt.initial = true;
-    }
-
-    if (this.promptIcon.value.trim()) {
-      newPrompt.svgIcon = this.promptIcon.value.trim();
-    }
-
-    if (this.promptAltText.value.trim()) {
-      newPrompt.altText = this.promptAltText.value.trim();
-    }
-
-    if (this.promptAutoPaste.checked) {
-      newPrompt.autoPaste = true;
-    }
-
-    if (this.promptAutoSubmit.checked) {
-      newPrompt.autoSubmit = true;
-    }
-
-    if (this.editingIndex === -1) {
-      this.insertPromptAtTop(newPrompt);
-    } else {
-      this.customPrompts[this.editingIndex] = newPrompt;
-    }
-
-    void (async () => {
-      if (!(await this.savePrompts())) return;
-      this.activeTab = this.isPromptInitial(newPrompt) ? 'initial' : 'followUp';
+      this.importModal.close();
+      this.clearSearch();
       this.renderPrompts();
-      this.closeModal();
-    })();
-  }
-
-  /**
-   * Toggle prompt enabled/disabled
-   */
-  private togglePrompt(index: number): void {
-    if (this.customPrompts[index]) {
-      const currentEnabled = getProperty(this.customPrompts[index], 'enabled', true);
-      this.customPrompts[index].enabled = !currentEnabled;
-      void (async () => {
-        await this.savePrompts();
-        this.renderPrompts();
-      })();
+      this.ui.showStatus(getMessage('options_status_import_success', String(imported.length)), 'success');
+    } finally {
+      this.isImporting = false;
     }
   }
 
-  /**
-   * Delete prompt
-   */
-  private deletePrompt(index: number): void {
-    if (this.ui.confirm(getMessage('options_confirm_delete_prompt'))) {
-      this.customPrompts.splice(index, 1);
-      void (async () => {
-        await this.savePrompts();
-        this.renderPrompts();
-      })();
-    }
-  }
-
-  /**
-   * Move prompt up
-   */
-  private moveUp(index: number): void {
-    const prompt = this.customPrompts[index];
-    if (!prompt) return;
-
-    const isInitial = this.isPromptInitial(prompt);
-    for (let i = index - 1; i >= 0; i--) {
-      if (this.isPromptInitial(this.customPrompts[i]) === isInitial) {
-        [this.customPrompts[i], this.customPrompts[index]] =
-          [this.customPrompts[index], this.customPrompts[i]];
-        void (async () => {
-          await this.savePrompts();
-          this.renderPrompts();
-        })();
-        return;
-      }
-    }
-  }
-
-  /**
-   * Move prompt down
-   */
-  private moveDown(index: number): void {
-    const prompt = this.customPrompts[index];
-    if (!prompt) return;
-
-    const isInitial = this.isPromptInitial(prompt);
-    for (let i = index + 1; i < this.customPrompts.length; i++) {
-      if (this.isPromptInitial(this.customPrompts[i]) === isInitial) {
-        [this.customPrompts[index], this.customPrompts[i]] =
-          [this.customPrompts[i], this.customPrompts[index]];
-        void (async () => {
-          await this.savePrompts();
-          this.renderPrompts();
-        })();
-        return;
-      }
-    }
-  }
-
-  /**
-   * Export prompts
-   */
   private exportPrompts(): void {
-    const dataStr = PromptsStorageService.exportPrompts(this.customPrompts);
-    downloadFile(dataStr, 'chatgpt-toolkit-prompts.json', 'application/json');
+    downloadFile(PromptsStorageService.exportPrompts(this.customPrompts), EXPORT_FILENAME, 'application/json');
     this.ui.showStatus(getMessage('options_status_export_success'), 'success');
   }
 
-  /**
-   * Open import modal
-   */
-  private openImportModal(): void {
-    this.importText.value = '';
-    this.importModal.classList.add('active');
-  }
+  private async resetToDefaults(): Promise<void> {
+    const confirmed = await this.ui.confirm({
+      message: getMessage('options_confirm_reset'),
+      confirmLabel: getMessage('options_confirm_reset_button'),
+      danger: true,
+    });
+    if (!confirmed) return;
 
-  /**
-   * Close import modal
-   */
-  private closeImportModal(): void {
-    this.importModal.classList.remove('active');
-    this.importText.value = '';
-  }
+    // Deep copies: later edits must never mutate DEFAULT_PROMPTS.
+    if (!(await this.commitChange(PromptsStorageService.getDefaultPrompts()))) return;
 
-  /**
-   * Import prompts
-   */
-  private importPrompts(): void {
-    void (async () => {
-      try {
-        const imported = PromptsStorageService.importPrompts(this.importText.value);
-
-        if (this.ui.confirm(getMessage('options_confirm_import', String(imported.length)))) {
-          this.customPrompts = imported;
-          await this.savePrompts();
-          this.renderPrompts();
-          this.closeImportModal();
-        }
-      } catch (error) {
-        this.ui.showStatus(
-          getMessage('options_status_import_error', (error as Error).message),
-          'error'
-        );
-      }
-    })();
-  }
-
-  /**
-   * Reset to default prompts
-   */
-  private resetToDefaults(): void {
-    if (!this.ui.confirm(getMessage('options_confirm_reset'))) {
-      return;
-    }
-
-    this.customPrompts = [...DEFAULT_PROMPTS];
     this.activeTab = 'initial';
-    void (async () => {
-      await this.savePrompts();
-      this.renderPrompts();
-      this.ui.showStatus(getMessage('options_status_reset_success'), 'success');
-    })();
-  }
-
-  /**
-   * Attach event listeners
-   */
-  private attachEventListeners(): void {
-    // Main action buttons
-    document.getElementById('addPromptBtn')?.addEventListener('click', () => this.openAddModal());
-    document.getElementById('importBtn')?.addEventListener('click', () => this.openImportModal());
-    document.getElementById('exportBtn')?.addEventListener('click', () => this.exportPrompts());
-    document.getElementById('resetBtn')?.addEventListener('click', () => this.resetToDefaults());
-
-    this.tabInitialBtn.addEventListener('click', () => this.setActiveTab('initial'));
-    this.tabFollowUpBtn.addEventListener('click', () => this.setActiveTab('followUp'));
-
-    const onTabKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight' && event.key !== 'Home' && event.key !== 'End') {
-        return;
-      }
-
-      event.preventDefault();
-
-      const nextTab =
-        event.key === 'Home' ? 'initial'
-        : event.key === 'End' ? 'followUp'
-        : this.activeTab === 'initial' ? 'followUp' : 'initial';
-
-      this.setActiveTab(nextTab);
-      (nextTab === 'initial' ? this.tabInitialBtn : this.tabFollowUpBtn).focus();
-    };
-
-    this.tabInitialBtn.addEventListener('keydown', onTabKeyDown);
-    this.tabFollowUpBtn.addEventListener('keydown', onTabKeyDown);
-
-    // Prompt modal
-    document.getElementById('cancelBtn')?.addEventListener('click', () => this.closeModal());
-    this.promptForm.addEventListener('submit', (e) => this.savePromptFromForm(e));
-    this.promptAutoPaste.addEventListener('change', () => this.updatePromptArgsHintVisibility());
-    this.promptArgsInsert.addEventListener('pointerdown', (event) => event.preventDefault());
-    this.promptArgsInsert.addEventListener('click', () => this.insertPromptArgsAtCursor());
-
-    // Import modal
-    document.getElementById('closeImportModalBtn')?.addEventListener('click', () => this.closeImportModal());
-    document.getElementById('cancelImportBtn')?.addEventListener('click', () => this.closeImportModal());
-    document.getElementById('confirmImportBtn')?.addEventListener('click', () => this.importPrompts());
-
-    // Drag & drop import file
-    const setDragOver = (isOver: boolean) => {
-      this.importText.classList.toggle('drag-over', isOver);
-    };
-
-    this.importText.addEventListener('dragenter', (e) => {
-      e.preventDefault();
-      setDragOver(true);
-    });
-
-    this.importText.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      setDragOver(true);
-    });
-
-    this.importText.addEventListener('dragleave', () => {
-      setDragOver(false);
-    });
-
-    this.importText.addEventListener('drop', (e) => {
-      e.preventDefault();
-      setDragOver(false);
-
-      const files = e.dataTransfer?.files;
-      if (!files || files.length === 0) return;
-
-      const file = files[0];
-      void (async () => {
-        try {
-          const text = await file.text();
-          this.importText.value = text;
-          this.importPrompts();
-        } catch (error) {
-          this.ui.showStatus(
-            getMessage('options_status_file_read_error', (error as Error).message),
-            'error'
-          );
-        }
-      })();
-    });
-
-    // Close import modal when clicking outside
-    this.importModal.addEventListener('click', (e) => {
-      if (e.target === this.importModal) {
-        this.closeImportModal();
-      }
-    });
+    this.clearSearch();
+    this.renderPrompts();
+    this.ui.showStatus(getMessage('options_status_reset_success'), 'success');
   }
 }
 
 // Initialize when DOM is ready
+const start = (): void => {
+  void new OptionsController().init();
+};
+
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    const controller = new OptionsController();
-    void controller.init();
-  });
+  document.addEventListener('DOMContentLoaded', start);
 } else {
-  const controller = new OptionsController();
-  void controller.init();
+  start();
 }

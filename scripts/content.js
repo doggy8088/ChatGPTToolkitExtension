@@ -29,7 +29,12 @@
     function fillTextareaAndDispatchInput(textarea, text) {
       if (!textarea)
         return;
-      textarea.value = text;
+      const valueSetter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
+      if (valueSetter) {
+        valueSetter.call(textarea, text);
+      } else {
+        textarea.value = text;
+      }
       textarea.dispatchEvent(new Event("input", { bubbles: true }));
     }
     function startRetryInterval({ intervalMs = 500, retries = 10, tick }) {
@@ -74,14 +79,17 @@
                 cancelable: true,
                 clipboardData: dataTransfer
               });
-              console.log("觸發貼上事件", pasteEvent);
+              if (debug)
+                console.log("觸發貼上事件", pasteEvent);
               targetElement.dispatchEvent(pasteEvent);
-              console.log("模擬貼上圖片成功");
+              if (debug)
+                console.log("模擬貼上圖片成功");
               return true;
             }
           }
         }
-        console.log("剪貼簿中沒有圖片");
+        if (debug)
+          console.log("剪貼簿中沒有圖片");
         return false;
       } catch (error) {
         console.error("抓取剪貼簿圖片失敗:", error);
@@ -195,13 +203,164 @@
     return parts.join("");
   }
 
+  // src/shared/promptMigrations.ts
+  var PROMPT_MIGRATIONS_KEY = "chatgpttoolkit.promptMigrations";
+  function getDefaultReviewPrompt() {
+    return {
+      enabled: true,
+      initial: true,
+      svgIcon: "\uD83D\uDCAC",
+      title: "評論",
+      altText: "評論剪貼簿內容並提出改進建議",
+      prompt: `請評論以下內容，指出優缺點並提供改進建議：
+
+`,
+      autoPaste: true,
+      autoSubmit: true
+    };
+  }
+  function migrateAddMissingPrompts(prompts) {
+    const review = getDefaultReviewPrompt();
+    const reviewTitle = String(review.title).trim();
+    const hasReview = prompts.some((p) => Boolean(p?.initial) && String(p?.title || "").trim() === reviewTitle);
+    if (hasReview)
+      return { prompts, changed: false };
+    return { prompts: [...prompts, { ...review }], changed: true };
+  }
+  var PROMPT_MIGRATIONS = [{ id: "add-review-prompt", run: migrateAddMissingPrompts }];
+  var ALL_PROMPT_MIGRATION_IDS = PROMPT_MIGRATIONS.map((migration) => migration.id);
+  function applyPendingPromptMigrations(prompts, storedAppliedIds) {
+    const applied = new Set(Array.isArray(storedAppliedIds) ? storedAppliedIds.filter((id) => typeof id === "string") : []);
+    let current = prompts;
+    let changed = false;
+    let appliedChanged = !Array.isArray(storedAppliedIds) || applied.size !== storedAppliedIds.length;
+    for (const migration of PROMPT_MIGRATIONS) {
+      if (applied.has(migration.id))
+        continue;
+      const result = migration.run(current);
+      current = result.prompts;
+      changed = changed || result.changed;
+      applied.add(migration.id);
+      appliedChanged = true;
+    }
+    return { prompts: current, changed, appliedIds: Array.from(applied), appliedChanged };
+  }
+
+  // src/content/prompts.ts
+  var CUSTOM_PROMPTS_KEY = "chatgpttoolkit.customPrompts";
+  var ARGS_PLACEHOLDER = "{{args}}";
+  function safeParseJsonArray(str) {
+    if (!str)
+      return null;
+    try {
+      const parsed = JSON.parse(str);
+      return Array.isArray(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+  function chromeStorageGet(keys) {
+    try {
+      if (!chrome?.storage?.local)
+        return Promise.resolve({});
+      return new Promise((resolve) => chrome.storage.local.get(keys, (result) => resolve(result || {})));
+    } catch {
+      return Promise.resolve({});
+    }
+  }
+  function chromeStorageSet(items) {
+    try {
+      if (!chrome?.storage?.local)
+        return Promise.resolve(false);
+      return new Promise((resolve) => chrome.storage.local.set(items, () => resolve(true)));
+    } catch {
+      return Promise.resolve(false);
+    }
+  }
+  async function loadCustomPrompts() {
+    const items = await chromeStorageGet([CUSTOM_PROMPTS_KEY, PROMPT_MIGRATIONS_KEY]);
+    const stored = items[CUSTOM_PROMPTS_KEY];
+    const legacy = Array.isArray(stored) ? null : safeParseJsonArray(localStorage.getItem(CUSTOM_PROMPTS_KEY));
+    const source = Array.isArray(stored) ? stored : legacy;
+    if (!source)
+      return null;
+    const migrated = applyPendingPromptMigrations(source, items[PROMPT_MIGRATIONS_KEY]);
+    const updates = {};
+    if (migrated.changed || legacy)
+      updates[CUSTOM_PROMPTS_KEY] = migrated.prompts;
+    if (migrated.appliedChanged)
+      updates[PROMPT_MIGRATIONS_KEY] = migrated.appliedIds;
+    if (Object.keys(updates).length > 0)
+      await chromeStorageSet(updates);
+    return migrated.prompts;
+  }
+  function selectReadyPrompts(prompts, initial) {
+    return (prompts || []).filter((item) => {
+      if (!item || typeof item !== "object")
+        return false;
+      const isEnabled = !Object.prototype.hasOwnProperty.call(item, "enabled") || item.enabled === true;
+      const isInitial = Object.prototype.hasOwnProperty.call(item, "initial") && item.initial === true;
+      return isEnabled && isInitial === initial && !!item.title && !!item.prompt;
+    });
+  }
+  function getReadyPromptsSignature(items) {
+    return JSON.stringify(items.map((item) => [item.title, item.prompt, item.altText || "", item.autoPaste === true, item.autoSubmit === true]));
+  }
+  function getLocaleDefaultFollowUpPrompts(locale) {
+    if (!locale)
+      return [];
+    if (locale === "zh-TW") {
+      return [
+        { title: "舉例說明", prompt: "請舉例說明" },
+        { title: "提供細節", prompt: "請提供更多細節說明" },
+        { title: "翻譯成繁中", prompt: "請將上述回應內容翻譯成臺灣常用的正體中文" },
+        { title: "翻譯成英文", prompt: "Please translate the above response into English." }
+      ];
+    }
+    if (locale === "ja") {
+      return [
+        { title: "例えば", prompt: "例を挙げて説明して" },
+        { title: "詳細説明", prompt: "もっと詳細に説明して" },
+        { title: "日本語に翻訳", prompt: "上述の返答内容を日本語に翻訳して" },
+        { title: "英語に翻訳", prompt: "Please translate the above response into English." }
+      ];
+    }
+    return [
+      { title: "More Examples", prompt: "Could you please provide me with more examples?" },
+      { title: "More Details", prompt: "Could you please provide me with more details?" },
+      { title: "Translate to English", prompt: "Please translate the above response into English." }
+    ];
+  }
+  function applyPromptArgs(template, argsText) {
+    if (template.includes(ARGS_PLACEHOLDER)) {
+      return template.split(ARGS_PLACEHOLDER).join(argsText);
+    }
+    return argsText ? template + argsText : template;
+  }
+  function readClipboardTextSafely(debug, site) {
+    if (!navigator.clipboard?.readText)
+      return Promise.resolve("");
+    return navigator.clipboard.readText().catch((error) => {
+      if (debug)
+        console.warn(`[ChatGPTToolkit][${site}] clipboard read failed`, error);
+      return "";
+    });
+  }
+  async function resolveAutoPastePrompt(template, editorText, debug, site) {
+    const trimmedEditorText = editorText.trim();
+    const argsText = trimmedEditorText || (await readClipboardTextSafely(debug, site)).trim();
+    return {
+      prompt: applyPromptArgs(template, argsText),
+      argsSource: trimmedEditorText ? "editor" : "clipboard",
+      argsLength: argsText.length
+    };
+  }
+
   // src/content/sites/gemini.ts
   function initGemini(ctx) {
     if (location.hostname !== "gemini.google.com")
       return false;
     const { state, debug } = ctx;
-    const CUSTOM_PROMPTS_KEY = "chatgpttoolkit.customPrompts";
-    const CLIPBOARD_ARGS_PLACEHOLDER = "{{args}}";
     const GEMINI_EDITOR_SELECTORS = [
       "chat-window .textarea",
       "input-container rich-textarea .ql-editor",
@@ -240,15 +399,6 @@
       ctx.fillContentEditableWithParagraphs(editorDiv, promptText);
       editorDiv.dispatchEvent(new Event("input", { bubbles: true }));
       editorDiv.focus();
-    }
-    function readClipboardTextSafely() {
-      if (!navigator.clipboard?.readText)
-        return Promise.resolve("");
-      return navigator.clipboard.readText().catch((error) => {
-        if (debug)
-          console.warn("[ChatGPTToolkit][gemini] clipboard read failed", error);
-        return "";
-      });
     }
     function getPromptEditorText() {
       return extractPromptEditorText(getPromptEditor());
@@ -381,21 +531,16 @@
           });
         }
         if (autoPasteEnabled) {
-          const editorText = getPromptEditorText().trim();
-          const resolveArgsText = editorText ? Promise.resolve(editorText) : readClipboardTextSafely().then((text) => text.trim());
-          resolveArgsText.then((trimmed) => {
-            const hasArgsPlaceholder = item.prompt.includes(CLIPBOARD_ARGS_PLACEHOLDER);
-            const nextPrompt = hasArgsPlaceholder ? item.prompt.split(CLIPBOARD_ARGS_PLACEHOLDER).join(trimmed) : trimmed ? item.prompt + trimmed : item.prompt;
+          resolveAutoPastePrompt(item.prompt, getPromptEditorText(), debug, "gemini").then((resolved) => {
             if (debug) {
               console.log(`[ChatGPTToolkit][gemini] ${label} button args resolved`, {
                 title: item.title,
-                argsSource: editorText ? "editor" : "clipboard",
-                trimmedLength: trimmed.length,
-                hasArgsPlaceholder,
-                nextPromptLength: nextPrompt.length
+                argsSource: resolved.argsSource,
+                argsLength: resolved.argsLength,
+                nextPromptLength: resolved.prompt.length
               });
             }
-            fillPrompt(nextPrompt, autoSubmitEnabled);
+            fillPrompt(resolved.prompt, autoSubmitEnabled);
           });
         } else {
           fillPrompt(item.prompt, autoSubmitEnabled);
@@ -425,155 +570,18 @@
         trigger(`keydown:${event.key}`);
       });
     }
-    function getDefaultReviewPrompt() {
-      return {
-        enabled: true,
-        initial: true,
-        svgIcon: "\uD83D\uDCAC",
-        title: "評論",
-        altText: "評論剪貼簿內容並提出改進建議",
-        prompt: `請評論以下內容，指出優缺點並提供改進建議：
-
-`,
-        autoPaste: true,
-        autoSubmit: true
-      };
-    }
-    function ensurePromptExists(prompts, promptToEnsure) {
-      if (!Array.isArray(prompts))
-        return { prompts, changed: false };
-      if (!promptToEnsure || !promptToEnsure.title)
-        return { prompts, changed: false };
-      const title = String(promptToEnsure.title).trim();
-      const exists = prompts.some((p) => {
-        if (!p)
-          return false;
-        const isInitial = Object.prototype.hasOwnProperty.call(p, "initial") ? p.initial === true : false;
-        return isInitial === true && String(p.title || "").trim() === title;
-      });
-      if (exists)
-        return { prompts, changed: false };
-      return { prompts: [...prompts, { ...promptToEnsure }], changed: true };
-    }
-    function safeParseJsonArray(str) {
-      if (!str)
-        return null;
-      try {
-        const parsed = JSON.parse(str);
-        return Array.isArray(parsed) ? parsed : null;
-      } catch {
-        return null;
-      }
-    }
-    function chromeStorageGet(key) {
-      try {
-        if (!chrome?.storage?.local)
-          return Promise.resolve(undefined);
-        return new Promise((resolve) => chrome.storage.local.get([key], (result) => resolve(result?.[key])));
-      } catch {
-        return Promise.resolve(undefined);
-      }
-    }
-    function chromeStorageSet(key, value) {
-      try {
-        if (!chrome?.storage?.local)
-          return Promise.resolve(false);
-        return new Promise((resolve) => chrome.storage.local.set({ [key]: value }, () => resolve(true)));
-      } catch {
-        return Promise.resolve(false);
-      }
-    }
-    async function loadCustomPromptsFromExtensionStorageWithMigration() {
-      const stored = await chromeStorageGet(CUSTOM_PROMPTS_KEY);
-      if (Array.isArray(stored)) {
-        const migrated = ensurePromptExists(stored, getDefaultReviewPrompt());
-        if (migrated.changed)
-          await chromeStorageSet(CUSTOM_PROMPTS_KEY, migrated.prompts);
-        return migrated.prompts;
-      }
-      const legacy = safeParseJsonArray(localStorage.getItem(CUSTOM_PROMPTS_KEY));
-      if (legacy) {
-        const migrated = ensurePromptExists(legacy, getDefaultReviewPrompt());
-        await chromeStorageSet(CUSTOM_PROMPTS_KEY, migrated.prompts);
-        return migrated.prompts;
-      }
-      return null;
-    }
-    function buildInitialButtonsFromPrompts(prompts) {
-      const results = [];
-      (prompts || []).forEach((item) => {
-        const hasEnabled = Object.prototype.hasOwnProperty.call(item, "enabled");
-        const isItemEnabled = !hasEnabled || item.enabled === true;
-        const isItemInitial = Object.prototype.hasOwnProperty.call(item, "initial") ? item.initial === true : false;
-        if (isItemEnabled && isItemInitial && !!item.title && !!item.prompt) {
-          results.push(item);
-        }
-      });
-      return results;
-    }
     (async () => {
       let initialManualSubmitText = [];
       let followUpManualSubmitText = [];
-      let localeDefaultManualSubmitText = [];
+      const localeDefaultManualSubmitText = getLocaleDefaultFollowUpPrompts(chrome.i18n?.getUILanguage());
       let lastResponse;
       let initialButtonsSignature = "";
       let shiftedInitialHeading = null;
-      const currentLocale = chrome.i18n?.getUILanguage();
-      if (currentLocale) {
-        if (currentLocale === "zh-TW") {
-          localeDefaultManualSubmitText.push({ title: "舉例說明", prompt: "請舉例說明" });
-          localeDefaultManualSubmitText.push({ title: "提供細節", prompt: "請提供更多細節說明" });
-          localeDefaultManualSubmitText.push({
-            title: "翻譯成繁中",
-            prompt: "請將上述回應內容翻譯成臺灣常用的正體中文"
-          });
-          localeDefaultManualSubmitText.push({
-            title: "翻譯成英文",
-            prompt: "Please translate the above response into English."
-          });
-        } else if (currentLocale === "ja") {
-          localeDefaultManualSubmitText.push({ title: "例えば", prompt: "例を挙げて説明して" });
-          localeDefaultManualSubmitText.push({ title: "詳細説明", prompt: "もっと詳細に説明して" });
-          localeDefaultManualSubmitText.push({
-            title: "日本語に翻訳",
-            prompt: "上述の返答内容を日本語に翻訳して"
-          });
-          localeDefaultManualSubmitText.push({
-            title: "英語に翻訳",
-            prompt: "Please translate the above response into English."
-          });
-        } else {
-          localeDefaultManualSubmitText.push({
-            title: "More Examples",
-            prompt: "Could you please provide me with more examples?"
-          });
-          localeDefaultManualSubmitText.push({
-            title: "More Details",
-            prompt: "Could you please provide me with more details?"
-          });
-          localeDefaultManualSubmitText.push({
-            title: "Translate to English",
-            prompt: "Please translate the above response into English."
-          });
-        }
-      }
       followUpManualSubmitText = [...localeDefaultManualSubmitText];
-      function buildFollowUpButtonsFromPrompts(prompts) {
-        const results = [];
-        (prompts || []).forEach((item) => {
-          const hasEnabled = Object.prototype.hasOwnProperty.call(item, "enabled");
-          const isItemEnabled = !hasEnabled || item.enabled === true;
-          const isItemInitial = Object.prototype.hasOwnProperty.call(item, "initial") ? item.initial === true : false;
-          if (isItemEnabled && !isItemInitial && !!item.title && !!item.prompt) {
-            results.push(item);
-          }
-        });
-        return results;
-      }
-      const customPrompts = await loadCustomPromptsFromExtensionStorageWithMigration();
+      const customPrompts = await loadCustomPrompts();
       if (Array.isArray(customPrompts)) {
-        initialManualSubmitText = buildInitialButtonsFromPrompts(customPrompts);
-        followUpManualSubmitText = buildFollowUpButtonsFromPrompts(customPrompts);
+        initialManualSubmitText = selectReadyPrompts(customPrompts, true);
+        followUpManualSubmitText = selectReadyPrompts(customPrompts, false);
       }
       let mutationObserverTimer;
       const obs = new MutationObserver((mutations) => {
@@ -719,15 +727,6 @@
       function resetInitialButtonsHeadingShift() {
         setInitialButtonsHeadingShift(null, 0);
       }
-      function getReadyPromptsSignature(items) {
-        return JSON.stringify(items.map((item) => ({
-          title: item.title,
-          prompt: item.prompt,
-          altText: item.altText || "",
-          autoPaste: item.autoPaste === true,
-          autoSubmit: item.autoSubmit === true
-        })));
-      }
       function rebuildInitialButtons() {
         const existing = document.getElementById("custom-gemini-initial-buttons");
         if (!Array.isArray(initialManualSubmitText) || initialManualSubmitText.length === 0) {
@@ -750,7 +749,7 @@
         }
         const barEl = bar;
         const nextSignature = getReadyPromptsSignature(initialManualSubmitText);
-        const shouldRebuildButtons = nextSignature !== initialButtonsSignature;
+        const shouldRebuildButtons = !existing || nextSignature !== initialButtonsSignature;
         if (shouldRebuildButtons && barEl.style.visibility !== "hidden") {
           barEl.style.visibility = "hidden";
         }
@@ -901,8 +900,9 @@
           const change = changes?.[CUSTOM_PROMPTS_KEY];
           if (!change)
             return;
-          const nextInitial = Array.isArray(change.newValue) ? buildInitialButtonsFromPrompts(change.newValue) : [];
-          const nextFollowUp = Array.isArray(change.newValue) ? buildFollowUpButtonsFromPrompts(change.newValue) : [...localeDefaultManualSubmitText];
+          const nextPrompts = Array.isArray(change.newValue) ? change.newValue : null;
+          const nextInitial = nextPrompts ? selectReadyPrompts(nextPrompts, true) : [];
+          const nextFollowUp = nextPrompts ? selectReadyPrompts(nextPrompts, false) : [...localeDefaultManualSubmitText];
           initialManualSubmitText = nextInitial;
           followUpManualSubmitText = nextFollowUp;
           document.querySelectorAll("#custom-gemini-initial-buttons")?.forEach((item) => item.remove());
@@ -1116,9 +1116,148 @@
   }
 
   // src/content/sites/chatgpt.ts
+  var COMPOSER_FORM_SELECTORS = [
+    "form[data-chatgpt-composer]",
+    'form[data-type="unified-composer"]',
+    "form[data-mobile-composer]"
+  ];
+  var PROMPT_EDITOR_SELECTORS = [
+    "#prompt-textarea",
+    '[data-composer-markdown][contenteditable="true"]',
+    'textarea[name="prompt"]',
+    '[contenteditable="true"][role="textbox"]',
+    'textarea[data-testid*="prompt"]',
+    "textarea[placeholder]",
+    "textarea",
+    '[contenteditable="true"][data-virtualkeyboard="true"]',
+    '[contenteditable="true"]'
+  ];
+  var SEND_BUTTON_SELECTORS = [
+    'button[data-testid="composer-send-button"]',
+    'button[data-testid="send-button"]',
+    'button[data-testid*="send-button"]',
+    "button[data-composer-submit]",
+    'button[aria-label*="Submit"]',
+    'button[aria-label*="Send"]',
+    'button[aria-label*="傳送"]',
+    'button[aria-label*="送出"]',
+    'button[aria-label*="送信"]'
+  ];
+  var CONVERSATION_CONTENT_SELECTOR = "[data-turn-key], [data-content-search-unit-key], article[data-turn], [data-message-author-role]";
+  var ASSISTANT_UNIT_SELECTOR = '[data-content-search-unit-key$=":assistant"], [data-chatgpt-search-unit-key$=":assistant"]';
+  var USER_MESSAGE_SELECTOR = '[data-content-search-unit-key$=":user"], [data-chatgpt-search-unit-key$=":user"], div[data-message-author-role="user"]';
+  var STOP_LABEL_PATTERN = /stop|停止|中止|중지/i;
+  var NOT_STOP_LABEL_PATTERN = /dictat|voice|record|聽寫|語音|音声|録音|음성/i;
+  var EDIT_LABEL_PATTERN = /edit|編輯|编辑|編集|修改|편집/i;
+  var INITIAL_BAR_ID = "custom-chatgpt-initial-buttons";
+  var FOLLOW_UP_AREA_ID = "custom-chatgpt-magic-box-buttons";
+  var STYLE_ID = "custom-chatgpt-button-styles";
+  var HEADING_SHIFT_ATTR = "data-chatgpttoolkit-chatgpt-heading-shift";
+  var MARKMAP_SCANNED_ATTR = "data-chatgpttoolkit-markmap";
+  var REBUILD_THROTTLE_MS = 150;
+  var HEADING_SHIFT_PX = 48;
+  var BUTTON_STYLES = `
+  #${INITIAL_BAR_ID} {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    z-index: 10;
+    box-sizing: border-box;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    width: 100%;
+    margin: 0;
+    padding: 0.15rem 0.25rem;
+    transform: translateY(-16px);
+    pointer-events: auto;
+  }
+  #${FOLLOW_UP_AREA_ID} {
+    box-sizing: border-box;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.75rem 0 0.25rem;
+  }
+  #${FOLLOW_UP_AREA_ID}.chatgpttoolkit-legacy-area {
+    margin: 0 auto;
+    padding: 0.75rem 1rem 1rem calc(30px + 0.75rem);
+  }
+  .chatgpttoolkit-btn {
+    box-sizing: border-box;
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0.3rem 0.85rem;
+    border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, currentColor 5%, transparent);
+    color: inherit;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 500;
+    line-height: 1.25;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 140ms ease, border-color 140ms ease, transform 140ms ease;
+  }
+  #${FOLLOW_UP_AREA_ID} .chatgpttoolkit-btn {
+    padding: 0.4rem 0.95rem;
+    font-size: 0.875rem;
+  }
+  .chatgpttoolkit-btn:hover {
+    border-color: color-mix(in srgb, currentColor 36%, transparent);
+    background: color-mix(in srgb, currentColor 11%, transparent);
+    transform: translateY(-1px);
+  }
+  .chatgpttoolkit-btn:active {
+    transform: translateY(0);
+  }
+  .chatgpttoolkit-btn:focus-visible,
+  .chatgpttoolkit-markmap-btn:focus-visible {
+    outline: 2px solid color-mix(in srgb, currentColor 60%, transparent);
+    outline-offset: 2px;
+  }
+  .chatgpttoolkit-markmap-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0.2rem 0.5rem;
+    border: 0;
+    border-radius: 0.375rem;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 0.75rem;
+    line-height: 1.25rem;
+    cursor: pointer;
+    user-select: none;
+  }
+  .chatgpttoolkit-markmap-btn:hover {
+    background: color-mix(in srgb, currentColor 10%, transparent);
+  }
+  .chatgpttoolkit-markmap {
+    overflow: hidden;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .chatgpttoolkit-btn {
+      transition: none;
+    }
+    .chatgpttoolkit-btn:hover {
+      transform: none;
+    }
+  }
+`;
+  var MINDMAP_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="12" viewBox="0 0 128 128" aria-hidden="true"><path fill="#F5E41C" stroke="#010100" stroke-width="2" d="M76.35 109.75C61.4 101.92 53.99 89.4 51.84 73.08c-10.98 0-21.78.02-32.59-.01-6.37-.02-10.02-2.86-10.14-7.79-.12-5.04 3.8-8.19 10.32-8.21 10.65-.03 21.3-.01 31.75-.01.38-.47.7-.68.74-.95 4.5-25.18 19.67-39.08 46.09-42.08 4.79-.54 9.62-.89 14.44-.97 5.2-.09 8.51 3.02 8.67 7.62.17 4.86-3.14 7.72-8.53 8.4-8.53 1.07-17.29 1.71-25.44 4.2-11.36 3.46-17.21 11.76-18.83 23.78h39.47c1.67 0 3.34-.08 5 .03 5.1.33 8.32 3.55 8.25 8.17-.07 4.6-3.33 7.74-8.53 7.78-12.83.09-25.65.03-38.48.04h-5.8c1.45 10.83 6.64 18.94 16.52 22.73 7.02 2.69 14.74 3.62 22.19 5.15 2.09.43 4.33.03 6.48.28 5.05.57 8.02 4 7.68 8.68-.31 4.4-3.5 7.19-8.52 7.22-12.45.07-24.53-1.79-36.23-7.37z"/></svg>';
   function initChatGPT(ctx) {
     const { state, debug } = ctx;
-    const CLIPBOARD_ARGS_PLACEHOLDER = "{{args}}";
     function isInitialButtonsAllowedPage() {
       const pathname = (location.pathname || "/").replace(/\/+$/, "") || "/";
       return pathname === "/";
@@ -1126,43 +1265,108 @@
     function isElementVisible(el) {
       if (!el)
         return false;
-      const rect = el.getBoundingClientRect();
       const style = window.getComputedStyle(el);
       if (style.display === "none" || style.visibility === "hidden")
         return false;
-      const hasLayoutBox = rect.width > 0 || rect.height > 0;
-      if (hasLayoutBox)
-        return true;
-      const userAgent = window.navigator?.userAgent || "";
-      if (/jsdom/i.test(userAgent))
+      const rect = el.getBoundingClientRect();
+      if (rect.width > 0 || rect.height > 0)
         return true;
       return el.getClientRects().length > 0;
     }
-    function getComposerRoot() {
-      const sendButton = getSendButton();
-      if (sendButton) {
-        return sendButton.closest('form[data-type="unified-composer"], form, main');
-      }
-      return document.querySelector('form[data-type="unified-composer"], main');
+    function isInsideConversation(el) {
+      return Boolean(el.closest(CONVERSATION_CONTENT_SELECTOR));
     }
-    function getPromptEditor() {
-      const root = getComposerRoot() || document;
-      const selectors = [
-        "#prompt-textarea",
-        'textarea[data-testid*="prompt"]',
-        "textarea[placeholder]",
-        "textarea",
-        '[contenteditable="true"][role="textbox"]',
-        '[contenteditable="true"][data-virtualkeyboard="true"]',
-        '[contenteditable="true"]'
-      ];
-      for (const selector of selectors) {
-        const candidates = Array.from(root.querySelectorAll(selector));
-        const match = candidates.find((el) => isElementVisible(el) && !el.closest('[aria-hidden="true"]'));
+    function getComposerForm() {
+      for (const selector of COMPOSER_FORM_SELECTORS) {
+        const forms = Array.from(document.querySelectorAll(selector)).filter((form) => !isInsideConversation(form));
+        const match = forms.find((form) => isElementVisible(form)) || forms[0];
         if (match)
           return match;
       }
       return null;
+    }
+    function isStopButton(button) {
+      if (button.hidden)
+        return false;
+      const label = (button.getAttribute("aria-label") || "").trim();
+      if (!label)
+        return false;
+      const stopLabel = button.getAttribute("data-stop-label");
+      if (stopLabel)
+        return label === stopLabel;
+      if (button.getAttribute("type") === "submit")
+        return false;
+      return STOP_LABEL_PATTERN.test(label) && !NOT_STOP_LABEL_PATTERN.test(label);
+    }
+    function isGenerating() {
+      if (document.querySelector('button[data-testid="stop-button"]'))
+        return true;
+      const form = getComposerForm();
+      if (!form)
+        return false;
+      return Array.from(form.querySelectorAll("button")).some(isStopButton);
+    }
+    function pickSendButton(buttons) {
+      const candidates = buttons.filter((button) => !button.hidden && !isStopButton(button));
+      return candidates.find((button) => isElementVisible(button) && !button.disabled) || candidates[0] || null;
+    }
+    function getSendButton() {
+      const form = getComposerForm();
+      if (form) {
+        for (const selector of [...SEND_BUTTON_SELECTORS, 'button[type="submit"]']) {
+          const button = pickSendButton(Array.from(form.querySelectorAll(selector)));
+          if (button)
+            return button;
+        }
+      }
+      for (const selector of SEND_BUTTON_SELECTORS) {
+        const buttons = Array.from(document.querySelectorAll(selector)).filter((button2) => !isInsideConversation(button2));
+        const button = pickSendButton(buttons);
+        if (button)
+          return button;
+      }
+      return null;
+    }
+    function isSendButtonEnabled(sendButton) {
+      if (!sendButton)
+        return false;
+      if (sendButton.disabled)
+        return false;
+      if (sendButton.getAttribute("aria-disabled") === "true")
+        return false;
+      return true;
+    }
+    function getComposerRoot() {
+      return getComposerForm() || getSendButton()?.closest("form, main") || document.querySelector("main") || document;
+    }
+    function getPromptEditor() {
+      const root = getComposerRoot();
+      for (const selector of PROMPT_EDITOR_SELECTORS) {
+        const candidates = Array.from(root.querySelectorAll(selector));
+        const match = candidates.find((el) => isElementVisible(el) && !el.closest('[aria-hidden="true"]') && !isInsideConversation(el));
+        if (match)
+          return match;
+      }
+      return null;
+    }
+    function hasConversationMessages() {
+      return Boolean(document.querySelector('[data-turn-key], [data-content-search-unit-key], div[data-message-author-role="assistant"], div[data-message-author-role="user"]'));
+    }
+    function isDarkTheme() {
+      const root = document.documentElement;
+      if (root.classList.contains("dark") || root.dataset.theme === "dark")
+        return true;
+      if (root.classList.contains("light") || root.dataset.theme === "light")
+        return false;
+      return window.getComputedStyle(root).colorScheme === "dark";
+    }
+    function ensureButtonStyles() {
+      if (document.getElementById(STYLE_ID))
+        return;
+      const styleEl = document.createElement("style");
+      styleEl.id = STYLE_ID;
+      styleEl.textContent = BUTTON_STYLES;
+      (document.head || document.documentElement).appendChild(styleEl);
     }
     function setChatGPTPromptEditor(editorDiv, promptText) {
       if (!editorDiv)
@@ -1176,19 +1380,9 @@
       editorDiv.dispatchEvent(new Event("input", { bubbles: true }));
       editorDiv.focus();
     }
-    function readClipboardTextSafely() {
-      if (!navigator.clipboard?.readText)
-        return Promise.resolve("");
-      return navigator.clipboard.readText().catch((error) => {
-        if (debug)
-          console.warn("[ChatGPTToolkit][chatgpt] clipboard read failed", error);
-        return "";
-      });
-    }
-    function getPromptEditorText() {
-      return extractPromptEditorText(getPromptEditor());
-    }
-    function bindPromptButton(button, item, autoPasteEnabled, autoSubmitEnabled, label) {
+    function bindPromptButton(button, item, label) {
+      const autoPasteEnabled = item.autoPaste === true;
+      const autoSubmitEnabled = item.autoSubmit === true;
       let lastTriggerAt = 0;
       const trigger = (source) => {
         const now = Date.now();
@@ -1209,29 +1403,25 @@
             title: item.title,
             autoPasteEnabled,
             autoSubmitEnabled,
-            promptLength: item.prompt?.length || 0
+            promptLength: item.prompt.length
           });
         }
-        if (autoPasteEnabled) {
-          const editorText = getPromptEditorText().trim();
-          const resolveArgsText = editorText ? Promise.resolve(editorText) : readClipboardTextSafely().then((text) => text.trim());
-          resolveArgsText.then((trimmed) => {
-            const hasArgsPlaceholder = item.prompt.includes(CLIPBOARD_ARGS_PLACEHOLDER);
-            const nextPrompt = hasArgsPlaceholder ? item.prompt.split(CLIPBOARD_ARGS_PLACEHOLDER).join(trimmed) : trimmed ? item.prompt + trimmed : item.prompt;
-            if (debug) {
-              console.log(`[ChatGPTToolkit][chatgpt] ${label} button args resolved`, {
-                title: item.title,
-                argsSource: editorText ? "editor" : "clipboard",
-                trimmedLength: trimmed.length,
-                hasArgsPlaceholder,
-                nextPromptLength: nextPrompt.length
-              });
-            }
-            fillPrompt(nextPrompt, autoSubmitEnabled);
-          });
-        } else {
+        if (!autoPasteEnabled) {
           fillPrompt(item.prompt, autoSubmitEnabled);
+          return;
         }
+        const editorText = extractPromptEditorText(getPromptEditor());
+        resolveAutoPastePrompt(item.prompt, editorText, debug, "chatgpt").then((resolved) => {
+          if (debug) {
+            console.log(`[ChatGPTToolkit][chatgpt] ${label} button args resolved`, {
+              title: item.title,
+              argsSource: resolved.argsSource,
+              argsLength: resolved.argsLength,
+              nextPromptLength: resolved.prompt.length
+            });
+          }
+          fillPrompt(resolved.prompt, autoSubmitEnabled);
+        });
       };
       button.addEventListener("pointerdown", (event) => {
         if (event.button !== 0)
@@ -1243,6 +1433,16 @@
           return;
         trigger("click");
       });
+    }
+    function createPromptButton(item, label) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "chatgpttoolkit-btn";
+      button.textContent = item.title;
+      if (item.altText)
+        button.title = String(item.altText);
+      bindPromptButton(button, item, label);
+      return button;
     }
     function describeElement(el) {
       if (!el)
@@ -1352,14 +1552,15 @@
       }
       for (let i = 0;i < text.length; i += 1) {
         const char = text[i];
-        if (debug) {
-          console.log(`[ChatGPTToolkit][chatgpt] typing char ${i + 1}/${text.length}: "${char}"`);
-        }
         dispatchKeyEvent(editorDiv, "keydown", char);
         dispatchKeyEvent(editorDiv, "keypress", char);
         const inserted = insertTextAtCursor(editorDiv, char);
         if (!inserted) {
-          editorDiv.textContent = (editorDiv.textContent || "") + char;
+          if (editorDiv instanceof HTMLTextAreaElement) {
+            editorDiv.value += char;
+          } else {
+            editorDiv.textContent = (editorDiv.textContent || "") + char;
+          }
           editorDiv.dispatchEvent(new Event("input", { bubbles: true }));
         }
         dispatchInputEvent(editorDiv, char);
@@ -1427,203 +1628,42 @@
       if (debug)
         console.log("[ChatGPTToolkit][chatgpt] AutoFillFromURI done");
     };
-    const CUSTOM_PROMPTS_KEY = "chatgpttoolkit.customPrompts";
-    function getDefaultReviewPrompt() {
-      return {
-        enabled: true,
-        initial: true,
-        svgIcon: "\uD83D\uDCAC",
-        title: "評論",
-        altText: "評論剪貼簿內容並提出改進建議",
-        prompt: `請評論以下內容，指出優缺點並提供改進建議：
-
-`,
-        autoPaste: true,
-        autoSubmit: true
-      };
-    }
-    function ensurePromptExists(prompts, promptToEnsure) {
-      if (!Array.isArray(prompts))
-        return { prompts, changed: false };
-      if (!promptToEnsure || !promptToEnsure.title)
-        return { prompts, changed: false };
-      const title = String(promptToEnsure.title).trim();
-      const exists = prompts.some((p) => {
-        if (!p)
-          return false;
-        const isInitial = Object.prototype.hasOwnProperty.call(p, "initial") ? p.initial === true : false;
-        return isInitial === true && String(p.title || "").trim() === title;
-      });
-      if (exists)
-        return { prompts, changed: false };
-      return { prompts: [...prompts, { ...promptToEnsure }], changed: true };
-    }
-    function safeParseJsonArray(str) {
-      if (!str)
-        return null;
-      try {
-        const parsed = JSON.parse(str);
-        return Array.isArray(parsed) ? parsed : null;
-      } catch {
-        return null;
-      }
-    }
-    function chromeStorageGet(key) {
-      try {
-        if (!chrome?.storage?.local)
-          return Promise.resolve(undefined);
-        return new Promise((resolve) => chrome.storage.local.get([key], (result) => resolve(result?.[key])));
-      } catch {
-        return Promise.resolve(undefined);
-      }
-    }
-    function chromeStorageSet(key, value) {
-      try {
-        if (!chrome?.storage?.local)
-          return Promise.resolve(false);
-        return new Promise((resolve) => chrome.storage.local.set({ [key]: value }, () => resolve(true)));
-      } catch {
-        return Promise.resolve(false);
-      }
-    }
-    async function loadCustomPromptsFromExtensionStorageWithMigration() {
-      const stored = await chromeStorageGet(CUSTOM_PROMPTS_KEY);
-      if (Array.isArray(stored)) {
-        const migrated = ensurePromptExists(stored, getDefaultReviewPrompt());
-        if (migrated.changed)
-          await chromeStorageSet(CUSTOM_PROMPTS_KEY, migrated.prompts);
-        return migrated.prompts;
-      }
-      const legacy = safeParseJsonArray(localStorage.getItem(CUSTOM_PROMPTS_KEY));
-      if (legacy) {
-        const migrated = ensurePromptExists(legacy, getDefaultReviewPrompt());
-        await chromeStorageSet(CUSTOM_PROMPTS_KEY, migrated.prompts);
-        return migrated.prompts;
-      }
-      return null;
-    }
     const StartMonitoringResponse = async () => {
-      let defaultManualSubmitText = [];
-      let localeDefaultManualSubmitText = [];
-      let initialManualSubmitText = [];
-      let lastBlock;
-      const currentLocale = chrome.i18n?.getUILanguage();
-      if (currentLocale) {
-        if (currentLocale === "zh-TW") {
-          defaultManualSubmitText.push({ title: "舉例說明", prompt: "請舉例說明" });
-          defaultManualSubmitText.push({ title: "提供細節", prompt: "請提供更多細節說明" });
-          defaultManualSubmitText.push({
-            title: "翻譯成繁中",
-            prompt: "請將上述回應內容翻譯成臺灣常用的正體中文"
-          });
-          defaultManualSubmitText.push({
-            title: "翻譯成英文",
-            prompt: "Please translate the above response into English."
-          });
-        } else if (currentLocale === "ja") {
-          defaultManualSubmitText.push({ title: "例えば", prompt: "例を挙げて説明して" });
-          defaultManualSubmitText.push({ title: "詳細説明", prompt: "もっと詳細に説明して" });
-          defaultManualSubmitText.push({
-            title: "日本語に翻訳",
-            prompt: "上述の返答内容を日本語に翻訳して"
-          });
-          defaultManualSubmitText.push({
-            title: "英語に翻訳",
-            prompt: "Please translate the above response into English."
-          });
-        } else {
-          defaultManualSubmitText.push({
-            title: "More Examples",
-            prompt: "Could you please provide me with more examples?"
-          });
-          defaultManualSubmitText.push({
-            title: "More Details",
-            prompt: "Could you please provide me with more details?"
-          });
-          defaultManualSubmitText.push({
-            title: "Translate to English",
-            prompt: "Please translate the above response into English."
-          });
-        }
-      }
-      localeDefaultManualSubmitText = [...defaultManualSubmitText];
-      function buildFollowUpButtonsFromPrompts(prompts) {
-        const results = [];
-        (prompts || []).forEach((item) => {
-          const hasEnabled = Object.prototype.hasOwnProperty.call(item, "enabled");
-          const isItemEnabled = !hasEnabled || item.enabled === true;
-          const isItemInitial = Object.prototype.hasOwnProperty.call(item, "initial") ? item.initial === true : false;
-          if (isItemEnabled && !isItemInitial && !!item.title && !!item.prompt) {
-            results.push(item);
-          }
-        });
-        return results;
-      }
-      const customPrompts = await loadCustomPromptsFromExtensionStorageWithMigration();
+      const localeDefaultFollowUps = getLocaleDefaultFollowUpPrompts(chrome.i18n?.getUILanguage());
+      let followUpPrompts = localeDefaultFollowUps;
+      let initialPrompts = [];
+      const customPrompts = await loadCustomPrompts();
       if (Array.isArray(customPrompts)) {
-        defaultManualSubmitText = buildFollowUpButtonsFromPrompts(customPrompts);
-        initialManualSubmitText = buildInitialButtonsFromPrompts(customPrompts);
+        followUpPrompts = selectReadyPrompts(customPrompts, false);
+        initialPrompts = selectReadyPrompts(customPrompts, true);
       }
-      let mutationObserverTimer;
-      const obs = new MutationObserver(() => {
-        if (location.pathname.startsWith("/gpts/editor")) {
-          return;
-        }
-        clearTimeout(mutationObserverTimer);
-        mutationObserverTimer = setTimeout(() => {
-          stop();
-          rebuild_initial_buttons();
-          rebuild_buttons();
-          const autoContinue = localStorage.getItem("chatgpttoolkit.featureToggle.autoContinue");
-          if (autoContinue) {
-            const btnContinue = Array.from(document.querySelectorAll("button")).filter((e) => e.innerText.trim() === "繼續生成" || e.innerText.trim() === "Continue generating" || e.innerText.trim() === "生成を続ける");
-            if (btnContinue.length > 0) {
-              btnContinue[0].click();
-            }
-          }
-          start();
-        }, 0);
-      });
-      function buildInitialButtonsFromPrompts(prompts) {
-        const results = [];
-        (prompts || []).forEach((item) => {
-          const hasEnabled = Object.prototype.hasOwnProperty.call(item, "enabled");
-          const isItemEnabled = !hasEnabled || item.enabled === true;
-          const isItemInitial = Object.prototype.hasOwnProperty.call(item, "initial") ? item.initial === true : false;
-          if (isItemEnabled && isItemInitial && !!item.title && !!item.prompt) {
-            results.push(item);
-          }
-        });
-        return results;
-      }
+      let renderedInitialSignature = "";
+      let renderedFollowUpSignature = "";
+      let followUpAnchor = null;
       let shiftedInitialHeading = null;
-      function setInitialButtonsHeadingShift(headingTarget, shiftPx) {
+      function setInitialButtonsHeadingShift(headingTarget) {
         if (shiftedInitialHeading && shiftedInitialHeading !== headingTarget) {
           shiftedInitialHeading.style.removeProperty("transform");
-          shiftedInitialHeading.removeAttribute("data-chatgpttoolkit-chatgpt-heading-shift");
+          shiftedInitialHeading.removeAttribute(HEADING_SHIFT_ATTR);
         }
         shiftedInitialHeading = headingTarget;
         if (!headingTarget)
           return;
-        if (headingTarget.style.getPropertyValue("transform") !== `translateY(-${shiftPx}px)`) {
-          headingTarget.style.setProperty("transform", `translateY(-${shiftPx}px)`);
+        const transform = `translateY(-${HEADING_SHIFT_PX}px)`;
+        if (headingTarget.style.getPropertyValue("transform") !== transform) {
+          headingTarget.style.setProperty("transform", transform);
         }
-        if (headingTarget.getAttribute("data-chatgpttoolkit-chatgpt-heading-shift") !== "true") {
-          headingTarget.setAttribute("data-chatgpttoolkit-chatgpt-heading-shift", "true");
+        if (headingTarget.getAttribute(HEADING_SHIFT_ATTR) !== "true") {
+          headingTarget.setAttribute(HEADING_SHIFT_ATTR, "true");
         }
       }
-      function resetInitialButtonsHeadingShift() {
-        setInitialButtonsHeadingShift(null, 0);
-      }
-      function getInitialButtonsHeadingTarget(anchor, bar) {
+      function findHeadingCandidates(scope, selector, anchor, bar) {
         const anchorRect = anchor.getBoundingClientRect();
         const pageCenter = window.innerWidth / 2;
-        const candidates = Array.from(document.querySelectorAll("h1, h2, div, span")).filter((item) => {
+        return Array.from(scope.querySelectorAll(selector)).filter((item) => {
           if (item === bar || item.contains(bar) || bar.contains(item))
             return false;
-          if (anchor.contains(item))
-            return false;
-          if (!isElementVisible(item))
+          if (anchor.contains(item) || item.contains(anchor))
             return false;
           const text = (item.textContent || "").replace(/\s+/g, " ").trim();
           if (text.length < 2 || text.length > 80)
@@ -1633,16 +1673,18 @@
             return false;
           if (rect.top < 80)
             return false;
-          const style = window.getComputedStyle(item);
-          const fontSize = Number.parseFloat(style.fontSize || "0");
-          if (!Number.isFinite(fontSize) || fontSize < 20)
+          if (!isElementVisible(item))
             return false;
-          return true;
+          const fontSize = Number.parseFloat(window.getComputedStyle(item).fontSize || "0");
+          return Number.isFinite(fontSize) && fontSize >= 20;
         }).map((item) => {
           const rect = item.getBoundingClientRect();
-          const centerDistance = Math.abs(rect.left + rect.width / 2 - pageCenter);
-          const verticalDistance = anchorRect.top - rect.bottom;
-          return { item, centerDistance, verticalDistance, area: rect.width * rect.height };
+          return {
+            item,
+            centerDistance: Math.abs(rect.left + rect.width / 2 - pageCenter),
+            verticalDistance: anchorRect.top - rect.bottom,
+            area: rect.width * rect.height
+          };
         }).sort((a, b) => {
           if (Math.abs(a.verticalDistance - b.verticalDistance) > 8) {
             return a.verticalDistance - b.verticalDistance;
@@ -1652,226 +1694,169 @@
           }
           return b.area - a.area;
         });
-        return candidates[0]?.item || null;
       }
-      function rebuild_initial_buttons() {
-        const existing = document.getElementById("custom-chatgpt-initial-buttons");
-        if (!isInitialButtonsAllowedPage()) {
-          existing?.remove();
-          resetInitialButtonsHeadingShift();
-          return;
+      function getInitialButtonsHeadingTarget(anchor, bar) {
+        let scope = anchor.parentElement;
+        while (scope && scope !== document.body && !scope.querySelector("h1, h2")) {
+          scope = scope.parentElement;
         }
-        const stopButton = document.querySelector('button[data-testid="stop-button"]');
-        if (stopButton) {
-          existing?.remove();
-          resetInitialButtonsHeadingShift();
-          return;
+        const root = scope || document;
+        const headings = findHeadingCandidates(root, "h1, h2", anchor, bar);
+        if (headings.length === 0) {
+          return findHeadingCandidates(root, "h1, h2, div, span", anchor, bar)[0]?.item || null;
         }
-        const promptTextarea = getPromptEditor();
-        if (!promptTextarea) {
-          existing?.remove();
-          resetInitialButtonsHeadingShift();
-          return;
-        }
-        const hasAnyMessages = Boolean(document.querySelector('div[data-message-author-role="assistant"], div[data-message-author-role="user"]'));
-        if (hasAnyMessages || !Array.isArray(initialManualSubmitText) || initialManualSubmitText.length === 0) {
-          existing?.remove();
-          resetInitialButtonsHeadingShift();
-          return;
-        }
-        const form = promptTextarea.closest('form[data-type="unified-composer"]') || promptTextarea.closest("form");
-        if (!form) {
-          existing?.remove();
-          resetInitialButtonsHeadingShift();
-          return;
-        }
-        const composerGrid = form.querySelector('div[class*="bg-token-bg-primary"][class*="grid-template-areas"]') || form.querySelector('div[class*="grid-template-areas"]');
-        let headerCandidates = [];
-        if (composerGrid) {
-          try {
-            headerCandidates = Array.from(composerGrid.querySelectorAll(':scope > div[class*="[grid-area:header]"], :scope > div[style*="grid-area: header"]'));
-          } catch {
-            headerCandidates = Array.from(composerGrid.querySelectorAll('div[class*="[grid-area:header]"], div[style*="grid-area: header"]'));
-          }
-        }
-        const headerContainer = headerCandidates.find((el) => el.id !== "custom-chatgpt-initial-buttons") || null;
-        let bar = document.getElementById("custom-chatgpt-initial-buttons");
-        if (!bar) {
-          bar = document.createElement("div");
-          bar.id = "custom-chatgpt-initial-buttons";
-        } else {
-          bar.innerHTML = "";
-        }
-        const barEl = bar;
-        barEl.style.position = "absolute";
-        barEl.style.bottom = "100%";
-        barEl.style.left = "0";
-        barEl.style.display = "flex";
-        barEl.style.flexWrap = "wrap";
-        barEl.style.gap = "0.45rem";
-        barEl.style.alignItems = "center";
-        barEl.style.alignContent = "center";
-        barEl.style.justifyContent = "center";
-        barEl.style.width = "100%";
-        barEl.style.boxSizing = "border-box";
-        barEl.style.padding = "0.15rem 0.25rem 0.15rem 0.25rem";
-        barEl.style.margin = "0";
-        barEl.style.transform = "translateY(-16px)";
-        barEl.style.pointerEvents = "auto";
-        barEl.style.zIndex = "10";
-        if (window.getComputedStyle(form).position === "static") {
-          form.style.setProperty("position", "relative");
-        }
-        if (barEl.parentElement !== form) {
-          form.appendChild(barEl);
-        }
-        barEl.style.gridArea = "";
-        let styleEl = document.getElementById("custom-chatgpt-button-styles");
-        if (!styleEl) {
-          styleEl = document.createElement("style");
-          styleEl.id = "custom-chatgpt-button-styles";
-          styleEl.textContent = `
-          #custom-chatgpt-initial-buttons button {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            align-self: center;
-            flex: 0 0 auto;
-            border-radius: 999px;
-            padding: 0.28rem 0.8rem;
-            margin: 0;
-            font-size: 0.82rem;
-            font-weight: 500;
-            letter-spacing: 0.01em;
-            cursor: pointer;
-            line-height: 1.2;
-            white-space: nowrap;
-            transition: all 140ms ease;
-            backdrop-filter: blur(2px);
-            -webkit-backdrop-filter: blur(2px);
-            
-            /* Light theme (default) */
-            color: rgba(13, 13, 13, 0.88);
-            border: 1px solid rgba(0, 0, 0, 0.15);
-            background: linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.02));
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 1px 2px rgba(0, 0, 0, 0.05);
-          }
-          #custom-chatgpt-initial-buttons button:hover {
-            transform: translateY(-1px);
-            border-color: rgba(0, 0, 0, 0.25);
-            background: linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.04));
-          }
-          /* Dark theme */
-          .dark #custom-chatgpt-initial-buttons button {
-            color: rgba(255, 255, 255, 0.92);
-            border: 1px solid rgba(255, 255, 255, 0.28);
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.06));
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 1px 2px rgba(0, 0, 0, 0.25);
-          }
-          .dark #custom-chatgpt-initial-buttons button:hover {
-            border-color: rgba(255, 255, 255, 0.45);
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.1));
-          }
-        `;
-          document.head.appendChild(styleEl);
-        }
-        initialManualSubmitText.forEach((item) => {
-          const autoPasteEnabled = item.autoPaste === true;
-          const autoSubmitEnabled = item.autoSubmit === true;
-          const btn = document.createElement("button");
-          btn.type = "button";
-          btn.textContent = item.title;
-          if (item.altText) {
-            btn.title = String(item.altText);
-          }
-          bindPromptButton(btn, item, autoPasteEnabled, autoSubmitEnabled, "initial");
-          barEl.append(btn);
-        });
-        const anchorForHeading = headerContainer || form;
-        const headingTarget = getInitialButtonsHeadingTarget(anchorForHeading, barEl);
-        setInitialButtonsHeadingShift(headingTarget, 48);
+        const heading = headings[0].item;
+        const wrapped = findHeadingCandidates(root, "div", anchor, bar).find((candidate) => candidate.item.contains(heading) && candidate.verticalDistance <= headings[0].verticalDistance + 8);
+        return wrapped?.item || heading;
       }
-      function getAssistantTurnBlocks() {
-        const turnArticles = Array.from(document.querySelectorAll('article[data-testid^="conversation-turn-"][data-turn="assistant"]'));
-        if (turnArticles.length > 0)
-          return turnArticles;
-        const genericArticles = Array.from(document.querySelectorAll('article[data-turn="assistant"]'));
-        if (genericArticles.length > 0)
-          return genericArticles;
-        return Array.from(document.querySelectorAll('div[data-message-author-role="assistant"]'));
+      function removeInitialButtons() {
+        document.getElementById(INITIAL_BAR_ID)?.remove();
+        renderedInitialSignature = "";
+        setInitialButtonsHeadingShift(null);
       }
-      function rebuild_buttons() {
-        const talkBlocks = getAssistantTurnBlocks();
-        let buttonsAreas = document.querySelectorAll("#custom-chatgpt-magic-box-buttons");
-        const stopButton = document.querySelector('button[data-testid="stop-button"]');
-        if (stopButton) {
-          buttonsAreas?.forEach((item) => {
-            item.remove();
-          });
+      function rebuildInitialButtons() {
+        if (!isInitialButtonsAllowedPage() || initialPrompts.length === 0 || hasConversationMessages() || isGenerating()) {
+          removeInitialButtons();
           return;
         }
-        const promptTextarea = getPromptEditor();
-        if (!promptTextarea) {
-          buttonsAreas?.forEach((item) => {
-            item.remove();
-          });
+        const editor = getPromptEditor();
+        const form = getComposerForm() || editor?.closest("form") || null;
+        if (!editor || !form) {
+          removeInitialButtons();
           return;
         }
-        if (lastBlock !== talkBlocks[talkBlocks.length - 1]) {
-          buttonsAreas?.forEach((item) => {
-            item.remove();
-          });
+        const signature = getReadyPromptsSignature(initialPrompts);
+        let bar = document.getElementById(INITIAL_BAR_ID);
+        const isUpToDate = bar?.parentElement === form && signature === renderedInitialSignature;
+        if (!isUpToDate) {
+          ensureButtonStyles();
+          if (!bar) {
+            bar = document.createElement("div");
+            bar.id = INITIAL_BAR_ID;
+          }
+          bar.replaceChildren(...initialPrompts.map((item) => createPromptButton(item, "initial")));
+          if (window.getComputedStyle(form).position === "static") {
+            form.style.setProperty("position", "relative");
+          }
+          if (bar.parentElement !== form)
+            form.appendChild(bar);
+          renderedInitialSignature = signature;
         }
-        buttonsAreas = document.querySelectorAll("#custom-chatgpt-magic-box-buttons");
-        if (buttonsAreas.length > 0) {
-          return;
+        if (!isUpToDate || !shiftedInitialHeading?.isConnected) {
+          setInitialButtonsHeadingShift(getInitialButtonsHeadingTarget(form, bar));
         }
-        if (!talkBlocks || talkBlocks.length === 0) {
-          buttonsAreas?.forEach((item) => {
-            item.remove();
-          });
-          return;
-        }
-        const buttonsArea = document.createElement("div");
-        buttonsArea.id = "custom-chatgpt-magic-box-buttons";
-        buttonsArea.classList.value = "custom-buttons-area text-base m-auto md:max-w-2xl lg:max-w-2xl xl:max-w-3xl p-4 md:py-6 flex lg:px-0";
-        buttonsArea.style.overflowY = "auto";
-        buttonsArea.style.display = "flex";
-        buttonsArea.style.flexWrap = "wrap";
-        buttonsArea.style.paddingTop = "0.75rem";
-        buttonsArea.style.paddingLeft = "calc(30px + 0.75rem)";
-        defaultManualSubmitText.forEach((item) => {
-          const autoPasteEnabled = item.autoPaste === true;
-          const autoSubmitEnabled = item.autoSubmit === true;
-          const customButton = document.createElement("button");
-          customButton.style.border = "1px solid #d1d5db";
-          customButton.style.borderRadius = "5px";
-          customButton.style.padding = "0.5rem 1rem";
-          customButton.style.margin = "0.5rem";
-          customButton.title = String(item.altText);
-          customButton.innerText = item.title;
-          bindPromptButton(customButton, item, autoPasteEnabled, autoSubmitEnabled, "follow-up");
-          buttonsArea.append(customButton);
-        });
-        if (talkBlocks.length > 0) {
-          lastBlock = talkBlocks[talkBlocks.length - 1];
-          lastBlock.after(buttonsArea);
-        }
-        const mdLabels = Array.from(document.querySelectorAll("div")).filter((el) => (el.textContent || "").trim().toLowerCase() === "markdown");
-        mdLabels.forEach((mdLabel) => {
-          add_markmap_button(mdLabel);
-        });
       }
-      const start = () => {
-        obs.observe(document.body, {
+      function getLegacyAssistantBlocks() {
+        for (const selector of [
+          'article[data-testid^="conversation-turn-"][data-turn="assistant"]',
+          'article[data-turn="assistant"]',
+          'div[data-message-author-role="assistant"]'
+        ]) {
+          const blocks = Array.from(document.querySelectorAll(selector));
+          if (blocks.length > 0)
+            return blocks;
+        }
+        return [];
+      }
+      function findActionBarColumn(unit, boundary) {
+        let column = null;
+        let current = unit;
+        for (let depth = 0;depth < 12 && current.parentElement && current !== boundary; depth += 1) {
+          const parent = current.parentElement;
+          for (let sibling = current.nextElementSibling;sibling; sibling = sibling.nextElementSibling) {
+            if (sibling.id !== FOLLOW_UP_AREA_ID && sibling.querySelector("button")) {
+              column = parent;
+              break;
+            }
+          }
+          current = parent;
+        }
+        return column;
+      }
+      function getFollowUpMount() {
+        const units = document.querySelectorAll(ASSISTANT_UNIT_SELECTOR);
+        if (units.length > 0) {
+          const unit = units[units.length - 1];
+          const column = findActionBarColumn(unit, unit.closest("[data-turn-key]"));
+          if (!column)
+            return null;
+          return { anchor: unit, mount: (area) => column.appendChild(area) };
+        }
+        const blocks = getLegacyAssistantBlocks();
+        const lastBlock = blocks[blocks.length - 1];
+        if (!lastBlock)
+          return null;
+        return {
+          anchor: lastBlock,
+          mount: (area) => {
+            area.classList.add("chatgpttoolkit-legacy-area", "md:max-w-2xl", "lg:max-w-2xl", "xl:max-w-3xl");
+            lastBlock.after(area);
+          }
+        };
+      }
+      function removeFollowUpButtons() {
+        document.querySelectorAll(`#${FOLLOW_UP_AREA_ID}`).forEach((item) => item.remove());
+        followUpAnchor = null;
+        renderedFollowUpSignature = "";
+      }
+      function rebuildFollowUpButtons() {
+        if (followUpPrompts.length === 0 || isGenerating() || !getPromptEditor()) {
+          removeFollowUpButtons();
+          return;
+        }
+        const target = getFollowUpMount();
+        if (!target) {
+          removeFollowUpButtons();
+          return;
+        }
+        const signature = getReadyPromptsSignature(followUpPrompts);
+        const existing = document.getElementById(FOLLOW_UP_AREA_ID);
+        if (existing && followUpAnchor === target.anchor && renderedFollowUpSignature === signature) {
+          addMarkmapButtons();
+          return;
+        }
+        removeFollowUpButtons();
+        ensureButtonStyles();
+        const area = document.createElement("div");
+        area.id = FOLLOW_UP_AREA_ID;
+        area.className = "custom-buttons-area";
+        area.append(...followUpPrompts.map((item) => createPromptButton(item, "follow-up")));
+        target.mount(area);
+        followUpAnchor = target.anchor;
+        renderedFollowUpSignature = signature;
+        addMarkmapButtons();
+      }
+      let rebuildTimer;
+      const observer = new MutationObserver(() => {
+        if (location.pathname.startsWith("/gpts/editor"))
+          return;
+        scheduleRebuild();
+      });
+      function observe() {
+        observer.observe(document.body, {
           childList: true,
+          subtree: true,
           attributes: true,
-          subtree: true
+          attributeFilter: ["aria-label", "hidden"]
         });
-      };
-      const stop = () => {
-        obs.disconnect();
-      };
+      }
+      function rebuildAll() {
+        observer.disconnect();
+        try {
+          rebuildInitialButtons();
+          rebuildFollowUpButtons();
+        } finally {
+          observe();
+        }
+      }
+      function scheduleRebuild() {
+        if (rebuildTimer !== undefined)
+          return;
+        rebuildTimer = setTimeout(() => {
+          rebuildTimer = undefined;
+          rebuildAll();
+        }, REBUILD_THROTTLE_MS);
+      }
       if (chrome?.storage?.onChanged) {
         chrome.storage.onChanged.addListener((changes, areaName) => {
           if (areaName !== "local")
@@ -1879,23 +1864,60 @@
           const change = changes?.[CUSTOM_PROMPTS_KEY];
           if (!change)
             return;
-          const nextFollowUp = Array.isArray(change.newValue) ? buildFollowUpButtonsFromPrompts(change.newValue) : [...localeDefaultManualSubmitText];
-          const nextInitial = Array.isArray(change.newValue) ? buildInitialButtonsFromPrompts(change.newValue) : [];
-          defaultManualSubmitText = nextFollowUp;
-          initialManualSubmitText = nextInitial;
-          document.querySelectorAll("#custom-chatgpt-magic-box-buttons")?.forEach((item) => item.remove());
-          document.querySelectorAll("#custom-chatgpt-initial-buttons")?.forEach((item) => item.remove());
-          rebuild_initial_buttons();
-          rebuild_buttons();
+          const nextPrompts = Array.isArray(change.newValue) ? change.newValue : null;
+          followUpPrompts = nextPrompts ? selectReadyPrompts(nextPrompts, false) : localeDefaultFollowUps;
+          initialPrompts = nextPrompts ? selectReadyPrompts(nextPrompts, true) : [];
+          removeInitialButtons();
+          removeFollowUpButtons();
+          rebuildAll();
         });
       }
-      rebuild_initial_buttons();
-      rebuild_buttons();
-      start();
+      rebuildAll();
     };
     setTimeout(() => {
       StartMonitoringResponse();
     }, 1000);
+    function maybePasteImageIntoChatGPT() {
+      const textarea = getPromptEditor();
+      if (!textarea)
+        return Promise.resolve();
+      state.pastingImage = true;
+      if (debug)
+        console.log("[ChatGPTToolkit][chatgpt] pasting clipboard image");
+      return ctx.delay(300).then(() => ctx.fetchClipboardImageAndSimulatePaste(textarea)).then(() => {
+        if (debug)
+          console.log("[ChatGPTToolkit][chatgpt] clipboard image pasted");
+        state.pasteImage = false;
+        state.pastingImage = false;
+      });
+    }
+    function maybeAutoSubmitChatGPT() {
+      const sendButton = getSendButton();
+      if (!isSendButtonEnabled(sendButton))
+        return;
+      if (debug)
+        console.log("[ChatGPTToolkit][chatgpt] auto submit from URL");
+      sendButton.click();
+      state.autoSubmit = false;
+    }
+    function startUrlAutomationLoop() {
+      if (!state.autoSubmit && !state.pasteImage)
+        return;
+      const startedAt = Date.now();
+      const timer = setInterval(() => {
+        if (!state.autoSubmit && !state.pasteImage || Date.now() - startedAt > 60000) {
+          clearInterval(timer);
+          return;
+        }
+        if (state.pastingImage)
+          return;
+        if (state.pasteImage) {
+          maybePasteImageIntoChatGPT();
+          return;
+        }
+        maybeAutoSubmitChatGPT();
+      }, 60);
+    }
     let autoFillInProgress = false;
     const checkForTextareaInput = setInterval(async () => {
       const textarea = getPromptEditor();
@@ -1903,68 +1925,9 @@
         autoFillInProgress = true;
         clearInterval(checkForTextareaInput);
         await AutoFillFromURI(textarea);
+        startUrlAutomationLoop();
       }
     }, 60);
-    async function maybePasteImageIntoChatGPT() {
-      if (!state.pasteImage || state.pastingImage)
-        return;
-      const textarea = getPromptEditor();
-      if (!textarea)
-        return;
-      state.pastingImage = true;
-      if (debug)
-        console.log("貼上圖片中");
-      await ctx.delay(300);
-      await ctx.fetchClipboardImageAndSimulatePaste(textarea);
-      if (debug)
-        console.log("貼上圖片完成");
-      state.pasteImage = false;
-      state.pastingImage = false;
-    }
-    function maybeAutoSubmitChatGPT() {
-      if (!state.autoSubmit || state.pasteImage)
-        return;
-      const sendButton = getSendButton();
-      if (isSendButtonEnabled(sendButton)) {
-        if (debug)
-          console.log("自動提交按鈕被點擊");
-        sendButton.click();
-        state.autoSubmit = false;
-      }
-    }
-    setInterval(async () => {
-      await maybePasteImageIntoChatGPT();
-      maybeAutoSubmitChatGPT();
-    }, 60);
-    function isSendButtonEnabled(sendButton) {
-      if (!sendButton)
-        return false;
-      if (sendButton.disabled)
-        return false;
-      if (sendButton.getAttribute("aria-disabled") === "true")
-        return false;
-      return true;
-    }
-    function getSendButton() {
-      const selectors = [
-        'button[data-testid="composer-send-button"]',
-        'button[data-testid="send-button"]',
-        'button[data-testid*="send-button"]',
-        'button[aria-label*="Submit"]',
-        'button[aria-label*="Send"]',
-        'button[aria-label*="傳送"]',
-        'button[aria-label*="送出"]'
-      ];
-      for (const selector of selectors) {
-        const buttons = Array.from(document.querySelectorAll(selector));
-        const enabledButton = buttons.find((button) => isElementVisible(button) && !button.disabled);
-        if (enabledButton)
-          return enabledButton;
-        if (buttons.length > 0)
-          return buttons[0];
-      }
-      return null;
-    }
     function autoSubmitWhenReady() {
       if (debug)
         console.log("[ChatGPTToolkit][chatgpt] autoSubmitWhenReady start");
@@ -2047,132 +2010,153 @@
         }
       });
     }
+    function findEditMessageButton(userMessage) {
+      const buttons = Array.from(userMessage.querySelectorAll("button"));
+      const labelled = buttons.find((button) => EDIT_LABEL_PATTERN.test(button.getAttribute("aria-label") || button.title || ""));
+      if (labelled)
+        return labelled;
+      return userMessage.matches('div[data-message-author-role="user"]') ? buttons[0] || null : null;
+    }
+    function focusMessageEditor(scope) {
+      ctx.startRetryInterval({
+        intervalMs: 50,
+        retries: 20,
+        tick: () => {
+          const editor = Array.from(scope.querySelectorAll('textarea, [contenteditable="true"]')).find((el) => isElementVisible(el));
+          if (!editor)
+            return false;
+          editor.focus();
+          placeCaretAtEnd(editor);
+          return true;
+        }
+      });
+    }
     document.body.addEventListener("dblclick", (event) => {
       const target = event.target;
       if (!(target instanceof HTMLElement))
         return;
-      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") {
+      if (target.closest('input, textarea, [contenteditable="true"], button, a'))
         return;
-      }
-      const closestDIV = target.closest('div[data-message-author-role="user"]');
-      if (closestDIV) {
-        const btns = Array.from(closestDIV.querySelectorAll("button"));
-        if (btns.length > 0) {
-          const btn = btns[0];
-          btn.click();
-          setTimeout(() => {
-            const txt = closestDIV.querySelector("textarea");
-            if (txt) {
-              txt.selectionStart = txt.selectionEnd = txt.value.length;
-              txt.focus();
-            }
-          }, 0);
-        }
-      }
+      const userMessage = target.closest(USER_MESSAGE_SELECTOR);
+      if (!userMessage)
+        return;
+      const editButton = findEditMessageButton(userMessage);
+      if (!editButton)
+        return;
+      editButton.click();
+      focusMessageEditor(userMessage.closest("[data-turn-key]") || userMessage);
     });
-    document.body.addEventListener("keyup", (event) => {
-      if (event.ctrlKey && event.key === "Enter") {
-        const target = event.target;
-        if (!(target instanceof HTMLTextAreaElement))
+    function addMarkmapButtons() {
+      document.querySelectorAll(`[data-markdown-copy="code-block"]:not([${MARKMAP_SCANNED_ATTR}])`).forEach((block) => {
+        block.setAttribute(MARKMAP_SCANNED_ATTR, "");
+        const header = block.querySelector(':scope > [data-markdown-copy="exclude"]');
+        const codeEl = block.querySelector("code");
+        const content = codeEl?.parentElement;
+        if (!header || !codeEl || !content || content === block || header.contains(content))
           return;
-        const container = target.parentElement?.parentElement;
-        const sibling = container?.nextElementSibling;
-        const sendButton = sibling?.querySelector("button.btn-primary");
-        if (sendButton) {
-          sendButton.click();
-        }
-      }
-    });
-    function add_markmap_button(mdLabel) {
-      if (!mdLabel)
-        return;
-      const codeBlock = mdLabel.nextElementSibling?.nextElementSibling;
-      if (debug)
-        console.debug("Code block found:", codeBlock);
-      if (!(codeBlock instanceof HTMLElement))
-        return;
-      const codeEl = codeBlock.querySelector("code");
-      if (debug)
-        console.debug("Code element found:", codeEl);
-      if (!codeEl)
-        return;
-      const btn = mdLabel.nextElementSibling?.querySelector("button");
-      if (debug)
-        console.debug("Button found:", btn);
-      const containerDiv = btn?.parentElement?.parentElement;
-      if (!containerDiv)
-        return;
-      if (containerDiv.querySelector('button[aria-label="Mindmap"]'))
-        return;
-      if (debug)
-        console.debug("Wrapper div found:", containerDiv);
-      const spanHtml = '<span class="" data-state="closed"><button class="flex gap-1 items-center select-none px-4 py-1" aria-label="Mindmap"><svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="12" viewBox="0 0 128 128" enable-background="new 0 0 128 128" xml:space="preserve"><path fill="none" stroke="#010100" stroke-width="2" opacity="1.000000" d="M76.688866,109.921104 C88.050018,115.331482 100.131790,117.192719 112.584740,117.125877 C117.595360,117.098984 120.788620,114.305405 121.104477,109.904366 C121.439659,105.234016 118.474678,101.801880 113.419678,101.228683 C111.275566,100.985550 109.030663,101.381645 106.940926,100.953491 C99.494377,99.427811 91.778465,98.498268 84.753601,95.805984 C74.877594,92.020988 69.684692,83.908684 68.234291,73.078300 C70.384644,73.078300 72.207634,73.078644 74.030617,73.078247 C86.858322,73.075493 99.686478,73.133377 112.513527,73.040070 C117.709305,73.002274 120.970772,69.862900 121.039032,65.258537 C121.107437,60.644268 117.884323,57.419498 112.785179,57.093300 C111.125771,56.987152 109.454391,57.064369 107.788483,57.064228 C94.648399,57.063137 81.508308,57.063622 68.322067,57.063622 C69.945129,45.040371 75.792297,36.744892 87.154800,33.278618 C95.306870,30.791729 104.059700,30.155739 112.593239,29.080770 C117.983620,28.401745 121.287643,25.539717 121.122673,20.684353 C120.966324,16.082565 117.653831,12.969757 112.453003,13.059167 C107.634552,13.142003 102.803261,13.490462 98.013023,14.033926 C71.598251,17.030745 56.428867,30.937811 51.926388,56.118473 C51.879574,56.380272 51.563141,56.593864 51.183678,57.063988 C40.724709,57.063988 30.076698,57.042259 19.428833,57.072033 C12.907690,57.090271 8.991345,60.245888 9.110775,65.284119 C9.227548,70.210205 12.886068,73.054855 19.251369,73.070534 C30.057989,73.097160 40.864723,73.077866 51.840267,73.077866 C53.987484,89.401680 61.400532,101.920280 76.688866,109.921104 z"/><path fill="#F5E41C" opacity="1.000000" stroke="none" d="M76.354416,109.751411 C61.400532,101.920280 53.987484,89.401680 51.840267,73.077866 C40.864723,73.077866 30.057989,73.097160 19.251369,73.070534 C12.886068,73.054855 9.227548,70.210205 9.110775,65.284119 C8.991345,60.245888 12.907690,57.090271 19.428833,57.072033 C30.076698,57.042259 40.724709,57.063988 51.183678,57.063988 C51.563141,56.593864 51.879574,56.380272 51.926388,56.118473 C56.428867,30.937811 71.598251,17.030745 98.013023,14.033926 C102.803261,13.490462 107.634552,13.142003 112.453003,13.059167 C117.653831,12.969757 120.966324,16.082565 121.122673,20.684353 C121.287643,25.539717 117.983620,28.401745 112.593239,29.080770 C104.059700,30.155739 95.306870,30.791729 87.154800,33.278618 C75.792297,36.744892 69.945129,45.040371 68.322067,57.063622 C81.508308,57.063622 94.648399,57.063137 107.788483,57.064228 C109.454391,57.064369 111.125771,56.987152 112.785179,57.093300 C117.884323,57.419498 121.107437,60.644268 121.039032,65.258537 C120.970772,69.862900 117.709305,73.002274 112.513527,73.040070 C99.686478,73.133377 86.858322,73.075493 74.030617,73.078247 C72.207634,73.078644 70.384644,73.078300 68.234291,73.078300 C69.684692,83.908684 74.877594,92.020988 84.753601,95.805984 C91.778465,98.498268 99.494377,99.427811 106.940926,100.953491 C109.030663,101.381645 111.275566,100.985550 113.419678,101.228683 C118.474678,101.801880 121.439659,105.234016 121.104477,109.904366 C120.788620,114.305405 117.595360,117.098984 112.584740,117.125877 C100.131790,117.192719 88.050018,115.331482 76.354416,109.751411 z"/></svg>心智圖</button></span>';
-      containerDiv.insertAdjacentHTML("afterbegin", spanHtml);
-      if (debug)
-        console.debug("Inserted Mindmap button HTML into wrapperDiv:", containerDiv);
-      const mindmapBtn = containerDiv.querySelector('button[aria-label="Mindmap"]');
-      if (debug)
-        console.debug("Mindmap button found:", mindmapBtn);
-      if (!mindmapBtn)
-        return;
-      let isActive = false;
-      mindmapBtn.addEventListener("click", () => {
-        if (debug)
-          console.debug("Mindmap button clicked. Current active state:", isActive);
-        mdLabel.scrollIntoView({ behavior: "smooth", block: "start" });
-        let mm = null;
-        if (!isActive) {
-          let handleFullscreenChange = function() {
-            setTimeout(() => {
-              mdLabel.scrollIntoView({ behavior: "smooth", block: "start" });
-              mm?.fit();
-            }, 60);
-          };
-          if (debug)
-            console.debug("Creating mindmap...");
-          const svgHeight = Math.min(document.documentElement.clientHeight * 3 / 5, codeBlock.clientHeight || document.documentElement.clientHeight);
-          const roundedSvgHeight = Math.round(svgHeight / 10) * 10;
-          codeBlock.innerHTML = `<svg style="width: ${codeBlock.clientWidth}px; height: ${roundedSvgHeight}px"></svg>`;
-          const svgEl = codeBlock.querySelector("svg");
-          if (!svgEl)
-            return;
-          svgEl.addEventListener("dblclick", async () => {
-            if (debug)
-              console.debug("SVG element double-clicked. Requesting fullscreen...");
-            try {
-              if (svgEl.requestFullscreen) {
-                await svgEl.requestFullscreen();
-              } else if (svgEl.webkitRequestFullscreen) {
-                await svgEl.webkitRequestFullscreen();
-              } else if (svgEl.msRequestFullscreen) {
-                await svgEl.msRequestFullscreen();
-              }
-            } catch (error) {
-              if (debug)
-                console.error("Error attempting to enter fullscreen mode:", error);
-            }
-          });
-          document.addEventListener("fullscreenchange", handleFullscreenChange);
-          const transformer = new window.markmap.Transformer;
-          const { root } = transformer.transform(codeEl.textContent);
-          const jsonOptions = {
-            autoFit: true,
-            duration: 300
-          };
-          const options = window.markmap.deriveOptions(jsonOptions);
-          if (document.documentElement.classList.contains("dark")) {
-            document.documentElement.classList.add("markmap-dark");
+        const isMarkdown = Array.from(header.children).some((el) => /^(markdown|md)$/i.test((el.textContent || "").trim()));
+        if (!isMarkdown)
+          return;
+        const actions = header.querySelector("button")?.closest("span")?.parentElement || header;
+        attachMarkmapToggle({ actions, content, codeEl, scrollTarget: block });
+      });
+      getLegacyMarkdownLabels().forEach((mdLabel) => {
+        const codeBlock = mdLabel.nextElementSibling?.nextElementSibling;
+        if (!(codeBlock instanceof HTMLElement))
+          return;
+        const codeEl = codeBlock.querySelector("code");
+        const actions = mdLabel.nextElementSibling?.querySelector("button")?.parentElement?.parentElement;
+        if (!codeEl || !actions)
+          return;
+        attachMarkmapToggle({ actions, content: codeBlock, codeEl, scrollTarget: mdLabel });
+      });
+    }
+    function getLegacyMarkdownLabels() {
+      const labels = [];
+      document.querySelectorAll('article[data-turn="assistant"], div[data-message-author-role="assistant"]').forEach((block) => {
+        block.querySelectorAll("div").forEach((div) => {
+          if (div.childElementCount === 0 && (div.textContent || "").trim().toLowerCase() === "markdown") {
+            labels.push(div);
           }
-          mm = window.markmap.Markmap.create(svgEl, options, root);
-          isActive = true;
-        } else {
-          if (debug)
-            console.debug("Resetting code block to original content...");
-          const mmHandle = mm;
-          mmHandle?.destroy();
-          codeBlock.innerHTML = `<code>${codeEl.textContent}</code>`;
-          isActive = false;
+        });
+      });
+      return labels;
+    }
+    function attachMarkmapToggle({
+      actions,
+      content,
+      codeEl,
+      scrollTarget
+    }) {
+      if (actions.querySelector('button[aria-label="Mindmap"]'))
+        return;
+      ensureButtonStyles();
+      const mindmapBtn = document.createElement("button");
+      mindmapBtn.type = "button";
+      mindmapBtn.className = "chatgpttoolkit-markmap-btn";
+      mindmapBtn.setAttribute("aria-label", "Mindmap");
+      mindmapBtn.setAttribute("aria-pressed", "false");
+      mindmapBtn.innerHTML = MINDMAP_ICON_SVG;
+      const label = document.createElement("span");
+      label.textContent = chrome?.i18n?.getMessage?.("content_mindmap_button") || "心智圖";
+      mindmapBtn.appendChild(label);
+      actions.prepend(mindmapBtn);
+      let mm = null;
+      let wrapper = null;
+      const onFullscreenChange = () => {
+        setTimeout(() => {
+          scrollTarget.scrollIntoView({ behavior: "smooth", block: "start" });
+          mm?.fit();
+        }, 60);
+      };
+      const close = () => {
+        mm?.destroy();
+        mm = null;
+        wrapper?.remove();
+        wrapper = null;
+        content.style.removeProperty("display");
+        document.removeEventListener("fullscreenchange", onFullscreenChange);
+        mindmapBtn.setAttribute("aria-pressed", "false");
+      };
+      mindmapBtn.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        scrollTarget.scrollIntoView({ behavior: "smooth", block: "start" });
+        if (wrapper) {
+          close();
+          return;
         }
+        const markmap = window.markmap;
+        if (!markmap)
+          return;
+        const viewportHeight = document.documentElement.clientHeight;
+        const height = Math.max(240, Math.min(viewportHeight * 3 / 5, content.clientHeight || viewportHeight));
+        const width = content.clientWidth || scrollTarget.clientWidth;
+        const svgEl = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svgEl.style.width = `${width}px`;
+        svgEl.style.height = `${Math.round(height / 10) * 10}px`;
+        svgEl.addEventListener("dblclick", async () => {
+          try {
+            if (svgEl.requestFullscreen) {
+              await svgEl.requestFullscreen();
+            } else if (svgEl.webkitRequestFullscreen) {
+              await svgEl.webkitRequestFullscreen();
+            }
+          } catch (error) {
+            if (debug)
+              console.error("[ChatGPTToolkit][chatgpt] fullscreen failed", error);
+          }
+        });
+        wrapper = document.createElement("div");
+        wrapper.className = "chatgpttoolkit-markmap";
+        wrapper.appendChild(svgEl);
+        content.style.setProperty("display", "none");
+        content.after(wrapper);
+        document.documentElement.classList.toggle("markmap-dark", isDarkTheme());
+        const { root } = new markmap.Transformer().transform(codeEl.textContent || "");
+        mm = markmap.Markmap.create(svgEl, markmap.deriveOptions({ autoFit: true, duration: 300 }), root);
+        document.addEventListener("fullscreenchange", onFullscreenChange);
+        mindmapBtn.setAttribute("aria-pressed", "true");
       });
     }
   }
@@ -2197,4 +2181,4 @@
   runContentScript();
 })();
 
-//# debugId=3BB7C6C9399E437564756E2164756E21
+//# debugId=BEAD9039910AF1B764756E2164756E21
