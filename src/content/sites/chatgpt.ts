@@ -747,27 +747,16 @@ export function initChatGPT(ctx: ContentContext) {
             backdrop-filter: blur(2px);
             -webkit-backdrop-filter: blur(2px);
             
-            /* Light theme (default) */
-            color: rgba(13, 13, 13, 0.88);
-            border: 1px solid rgba(0, 0, 0, 0.15);
-            background: linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.02));
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 1px 2px rgba(0, 0, 0, 0.05);
+            /* Inherit ChatGPT's current foreground instead of guessing its theme class. */
+            color: inherit;
+            border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
+            background: color-mix(in srgb, currentColor 6%, transparent);
+            box-shadow: 0 1px 2px color-mix(in srgb, currentColor 10%, transparent);
           }
           #custom-chatgpt-initial-buttons button:hover {
             transform: translateY(-1px);
-            border-color: rgba(0, 0, 0, 0.25);
-            background: linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.04));
-          }
-          /* Dark theme */
-          .dark #custom-chatgpt-initial-buttons button {
-            color: rgba(255, 255, 255, 0.92);
-            border: 1px solid rgba(255, 255, 255, 0.28);
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.06));
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 1px 2px rgba(0, 0, 0, 0.25);
-          }
-          .dark #custom-chatgpt-initial-buttons button:hover {
-            border-color: rgba(255, 255, 255, 0.45);
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.1));
+            border-color: color-mix(in srgb, currentColor 45%, transparent);
+            background: color-mix(in srgb, currentColor 12%, transparent);
           }
         `;
         document.head.appendChild(styleEl);
