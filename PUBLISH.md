@@ -1,10 +1,16 @@
-# Pubilsh Notes
+# Publish Notes
 
-1. Simply zip whole folder as a zip file such as `ChatGPTToolkitExtension_v0.43.0.zip`
+Pushing to `main` runs `.github/workflows/publish.yml`, which builds, zips and uploads to the Chrome Web Store. For a manual release:
+
+1. Build and zip with the release file list:
 
     ```sh
-    7z a ChatGPTToolkitExtension_v0.43.0.zip _locales images scripts CHANGELOG.md manifest.json README.md
+    bun run pack:release
     ```
+
+    It needs `7z` on the PATH, builds with debug logging off and creates `ChatGPTToolkitExtension_vX.Y.Z.zip`. The file list lives in `tools/pack-release.mjs` and `.github/workflows/publish.yml`; keep the two in sync.
+
+    The debug-off build also rewrites the committed `scripts/content.js`; don't commit that change (run `bun run build` to restore it).
 
 2. Publish to Chrome Web Store.
 

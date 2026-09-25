@@ -11,10 +11,9 @@ Manifest V3 Chrome/Edge extension. Injects one content script to AI sites (ChatG
 - Markmap: detect “Markdown” label → toggle button renders next code fence via `window.markmap`; adds `markmap-dark` on dark theme. Locales in `_locales/*`; default `zh_TW`.
 
 ## Dev workflows
-- No build/tests; load folder as Unpacked Extension. Edit JS/JSON directly.
-- Debug in page DevTools; `debug = true` in `content.js`; DOM drifts are common (see CHANGELOG) — fix selectors.
-- Release: bump `manifest.json.version`, zip required files, upload (see PUBLISH.md, keep CHANGELOG):
-  7z a ChatGPTToolkitExtension_vX.Y.Z.zip _locales images scripts CHANGELOG.md manifest.json README.md
+- Edit `src/` and run `bun run build` and `bun test` (see AGENTS.md); `scripts/content.js`, `background.js` and `link-builder.js` are build output. Load the repo folder as an unpacked extension.
+- Debug in page DevTools; debug logging is on unless built with `CHATGPT_TOOLKIT_DEBUG=false`; DOM drifts are common (see CHANGELOG) — fix selectors.
+- Release: bump `manifest.json.version` and update CHANGELOG; pushing to `main` runs `.github/workflows/publish.yml` (build, zip, Chrome Web Store upload). For a local zip run `bun run pack:release` (see PUBLISH.md).
 
 ## Patterns
 - Branch per hostname with early `return` to avoid default path.
