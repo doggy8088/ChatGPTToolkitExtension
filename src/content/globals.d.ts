@@ -1,18 +1,6 @@
 export {};
 
 declare global {
-  interface ChatGPTToolkitContentUtils {
-    parseToolkitHash: (
-      hash: string,
-      locationSearch: string
-    ) => {
-      prompt: string | null;
-      autoSubmit: boolean;
-      pasteImage: boolean;
-      tool: string;
-    };
-  }
-
   interface MarkmapInstance {
     destroy: () => void;
     fit: () => void;
@@ -31,7 +19,6 @@ declare global {
   }
 
   interface Window {
-    ChatGPTToolkitContentUtils?: ChatGPTToolkitContentUtils;
     markmap?: MarkmapApi;
   }
 

@@ -49,7 +49,7 @@ jobs:
       - name: 建立 ZIP 封裝檔
         run: |
           $filePath = "ChatGPTToolkitExtension_v${{ steps.get_version.outputs.version }}.zip"
-          7z a $filePath _locales images scripts styles dist options.html CHANGELOG.md manifest.json README.md
+          7z a $filePath _locales images scripts styles dist options.html link-builder.html CHANGELOG.md manifest.json README.md
 
       - name: 上傳 Release 附件
         uses: softprops/action-gh-release@v1

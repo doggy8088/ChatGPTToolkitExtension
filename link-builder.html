@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title data-i18n="link_builder_page_title" data-i18n-args="chatgpttoolkit_name"></title>
+    <link rel="icon" href="images/icon-32.png">
+    <!-- Applies the stored theme before first paint (classic script, must stay synchronous). -->
+    <script src="dist/theme-init.js"></script>
+    <link rel="stylesheet" href="styles/common.css">
+    <style>
+        /* Link builder styles; the shared tokens and components live in styles/common.css. */
+
+        /* Second hue for the prompt inside URLs (the options page's follow-up indigo). */
+        :root,
+        :root[data-theme="light"] {
+            --prompt-ink: #4f46c8;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                --prompt-ink: #b3aeff;
+            }
+        }
+
+        :root[data-theme="dark"] {
+            --prompt-ink: #b3aeff;
+        }
+
+        .app-header__inner {
+            max-width: 1160px;
+        }
+
+        /* ------------------------------------------------------------------
+           Page layout: settings on the left, the live result on the right
+           ------------------------------------------------------------------ */
+        .builder {
+            flex: 1 0 auto;
+            width: 100%;
+            max-width: 1160px;
+            margin: 0 auto;
+            padding: 28px 24px 48px;
+        }
+
+        .builder__intro {
+            max-width: 68ch;
+            margin-bottom: 22px;
+            color: var(--ink-2);
+        }
+
+        .builder__grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(360px, 420px);
+            grid-template-areas:
+                "service result"
+                "prompt result"
+                "behavior result"
+                "search result";
+            align-items: start;
+            gap: 16px 24px;
+        }
+
+        .builder__service {
+            grid-area: service;
+            container-type: inline-size;
+        }
+
+        .builder__prompt {
+            grid-area: prompt;
+        }
+
+        .builder__behavior {
+            grid-area: behavior;
+        }
+
+        .builder__search {
+            grid-area: search;
+        }
+
+        .builder__result {
+            grid-area: result;
+        }
+
+        @media (min-width: 1000px) and (min-height: 700px) {
+            .builder__result {
+                position: sticky;
+                top: 84px;
+            }
+        }
+
+        .card {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            min-width: 0;
+            padding: 20px;
+            border: 1px solid var(--line);
+            border-radius: var(--radius-lg);
+            background: var(--surface);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .card__head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .card__heading {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            min-width: 0;
+        }
+
+        .card__title {
+            font-family: var(--font-display);
+            font-size: 16px;
+            font-weight: 700;
+            line-height: 1.35;
+            letter-spacing: -0.01em;
+        }
+
+        .card__desc {
+            color: var(--ink-2);
+            font-size: 13px;
+        }
+
+        .field__error {
+            display: flex;
+            align-items: flex-start;
+            gap: 6px;
+            color: var(--danger);
+            font-size: 12.5px;
+            line-height: 1.45;
+        }
+
+        .field__error .icon {
+            width: 15px;
+            height: 15px;
+            margin-top: 1px;
+        }
+
+        .input[aria-invalid="true"],
+        .textarea[aria-invalid="true"] {
+            border-color: var(--danger);
+        }
+
+        .input[aria-invalid="true"]:focus,
+        .textarea[aria-invalid="true"]:focus {
+            border-color: var(--danger);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 22%, transparent);
+        }
+
+        .input--mono {
+            font-family: var(--font-mono);
+            font-size: 13px;
+        }
+
+        /* ------------------------------------------------------------------
+           AI service picker
+           ------------------------------------------------------------------ */
+        .providers {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+            min-width: 0;
+            margin: 0;
+            padding: 0;
+            border: 0;
+        }
+
+        .provider {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+            padding: 9px 12px 9px 9px;
+            border: 1px solid var(--line-strong);
+            border-radius: 12px;
+            background: var(--surface);
+            cursor: pointer;
+            transition: border-color 0.15s, background-color 0.15s, box-shadow 0.15s;
+        }
+
+        .provider:hover {
+            border-color: color-mix(in srgb, var(--accent) 50%, var(--line-strong));
+        }
+
+        .provider:has(.provider__input:checked) {
+            border-color: var(--accent);
+            background: var(--accent-soft);
+            box-shadow: 0 0 0 1px var(--accent);
+        }
+
+        .provider:has(.provider__input:focus-visible) {
+            outline: 2px solid var(--focus);
+            outline-offset: 2px;
+        }
+
+        .provider__input {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .provider__icon {
+            display: grid;
+            place-items: center;
+            flex: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 9px;
+            background: var(--surface-sunken);
+            color: var(--ink-2);
+            transition: background-color 0.15s, color 0.15s;
+        }
+
+        .provider:has(.provider__input:checked) .provider__icon {
+            background: var(--primary-bg);
+            color: var(--primary-fg);
+        }
+
+        .provider__text {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        /* Names wrap on narrow tiles; the host is secondary and may be cut. */
+        .provider__name {
+            color: var(--ink);
+            font-size: 13.5px;
+            font-weight: 650;
+            line-height: 1.35;
+            overflow-wrap: anywhere;
+        }
+
+        .provider__detail {
+            overflow: hidden;
+            color: var(--ink-3);
+            font: 500 11.5px/1.35 var(--font-mono);
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .provider--custom {
+            grid-column: 1 / -1;
+        }
+
+        .provider--custom .provider__detail {
+            font-family: var(--font-sans);
+        }
+
+        /* Sized by the card, not the window: the card is narrow both on phones and next to the result. */
+        @container (max-width: 580px) {
+            .providers {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @container (max-width: 400px) {
+            .provider {
+                gap: 8px;
+                padding: 8px 10px 8px 8px;
+            }
+
+            .provider__icon {
+                width: 28px;
+                height: 28px;
+            }
+
+            .provider__name {
+                font-size: 13px;
+            }
+        }
+
+        /* ------------------------------------------------------------------
+           Prompt
+           ------------------------------------------------------------------ */
+        .composer-input {
+            min-height: 184px;
+            border-radius: 14px;
+            padding: 12px 14px;
+        }
+
+        .prompt-help {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 4px 8px;
+        }
+
+        .token-btn {
+            padding: 3px 8px;
+            border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+            border-radius: 7px;
+            background: var(--accent-soft);
+            color: var(--accent-soft-ink);
+            font: 600 12px/1.2 var(--font-mono);
+            cursor: pointer;
+            transition: border-color 0.15s;
+        }
+
+        .token-btn:hover {
+            border-color: var(--accent);
+        }
+
+        /* ------------------------------------------------------------------
+           Behavior switches
+           ------------------------------------------------------------------ */
+        .switch-row__note {
+            color: var(--ink-3);
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 1.45;
+        }
+
+        .switch-row.is-unavailable .switch-row__label,
+        .switch-row.is-unavailable .switch-row__help {
+            opacity: 0.55;
+        }
+
+        .switch-row.is-unavailable .switch-row__label {
+            cursor: default;
+        }
+
+        .switch:disabled {
+            opacity: 0.45;
+            cursor: default;
+        }
+
+        /* ------------------------------------------------------------------
+           Result: a miniature browser with the bookmark in its bookmarks bar
+           ------------------------------------------------------------------ */
+        .browser {
+            overflow: hidden;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: var(--surface-sunken);
+        }
+
+        .browser__toolbar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 10px 9px 12px;
+        }
+
+        .browser__dots {
+            display: flex;
+            flex: none;
+            gap: 5px;
+        }
+
+        .browser__dots i {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: var(--line-strong);
+        }
+
+        .browser__omnibox {
+            display: flex;
+            flex: 1 1 auto;
+            align-items: center;
+            gap: 7px;
+            min-width: 0;
+            height: 30px;
+            padding: 0 12px 0 10px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: var(--surface);
+            color: var(--ink-3);
+            font: 12px/1 var(--font-mono);
+        }
+
+        .browser__omnibox .icon {
+            width: 13px;
+            height: 13px;
+            stroke-width: 2;
+        }
+
+        .browser__url {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .browser__bookmarks {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 42px;
+            padding: 6px 10px;
+            border-top: 1px solid var(--line);
+            background: var(--surface);
+        }
+
+        .browser__ghost {
+            flex: none;
+            width: 54px;
+            height: 8px;
+            border-radius: 999px;
+            background: var(--line);
+        }
+
+        .browser__ghost--short {
+            width: 34px;
+        }
+
+        .bookmark {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            min-width: 0;
+            max-width: 100%;
+            height: 28px;
+            padding: 0 11px 0 6px;
+            border-radius: 999px;
+            background: var(--accent-soft);
+            box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
+            color: var(--accent-soft-ink);
+            font-size: 12.5px;
+            font-weight: 650;
+            text-decoration: none;
+            cursor: grab;
+            transition: background-color 0.2s, box-shadow 0.2s, color 0.2s;
+        }
+
+        .bookmark:hover {
+            box-shadow: inset 0 0 0 1px var(--accent);
+        }
+
+        .bookmark:active {
+            cursor: grabbing;
+        }
+
+        .bookmark[aria-disabled="true"] {
+            background: transparent;
+            box-shadow: inset 0 0 0 1.5px var(--line-strong);
+            color: var(--ink-3);
+            cursor: default;
+        }
+
+        .bookmark__icon {
+            display: grid;
+            place-items: center;
+            flex: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 6px;
+            background: var(--primary-bg);
+            color: var(--primary-fg);
+        }
+
+        .bookmark[aria-disabled="true"] .bookmark__icon {
+            background: var(--line);
+            color: var(--ink-3);
+        }
+
+        .bookmark__icon .icon {
+            width: 12px;
+            height: 12px;
+            stroke-width: 2.2;
+        }
+
+        .bookmark__title {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .drag-hint {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 4px 12px;
+            margin-top: -4px;
+            color: var(--ink-2);
+            font-size: 12.5px;
+        }
+
+        .drag-hint__text {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .drag-hint__text .icon {
+            width: 15px;
+            height: 15px;
+            color: var(--accent-ink);
+        }
+
+        .drag-hint__keys {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            color: var(--ink-3);
+        }
+
+        /* URL parts, as the address bar shows them. */
+        .url-host {
+            color: var(--ink);
+        }
+
+        .url-path,
+        .url-value {
+            color: var(--ink-2);
+        }
+
+        .url-punct {
+            color: var(--ink-3);
+        }
+
+        .url-key {
+            color: var(--accent-ink);
+        }
+
+        .url-prompt {
+            color: var(--prompt-ink);
+        }
+
+        .result-notice {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 12px 14px;
+            border: 1.5px dashed var(--line-strong);
+            border-radius: var(--radius-md);
+            color: var(--ink-2);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .result-notice .icon {
+            margin-top: 1px;
+            color: var(--ink-3);
+        }
+
+        .open-link {
+            width: 100%;
+            height: 40px;
+            font-size: 14px;
+            text-decoration: none;
+        }
+
+        .open-link[aria-disabled="true"] {
+            opacity: 0.5;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        .outputs {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .output {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 0;
+        }
+
+        .output__head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .output__label {
+            color: var(--ink-2);
+            font-size: 12.5px;
+            font-weight: 600;
+        }
+
+        .output__value {
+            min-height: 40px;
+            padding: 9px 12px;
+            border: 1px solid var(--line);
+            border-radius: var(--radius-md);
+            background: var(--surface-sunken);
+        }
+
+        .output__text {
+            display: -webkit-box;
+            overflow: hidden;
+            color: var(--ink-2);
+            font: 12px/1.6 var(--font-mono);
+            overflow-wrap: anywhere;
+            word-break: break-all;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            user-select: all;
+        }
+
+        .output__text:empty::before {
+            content: "—";
+            color: var(--ink-3);
+        }
+
+        .copy-btn {
+            min-width: 76px;
+        }
+
+        .copy-btn.is-copied {
+            border-color: color-mix(in srgb, var(--accent) 50%, var(--line-strong));
+            color: var(--accent-ink);
+        }
+
+        /* ------------------------------------------------------------------
+           Address bar shortcut
+           ------------------------------------------------------------------ */
+        .steps {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            counter-reset: step;
+        }
+
+        .step {
+            display: grid;
+            grid-template-columns: 24px minmax(0, 1fr);
+            column-gap: 12px;
+            counter-increment: step;
+        }
+
+        .step::before {
+            content: counter(step);
+            display: grid;
+            place-items: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--accent-soft);
+            color: var(--accent-soft-ink);
+            font-size: 12px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .step__body {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-width: 0;
+            padding-top: 2px;
+        }
+
+        .step__row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px 12px;
+        }
+
+        .search-fields {
+            display: grid;
+            grid-template-columns: max-content minmax(0, 1fr) auto;
+            column-gap: 16px;
+            margin: 0;
+            overflow: hidden;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+        }
+
+        .search-field {
+            display: grid;
+            grid-column: 1 / -1;
+            grid-template-columns: subgrid;
+            align-items: center;
+            row-gap: 4px;
+            padding: 10px 12px;
+        }
+
+        .search-field + .search-field {
+            border-top: 1px solid var(--line);
+        }
+
+        .search-field__name {
+            color: var(--ink-2);
+            font-size: 12.5px;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+
+        .search-field__value {
+            display: -webkit-box;
+            min-width: 0;
+            margin: 0;
+            overflow: hidden;
+            color: var(--ink);
+            font: 12.5px/1.55 var(--font-mono);
+            overflow-wrap: anywhere;
+            word-break: break-all;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            user-select: all;
+        }
+
+        .search-field__value:empty::before {
+            content: "—";
+            color: var(--ink-3);
+        }
+
+        /* Prose, not a URL: show it whole and break between words. */
+        .search-field__value--hint {
+            display: block;
+            overflow: visible;
+            color: var(--ink-2);
+            font-family: var(--font-sans);
+            word-break: normal;
+            -webkit-line-clamp: none;
+            user-select: auto;
+        }
+
+        .note {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 10px 12px;
+            border-radius: var(--radius-md);
+            background: var(--surface-sunken);
+            color: var(--ink-2);
+            font-size: 12.5px;
+            line-height: 1.5;
+        }
+
+        .note .icon {
+            width: 16px;
+            height: 16px;
+            margin-top: 1px;
+            color: var(--ink-3);
+        }
+
+        code.inline-token {
+            padding: 1px 5px;
+            border-radius: 5px;
+            background: var(--accent-soft);
+            color: var(--accent-soft-ink);
+            font: 600 12px/1.4 var(--font-mono);
+        }
+
+        /* ------------------------------------------------------------------
+           Dialogs
+           ------------------------------------------------------------------ */
+        #templatesDialog {
+            width: min(780px, calc(100vw - 32px));
+        }
+
+        .template-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+            gap: 10px;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .template {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            width: 100%;
+            height: 100%;
+            padding: 12px 14px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: var(--surface);
+            text-align: start;
+            cursor: pointer;
+            transition: border-color 0.15s, background-color 0.15s, box-shadow 0.15s;
+        }
+
+        .template:hover {
+            border-color: var(--accent);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .template__name {
+            color: var(--ink);
+            font-size: 13.5px;
+            font-weight: 650;
+            line-height: 1.35;
+        }
+
+        .template__prompt {
+            display: -webkit-box;
+            overflow: hidden;
+            color: var(--ink-2);
+            font-size: 12.5px;
+            line-height: 1.5;
+            overflow-wrap: anywhere;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+        }
+
+        #importDialog .textarea {
+            min-height: 112px;
+            font-size: 12.5px;
+        }
+
+        /* ------------------------------------------------------------------
+           Responsive
+           ------------------------------------------------------------------ */
+        @media (max-width: 999px) {
+            .builder__grid {
+                grid-template-columns: minmax(0, 1fr);
+                grid-template-areas:
+                    "service"
+                    "prompt"
+                    "behavior"
+                    "result"
+                    "search";
+            }
+        }
+
+        @media (max-width: 759px) {
+            .builder {
+                padding: 20px 16px 40px;
+            }
+        }
+
+        @media (max-width: 560px) {
+            .card {
+                padding: 16px;
+            }
+
+            .search-fields {
+                grid-template-columns: minmax(0, 1fr) auto;
+            }
+
+            .search-field__name {
+                grid-column: 1 / -1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Icon sprite: 24px grid, stroke icons referenced with <use href="#icon-…">. -->
+    <svg class="icon-sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+        <symbol id="icon-monitor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></symbol>
+        <symbol id="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/></symbol>
+        <symbol id="icon-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></symbol>
+        <symbol id="icon-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+        <symbol id="icon-import" viewBox="0 0 24 24"><path d="M12 3v11M7.5 9.5 12 14l4.5-4.5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></symbol>
+        <symbol id="icon-sliders" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
+        <symbol id="icon-book-open" viewBox="0 0 24 24"><path d="M12 7v13"/><path d="M3 5.5A1.5 1.5 0 0 1 4.5 4H9a3 3 0 0 1 3 3 3 3 0 0 1 3-3h4.5A1.5 1.5 0 0 1 21 5.5V17a1 1 0 0 1-1 1h-5a3 3 0 0 0-3 3 3 3 0 0 0-3-3H4a1 1 0 0 1-1-1z"/></symbol>
+        <symbol id="icon-message" viewBox="0 0 24 24"><path d="M20 11.5a8 8 0 0 1-11.6 7.1L4 19.7l1.1-4.1A8 8 0 1 1 20 11.5z"/></symbol>
+        <symbol id="icon-image" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="m20.5 15.5-4.6-4.6L6.5 19.5"/></symbol>
+        <symbol id="icon-asterisk" viewBox="0 0 24 24"><path d="M12 4v16M5.1 8l13.8 8M5.1 16l13.8-8"/></symbol>
+        <symbol id="icon-sparkle" viewBox="0 0 24 24"><path d="M12 3c.7 4.6 3.4 7.3 9 9-5.6 1.7-8.3 4.4-9 9-.7-4.6-3.4-7.3-9-9 5.6-1.7 8.3-4.4 9-9z"/></symbol>
+        <symbol id="icon-zap" viewBox="0 0 24 24"><path d="M13 3 5 13.5h6L10 21l8-10.5h-6z"/></symbol>
+        <symbol id="icon-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></symbol>
+        <symbol id="icon-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.3 2.4 3.5 5.2 3.5 8.5s-1.2 6.1-3.5 8.5c-2.3-2.4-3.5-5.2-3.5-8.5s1.2-6.1 3.5-8.5z"/></symbol>
+        <symbol id="icon-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+        <symbol id="icon-arrow-up" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+        <symbol id="icon-external" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></symbol>
+        <symbol id="icon-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="12" height="12" rx="2"/><path d="M15.5 8.5V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7.5a2 2 0 0 0 2 2h2.5"/></symbol>
+        <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+        <symbol id="icon-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.5v.01"/></symbol>
+        <symbol id="icon-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.7 2.7L16 9.8"/></symbol>
+        <symbol id="icon-alert-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.01"/></symbol>
+        <symbol id="icon-alert-triangle" viewBox="0 0 24 24"><path d="M10.3 4.3 2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 4.3a2 2 0 0 0-3.4 0z"/><path d="M12 9.5v4M12 17v.01"/></symbol>
+    </svg>
+
+    <header class="app-header">
+        <div class="app-header__inner">
+            <div class="brand">
+                <img class="brand__logo" src="images/icon-128.png" alt="" width="36" height="36">
+                <div class="brand__text">
+                    <p class="brand__name" data-i18n="chatgpttoolkit_name"></p>
+                    <h1 class="brand__title" data-i18n="link_builder_heading"></h1>
+                </div>
+            </div>
+
+            <div class="header-tools">
+                <fieldset class="theme-switch">
+                    <legend class="sr-only" data-i18n="options_theme_label"></legend>
+                    <label class="theme-switch__option" data-i18n-title="options_theme_system">
+                        <input class="theme-switch__input" type="radio" name="theme" value="system" checked>
+                        <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-monitor"/></svg>
+                        <span class="sr-only" data-i18n="options_theme_system"></span>
+                    </label>
+                    <label class="theme-switch__option" data-i18n-title="options_theme_light">
+                        <input class="theme-switch__input" type="radio" name="theme" value="light">
+                        <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-sun"/></svg>
+                        <span class="sr-only" data-i18n="options_theme_light"></span>
+                    </label>
+                    <label class="theme-switch__option" data-i18n-title="options_theme_dark">
+                        <input class="theme-switch__input" type="radio" name="theme" value="dark">
+                        <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-moon"/></svg>
+                        <span class="sr-only" data-i18n="options_theme_dark"></span>
+                    </label>
+                </fieldset>
+
+                <div class="header-actions" role="group" data-i18n-aria-label="link_builder_header_actions_label">
+                    <button type="button" id="importLinkBtn" class="btn btn--ghost">
+                        <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-import"/></svg>
+                        <span class="btn__label" data-i18n="link_builder_import_button"></span>
+                    </button>
+                    <button type="button" id="managePromptsBtn" class="btn btn--ghost">
+                        <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-sliders"/></svg>
+                        <span class="btn__label" data-i18n="link_builder_manage_prompts"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main id="main" class="builder">
+        <p class="builder__intro" data-i18n="link_builder_intro"></p>
+
+        <div class="builder__grid">
+            <section class="card builder__service" aria-labelledby="serviceTitle">
+                <div class="card__head">
+                    <div class="card__heading">
+                        <h2 id="serviceTitle" class="card__title" data-i18n="link_builder_service_title"></h2>
+                        <p id="serviceDesc" class="card__desc" data-i18n="link_builder_service_desc"></p>
+                    </div>
+                </div>
+
+                <fieldset id="providerPicker" class="providers" aria-describedby="serviceDesc">
+                    <legend class="sr-only" data-i18n="link_builder_service_title"></legend>
+                </fieldset>
+
+                <div id="customUrlField" class="field" hidden>
+                    <label class="field__label" for="customUrl" data-i18n="link_builder_custom_url_label"></label>
+                    <input type="url" id="customUrl" class="input input--mono" autocomplete="off" spellcheck="false" inputmode="url" placeholder="https://chatgpt.com/g/…" aria-describedby="customUrlHelp customUrlMessage">
+                    <p id="customUrlHelp" class="field__help" data-i18n="link_builder_custom_url_help"></p>
+                    <div id="customUrlMessage" aria-live="polite"></div>
+                </div>
+            </section>
+
+            <section class="card builder__prompt" aria-labelledby="promptTitle">
+                <div class="card__head">
+                    <div class="card__heading">
+                        <h2 id="promptTitle" class="card__title" data-i18n="link_builder_prompt_title"></h2>
+                    </div>
+                    <button type="button" id="openTemplatesBtn" class="btn btn--secondary btn--sm" aria-haspopup="dialog">
+                        <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-book-open"/></svg>
+                        <span data-i18n="link_builder_templates_button"></span>
+                    </button>
+                </div>
+
+                <div class="field">
+                    <label class="sr-only" for="promptText" data-i18n="link_builder_prompt_label"></label>
+                    <textarea id="promptText" class="textarea composer-input" spellcheck="false" aria-describedby="promptHelp" data-i18n-placeholder="link_builder_prompt_placeholder"></textarea>
+                    <p id="promptHelp" class="field__help prompt-help">
+                        <span data-i18n="link_builder_prompt_help"></span>
+                        <button type="button" id="insertSearchTermsBtn" class="token-btn" data-i18n-title="link_builder_insert_search_terms" data-i18n-aria-label="link_builder_insert_search_terms">%s</button>
+                    </p>
+                </div>
+
+                <div class="field">
+                    <label class="field__label" for="linkTitle" data-i18n="link_builder_title_label"></label>
+                    <input type="text" id="linkTitle" class="input" autocomplete="off" aria-describedby="linkTitleHelp">
+                    <p id="linkTitleHelp" class="field__help" data-i18n="link_builder_title_help"></p>
+                </div>
+            </section>
+
+            <section class="card builder__behavior" aria-labelledby="behaviorTitle">
+                <div class="card__head">
+                    <div class="card__heading">
+                        <h2 id="behaviorTitle" class="card__title" data-i18n="link_builder_behavior_title"></h2>
+                    </div>
+                </div>
+
+                <div class="switch-list">
+                    <div class="switch-row">
+                        <div class="switch-row__text">
+                            <label class="switch-row__label" for="autoSubmit" data-i18n="link_builder_auto_submit_label"></label>
+                            <p id="autoSubmitHelp" class="switch-row__help" data-i18n="link_builder_auto_submit_help"></p>
+                            <p id="autoSubmitNote" class="switch-row__note" hidden></p>
+                        </div>
+                        <input type="checkbox" id="autoSubmit" class="switch" role="switch" aria-describedby="autoSubmitHelp autoSubmitNote">
+                    </div>
+                    <div class="switch-row">
+                        <div class="switch-row__text">
+                            <label class="switch-row__label" for="pasteImage" data-i18n="link_builder_paste_image_label"></label>
+                            <p id="pasteImageHelp" class="switch-row__help" data-i18n="link_builder_paste_image_help"></p>
+                            <p id="pasteImageNote" class="switch-row__note" hidden></p>
+                        </div>
+                        <input type="checkbox" id="pasteImage" class="switch" role="switch" aria-describedby="pasteImageHelp pasteImageNote">
+                    </div>
+                    <div class="switch-row">
+                        <div class="switch-row__text">
+                            <label class="switch-row__label" for="imageTool" data-i18n="link_builder_image_tool_label"></label>
+                            <p id="imageToolHelp" class="switch-row__help" data-i18n="link_builder_image_tool_help"></p>
+                            <p id="imageToolNote" class="switch-row__note" hidden></p>
+                        </div>
+                        <input type="checkbox" id="imageTool" class="switch" role="switch" aria-describedby="imageToolHelp imageToolNote">
+                    </div>
+                </div>
+            </section>
+
+            <section class="card builder__result" aria-labelledby="resultTitle">
+                <div class="card__head">
+                    <div class="card__heading">
+                        <h2 id="resultTitle" class="card__title" data-i18n="link_builder_result_title"></h2>
+                    </div>
+                </div>
+
+                <div class="browser">
+                    <div class="browser__toolbar" aria-hidden="true">
+                        <span class="browser__dots"><i></i><i></i><i></i></span>
+                        <div class="browser__omnibox">
+                            <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-lock"/></svg>
+                            <span id="omniboxUrl" class="browser__url"></span>
+                        </div>
+                    </div>
+                    <div class="browser__bookmarks">
+                        <span class="browser__ghost" aria-hidden="true"></span>
+                        <span class="browser__ghost browser__ghost--short" aria-hidden="true"></span>
+                        <a id="bookmarkLink" class="bookmark" target="_blank" rel="noopener" aria-describedby="dragHintText">
+                            <span class="bookmark__icon"><svg class="icon" aria-hidden="true" focusable="false"><use id="bookmarkIcon" href="#icon-message"/></svg></span>
+                            <span id="bookmarkTitle" class="bookmark__title"></span>
+                        </a>
+                    </div>
+                </div>
+
+                <p class="drag-hint">
+                    <span class="drag-hint__text">
+                        <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-arrow-up"/></svg>
+                        <span id="dragHintText" data-i18n="link_builder_drag_hint"></span>
+                    </span>
+                    <span id="bookmarksBarKeys" class="drag-hint__keys"></span>
+                </p>
+
+                <p id="resultNotice" class="result-notice" hidden>
+                    <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-info"/></svg>
+                    <span id="resultNoticeText"></span>
+                </p>
+
+                <a id="openLinkBtn" class="btn btn--primary open-link" target="_blank" rel="noopener" aria-keyshortcuts="Control+Enter Meta+Enter">
+                    <span id="openLinkLabel"></span>
+                    <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-external"/></svg>
+                </a>
+
+                <div class="outputs">
+                    <div class="output">
+                        <div class="output__head">
+                            <span id="urlOutputLabel" class="output__label" data-i18n="link_builder_output_url"></span>
+                            <button type="button" class="btn btn--secondary btn--sm copy-btn" data-copy="url" data-i18n-aria-label="link_builder_copy_url_label">
+                                <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-copy"/></svg>
+                                <span class="copy-btn__label" data-i18n="link_builder_copy"></span>
+                            </button>
+                        </div>
+                        <div class="output__value"><code id="urlOutput" class="output__text" aria-labelledby="urlOutputLabel"></code></div>
+                    </div>
+                    <div class="output">
+                        <div class="output__head">
+                            <span id="markdownOutputLabel" class="output__label" data-i18n="link_builder_output_markdown"></span>
+                            <button type="button" class="btn btn--secondary btn--sm copy-btn" data-copy="markdown" data-i18n-aria-label="link_builder_copy_markdown_label">
+                                <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-copy"/></svg>
+                                <span class="copy-btn__label" data-i18n="link_builder_copy"></span>
+                            </button>
+                        </div>
+                        <div class="output__value"><code id="markdownOutput" class="output__text" aria-labelledby="markdownOutputLabel"></code></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card builder__search" aria-labelledby="searchTitle">
+                <div class="card__head">
+                    <div class="card__heading">
+                        <h2 id="searchTitle" class="card__title" data-i18n="link_builder_search_title"></h2>
+                        <p class="card__desc" data-i18n="link_builder_search_desc"></p>
+                    </div>
+                </div>
+
+                <ol class="steps">
+                    <li class="step">
+                        <div class="step__body">
+                            <div class="step__row">
+                                <span data-i18n="link_builder_search_step_open"></span>
+                                <button type="button" id="openSearchSettingsBtn" class="btn btn--secondary btn--sm">
+                                    <span data-i18n="link_builder_search_open_settings"></span>
+                                    <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-external"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="step">
+                        <div class="step__body">
+                            <span data-i18n="link_builder_search_step_add"></span>
+                            <dl class="search-fields">
+                                <div class="search-field">
+                                    <dt id="searchNameLabel" class="search-field__name" data-i18n="link_builder_search_field_name"></dt>
+                                    <dd id="searchNameOutput" class="search-field__value"></dd>
+                                    <dd class="search-field__action">
+                                        <button type="button" class="btn btn--secondary btn--sm copy-btn" data-copy="searchName" data-i18n-aria-label="link_builder_copy_search_name_label">
+                                            <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-copy"/></svg>
+                                            <span class="copy-btn__label" data-i18n="link_builder_copy"></span>
+                                        </button>
+                                    </dd>
+                                </div>
+                                <div class="search-field">
+                                    <dt class="search-field__name" data-i18n="link_builder_search_field_shortcut"></dt>
+                                    <dd class="search-field__value search-field__value--hint" data-i18n="link_builder_search_shortcut_hint"></dd>
+                                </div>
+                                <div class="search-field">
+                                    <dt class="search-field__name" data-i18n="link_builder_search_field_url"></dt>
+                                    <dd id="searchUrlOutput" class="search-field__value"></dd>
+                                    <dd class="search-field__action">
+                                        <button type="button" class="btn btn--secondary btn--sm copy-btn" data-copy="searchUrl" data-i18n-aria-label="link_builder_copy_search_url_label">
+                                            <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-copy"/></svg>
+                                            <span class="copy-btn__label" data-i18n="link_builder_copy"></span>
+                                        </button>
+                                    </dd>
+                                </div>
+                            </dl>
+                        </div>
+                    </li>
+                </ol>
+
+                <p class="note">
+                    <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-info"/></svg>
+                    <span id="searchTermsNote"></span>
+                </p>
+            </section>
+        </div>
+    </main>
+
+    <footer class="page-footer">
+        <span data-i18n="options_footer_version_label"></span><span id="appVersion">0.47.0</span>
+    </footer>
+
+    <div id="statusMessage" class="toast-region" aria-live="polite"></div>
+    <div id="liveAnnouncer" class="sr-only" aria-live="polite"></div>
+
+    <dialog id="templatesDialog" class="modal" aria-labelledby="templatesTitle" aria-describedby="templatesDesc">
+        <div class="modal__card">
+            <div class="modal__header">
+                <h2 id="templatesTitle" class="modal__title" data-i18n="link_builder_templates_title"></h2>
+                <button type="button" class="icon-btn" data-close-dialog data-i18n-aria-label="options_modal_close">
+                    <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-x"/></svg>
+                </button>
+            </div>
+            <div class="modal__body">
+                <p id="templatesDesc" class="field__help" data-i18n="link_builder_templates_desc"></p>
+                <ul id="templateList" class="template-list"></ul>
+            </div>
+        </div>
+    </dialog>
+
+    <dialog id="importDialog" class="modal" aria-labelledby="importTitle">
+        <form id="importForm" class="modal__card" novalidate>
+            <div class="modal__header">
+                <h2 id="importTitle" class="modal__title" data-i18n="link_builder_import_title"></h2>
+                <button type="button" class="icon-btn" data-close-dialog data-i18n-aria-label="options_modal_close">
+                    <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-x"/></svg>
+                </button>
+            </div>
+            <div class="modal__body">
+                <div class="field">
+                    <label class="field__label" for="importInput" data-i18n="link_builder_import_label"></label>
+                    <textarea id="importInput" class="textarea" spellcheck="false" placeholder="https://chatgpt.com/#autoSubmit=true&amp;prompt=…" aria-describedby="importHelp importError"></textarea>
+                    <p id="importHelp" class="field__help" data-i18n="link_builder_import_help"></p>
+                    <p id="importError" class="field__error" hidden>
+                        <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-alert-circle"/></svg>
+                        <span data-i18n="link_builder_import_error"></span>
+                    </p>
+                </div>
+            </div>
+            <div class="modal__footer">
+                <div class="modal__actions">
+                    <button type="button" class="btn btn--secondary" data-close-dialog data-i18n="options_modal_cancel_button"></button>
+                    <button type="submit" class="btn btn--primary" data-i18n="link_builder_import_confirm"></button>
+                </div>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Same encoder/decoder as the content script, so every link opens exactly as built. -->
+    <script src="scripts/content-utils.js"></script>
+    <script type="module" src="scripts/link-builder.js"></script>
+</body>
+</html>

@@ -307,5 +307,224 @@
   },
   "options_import_error_missing_fields": {
     "message": "$1 件目のプロンプトには文字列の title と prompt が必要です。"
+  },
+  "context_menu_open_link_builder": {
+    "message": "プロンプトリンク作成ツールを開く"
+  },
+  "link_builder_page_title": {
+    "message": "$1 - プロンプトリンク作成ツール"
+  },
+  "link_builder_heading": {
+    "message": "プロンプトリンク作成ツール"
+  },
+  "link_builder_intro": {
+    "message": "プロンプトをリンクにすると、クリックするだけで AI を開いて自動入力できます。ブックマークに保存したり、メモに貼り付けたり、アドレスバーのショートカットにしたりできます。"
+  },
+  "link_builder_header_actions_label": {
+    "message": "その他の操作"
+  },
+  "link_builder_import_button": {
+    "message": "リンクを読み込む"
+  },
+  "link_builder_manage_prompts": {
+    "message": "プロンプトを管理"
+  },
+  "link_builder_service_title": {
+    "message": "AI サービス"
+  },
+  "link_builder_service_desc": {
+    "message": "リンクを開くと、このサイトにプロンプトが入力されます。"
+  },
+  "link_builder_custom_name": {
+    "message": "カスタム URL"
+  },
+  "link_builder_custom_hint": {
+    "message": "GPTs、プロジェクトなど"
+  },
+  "link_builder_custom_url_label": {
+    "message": "URL"
+  },
+  "link_builder_custom_url_help": {
+    "message": "GPTs やプロジェクトの URL を入力できます（例：https://chatgpt.com/g/…）。"
+  },
+  "link_builder_custom_url_empty": {
+    "message": "URL を入力してください。"
+  },
+  "link_builder_custom_url_invalid": {
+    "message": "URL の形式が正しくありません（例：https://chatgpt.com/g/…）。"
+  },
+  "link_builder_custom_url_unsupported": {
+    "message": "拡張機能はこのサイトでは動作しないため、プロンプトは自動入力されません。"
+  },
+  "link_builder_prompt_title": {
+    "message": "プロンプト"
+  },
+  "link_builder_templates_button": {
+    "message": "テンプレート"
+  },
+  "link_builder_prompt_label": {
+    "message": "プロンプトの内容"
+  },
+  "link_builder_prompt_placeholder": {
+    "message": "例：以下の内容を日本語に翻訳してください："
+  },
+  "link_builder_prompt_help": {
+    "message": "アドレスバーのショートカットでは、入力したテキストがここに入ります："
+  },
+  "link_builder_insert_search_terms": {
+    "message": "%s を挿入"
+  },
+  "link_builder_title_label": {
+    "message": "リンク名"
+  },
+  "link_builder_title_help": {
+    "message": "ブックマーク、Markdown、ショートカットの名前に使われます。空欄の場合は AI サービス名になります。"
+  },
+  "link_builder_behavior_title": {
+    "message": "リンクを開いたとき"
+  },
+  "link_builder_auto_submit_label": {
+    "message": "自動で送信"
+  },
+  "link_builder_auto_submit_help": {
+    "message": "プロンプトを入力したらすぐに送信します。"
+  },
+  "link_builder_paste_image_label": {
+    "message": "クリップボードの画像を貼り付け"
+  },
+  "link_builder_paste_image_help": {
+    "message": "クリップボードの画像をメッセージに添付します。"
+  },
+  "link_builder_image_tool_label": {
+    "message": "画像生成ツールを使う"
+  },
+  "link_builder_image_tool_help": {
+    "message": "画像生成に切り替えてからプロンプトを入力します。"
+  },
+  "link_builder_feature_unavailable": {
+    "message": "$1 では使えません"
+  },
+  "link_builder_image_tool_builtin": {
+    "message": "$1 は最初から画像生成モードです"
+  },
+  "link_builder_site_unsupported": {
+    "message": "このサイトでは使えません"
+  },
+  "link_builder_result_title": {
+    "message": "作成したリンク"
+  },
+  "link_builder_drag_hint": {
+    "message": "ブックマークをブックマークバーにドラッグして保存"
+  },
+  "link_builder_bookmarks_bar_shortcut": {
+    "message": "ブックマークバーを表示"
+  },
+  "link_builder_bookmark_placeholder": {
+    "message": "ブックマーク"
+  },
+  "link_builder_result_empty": {
+    "message": "プロンプトを入力すると、ここにリンクが作成されます。"
+  },
+  "link_builder_result_url_problem": {
+    "message": "有効な URL を入力すると、ここにリンクが作成されます。"
+  },
+  "link_builder_open": {
+    "message": "$1 で開く"
+  },
+  "link_builder_open_fallback": {
+    "message": "リンクを開く"
+  },
+  "link_builder_output_url": {
+    "message": "URL"
+  },
+  "link_builder_output_markdown": {
+    "message": "Markdown"
+  },
+  "link_builder_copy": {
+    "message": "コピー"
+  },
+  "link_builder_copied": {
+    "message": "コピー済み"
+  },
+  "link_builder_copy_url_label": {
+    "message": "URL をコピー"
+  },
+  "link_builder_copy_markdown_label": {
+    "message": "Markdown をコピー"
+  },
+  "link_builder_copy_search_name_label": {
+    "message": "名前をコピー"
+  },
+  "link_builder_copy_search_url_label": {
+    "message": "ショートカットの URL をコピー"
+  },
+  "link_builder_copy_error": {
+    "message": "クリップボードにコピーできませんでした。テキストを選択して手動でコピーしてください。"
+  },
+  "link_builder_status_copied": {
+    "message": "クリップボードにコピーしました"
+  },
+  "link_builder_search_title": {
+    "message": "アドレスバーのショートカット"
+  },
+  "link_builder_search_desc": {
+    "message": "アドレスバーでショートカットを入力して Tab キーを押し、続けてテキストを入力すると AI に送れます。"
+  },
+  "link_builder_search_step_open": {
+    "message": "Chrome の検索エンジンの設定を開きます"
+  },
+  "link_builder_search_open_settings": {
+    "message": "設定を開く"
+  },
+  "link_builder_search_step_add": {
+    "message": "「サイト内検索」（新しい画面では「サイトのショートカット」）の横にある「追加」をクリックして、次のように入力します："
+  },
+  "link_builder_search_field_name": {
+    "message": "名前"
+  },
+  "link_builder_search_field_shortcut": {
+    "message": "ショートカット"
+  },
+  "link_builder_search_field_url": {
+    "message": "URL（%s=検索語句）"
+  },
+  "link_builder_search_shortcut_hint": {
+    "message": "短く覚えやすいもの（例：ss）"
+  },
+  "link_builder_search_terms_in_prompt": {
+    "message": "アドレスバーで入力したテキストが、プロンプトの %s に入ります。"
+  },
+  "link_builder_search_terms_appended": {
+    "message": "プロンプトに %s がないため、入力したテキストはプロンプトの後ろに追加されます。"
+  },
+  "link_builder_search_settings_error": {
+    "message": "設定を開けませんでした。アドレスバーに chrome://settings/searchEngines と入力してください。"
+  },
+  "link_builder_templates_title": {
+    "message": "プロンプトテンプレート"
+  },
+  "link_builder_templates_desc": {
+    "message": "テンプレートを選んで始めましょう。現在のプロンプトは置き換えられますが、適用後も編集できます。"
+  },
+  "link_builder_template_applied": {
+    "message": "「$1」を適用しました。$2 で元に戻せます"
+  },
+  "link_builder_import_title": {
+    "message": "リンクを読み込む"
+  },
+  "link_builder_import_label": {
+    "message": "リンク"
+  },
+  "link_builder_import_help": {
+    "message": "このツールで作成したプロンプトリンクや Markdown リンク、または以前の Web 版の共有リンクを貼り付けます。現在の設定は置き換えられます。"
+  },
+  "link_builder_import_error": {
+    "message": "プロンプトリンクではありません。URL 全体を貼り付けてください。"
+  },
+  "link_builder_import_confirm": {
+    "message": "読み込む"
+  },
+  "link_builder_import_success": {
+    "message": "リンクを読み込みました"
   }
 }

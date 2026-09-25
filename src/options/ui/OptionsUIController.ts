@@ -42,12 +42,14 @@ export class OptionsUIController {
   private readonly confirmCancelBtn: HTMLButtonElement | null;
   private settleConfirm: ((confirmed: boolean) => void) | null = null;
 
-  constructor(toastRegionId: string, confirmDialogId: string) {
+  /** Without a confirm dialog, `confirm()` falls back to `window.confirm`. */
+  constructor(toastRegionId: string, confirmDialogId?: string) {
+    const confirmPart = (suffix: string) => (confirmDialogId ? document.getElementById(`${confirmDialogId}${suffix}`) : null);
     this.toastRegion = document.getElementById(toastRegionId)!;
-    this.confirmDialog = document.getElementById(confirmDialogId) as HTMLDialogElement | null;
-    this.confirmMessage = document.getElementById(`${confirmDialogId}Message`);
-    this.confirmOkBtn = document.getElementById(`${confirmDialogId}OkBtn`) as HTMLButtonElement | null;
-    this.confirmCancelBtn = document.getElementById(`${confirmDialogId}CancelBtn`) as HTMLButtonElement | null;
+    this.confirmDialog = confirmPart('') as HTMLDialogElement | null;
+    this.confirmMessage = confirmPart('Message');
+    this.confirmOkBtn = confirmPart('OkBtn') as HTMLButtonElement | null;
+    this.confirmCancelBtn = confirmPart('CancelBtn') as HTMLButtonElement | null;
 
     this.bindConfirmDialog();
 

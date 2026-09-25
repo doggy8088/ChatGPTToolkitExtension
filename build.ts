@@ -5,26 +5,30 @@ console.log('Building TypeScript files...');
 const debugEnv = (process.env.CHATGPT_TOOLKIT_DEBUG || '').toLowerCase();
 const debugDefine = debugEnv === '0' || debugEnv === 'false' ? 'false' : 'true';
 
-const updateOptionsVersion = async (): Promise<void> => {
+// Extension pages that show the version in their footer (<span id="appVersion">).
+const VERSIONED_PAGES = ['options.html', 'link-builder.html'];
+
+const updatePageVersions = async (): Promise<void> => {
   const manifest = await Bun.file('manifest.json').json() as { version?: string };
   const version = manifest.version;
   if (!version || typeof version !== 'string') {
     throw new Error('manifest.json is missing a valid version field.');
   }
 
-  const optionsPath = 'options.html';
-  const optionsHtml = await Bun.file(optionsPath).text();
   const versionPattern = /(<span id="appVersion">)([^<]*)(<\/span>)/;
-  if (!versionPattern.test(optionsHtml)) {
-    throw new Error('options.html is missing <span id="appVersion"> for version injection.');
-  }
+  for (const pagePath of VERSIONED_PAGES) {
+    const pageHtml = await Bun.file(pagePath).text();
+    if (!versionPattern.test(pageHtml)) {
+      throw new Error(`${pagePath} is missing <span id="appVersion"> for version injection.`);
+    }
 
-  const updatedOptionsHtml = optionsHtml.replace(versionPattern, `$1${version}$3`);
-  if (updatedOptionsHtml !== optionsHtml) {
-    await Bun.write(optionsPath, updatedOptionsHtml);
-    console.log(`- options.html version updated to ${version}`);
-  } else {
-    console.log(`- options.html already at version ${version}`);
+    const updatedHtml = pageHtml.replace(versionPattern, `$1${version}$3`);
+    if (updatedHtml !== pageHtml) {
+      await Bun.write(pagePath, updatedHtml);
+      console.log(`- ${pagePath} version updated to ${version}`);
+    } else {
+      console.log(`- ${pagePath} already at version ${version}`);
+    }
   }
 };
 
@@ -37,7 +41,15 @@ const targets = [
     naming: { entry: 'options.js' },
   },
   {
-    // Classic script loaded synchronously in options.html <head> to apply the theme before first paint.
+    // Committed like content.js, so the page works in a checkout that has not been rebuilt.
+    name: 'link-builder',
+    entrypoints: ['./src/linkBuilder/LinkBuilderController.ts'],
+    outdir: './scripts',
+    format: 'esm',
+    naming: { entry: 'link-builder.js' },
+  },
+  {
+    // Classic script loaded synchronously in the extension pages' <head> to apply the theme before first paint.
     name: 'theme-init',
     entrypoints: ['./src/options/themeInit.ts'],
     outdir: './dist',
@@ -50,6 +62,14 @@ const targets = [
     outdir: './scripts',
     format: 'iife',
     naming: { entry: 'content.js' },
+  },
+  {
+    // MV3 service worker (manifest.json `background.service_worker`).
+    name: 'background',
+    entrypoints: ['./src/background/index.ts'],
+    outdir: './scripts',
+    format: 'iife',
+    naming: { entry: 'background.js' },
   },
 ];
 
@@ -76,7 +96,7 @@ if (results.every((result) => result.success)) {
   results.forEach((result) => {
     console.log('Output:', result.outputs.map((o) => o.path).join(', '));
   });
-  await updateOptionsVersion();
+  await updatePageVersions();
 } else {
   console.error('✗ Build failed');
   process.exit(1);

@@ -9,10 +9,10 @@ export function element<K extends keyof HTMLElementTagNameMap>(tag: K, className
 }
 
 /** A required element of the page; a missing one is a markup bug. */
-export function byId<T extends HTMLElement = HTMLElement>(id: string): T {
+export function byId<T extends Element = HTMLElement>(id: string): T {
   const node = document.getElementById(id);
   if (!node) throw new Error(`${location.pathname} is missing #${id}`);
-  return node as T;
+  return node as unknown as T;
 }
 
 /**

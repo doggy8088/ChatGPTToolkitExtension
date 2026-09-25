@@ -6,13 +6,14 @@ Chrome 線上應用程式商店: [ChatGPT 萬能工具箱](https://chrome.google
 
 ## 說明
 
-ChatGPT 萬能工具箱提供 ChatGPT 網站一些好用的額外功能，可以提升 ChatGPT 網站的使用體驗，目前提供的功能有 3 種：
+ChatGPT 萬能工具箱提供 ChatGPT 網站一些好用的額外功能，可以提升 ChatGPT 網站的使用體驗，目前提供的功能有 4 種：
 
 1. 自動從 URL 填入提示：這可以讓你把常用的提示詞(Prompt)透過「書籤」的方式保存下來，並在需要的時候可以快速填入。
 2. 在 ChatGPT 回應的地方出現自動提示按鈕，這些常用的提示詞可以透過按鈕自動輸入。
 3. 在 ChatGPT 已經提問的文字左側的使用者頭像上或文字上按滑鼠左鍵兩下，可以直接編輯提示詞。
+4. 內建「提示連結產生器」：在工具列的擴充套件圖示上按滑鼠右鍵，選擇「開啟提示連結產生器」，即可把提示詞做成書籤、Markdown 連結或網址列搜尋捷徑，支援 ChatGPT、ChatGPT Images、Claude、Gemini、Groq、Perplexity 與自訂網址（例如 GPTs）。
 
-📢 此套件 `2024-03-11` 加入 [Gemini](https://gemini.google.com/app), [Claude](https://claude.ai/), [phind](https://www.phind.com/search?home=true), [Groq](https://groq.com/) 支援 `AutoFill` 和 `AutoSubmit` 功能。請多加利用 [ChatGPT 提示連結產生器](https://blog.miniasp.com/ChatGPTToolkitExtensionUrlGen.html) 自動產生連結。
+📢 此套件 `2024-03-11` 加入 [Gemini](https://gemini.google.com/app), [Claude](https://claude.ai/), [phind](https://www.phind.com/search?home=true), [Groq](https://groq.com/) 支援 `AutoFill` 和 `AutoSubmit` 功能。現在可以直接使用擴充套件內建的「提示連結產生器」（在擴充套件圖示上按右鍵開啟）自動產生連結。
 
 以後會陸續推出好用功能，歡迎大家提供想法與建議。
 
@@ -52,13 +53,14 @@ Chrome Web Store: [ChatGPT Toolkit](https://chrome.google.com/webstore/detail/fm
 
 ## Description
 
-The ChatGPT Toolbox provides some useful additional features for the ChatGPT website, which can enhance the user experience. Currently, 3 features are available:
+The ChatGPT Toolbox provides some useful additional features for the ChatGPT website, which can enhance the user experience. Currently, 4 features are available:
 
 1. Automatic prompt filling from URL: This allows you to save commonly used prompts as bookmarks and quickly fill them in when needed.
 2. Automatic prompt buttons in the ChatGPT response. These commonly used prompts can be automatically entered through a button.
 3. You can directly edit the prompt by double-clicking on the user entered prompt text or user's image.
+4. Built-in prompt link builder: right-click the extension icon in the toolbar and choose "Open prompt link builder" to turn a prompt into a bookmark, a Markdown link or an address bar shortcut, for ChatGPT, ChatGPT Images, Claude, Gemini, Groq, Perplexity or a custom URL (such as a GPT).
 
-📢 This extension adds support for AutoFill and AutoSubmit functions for [Gemini](https://gemini.google.com/app), [Claude](https://claude.ai/), and [phind](https://www.phind.com/search?home=true) on 2024-03-11. Please make use of the ChatGPT Prompt Link Generator: https://blog.miniasp.com/ChatGPTToolkitExtensionUrlGen.html to automatically generate links.
+📢 This extension adds support for AutoFill and AutoSubmit functions for [Gemini](https://gemini.google.com/app), [Claude](https://claude.ai/), and [phind](https://www.phind.com/search?home=true) on 2024-03-11. You can now create these links with the built-in prompt link builder (right-click the extension icon to open it).
 
 More useful features will be launched in the future, and everyone is welcome to provide ideas and suggestions.
 

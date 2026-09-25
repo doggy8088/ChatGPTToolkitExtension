@@ -307,5 +307,224 @@
     },
     "options_import_error_missing_fields": {
         "message": "第 $1 筆提示必須包含 title 和 prompt 文字欄位"
+    },
+    "context_menu_open_link_builder": {
+        "message": "開啟提示連結產生器"
+    },
+    "link_builder_page_title": {
+        "message": "$1 - 提示連結產生器"
+    },
+    "link_builder_heading": {
+        "message": "提示連結產生器"
+    },
+    "link_builder_intro": {
+        "message": "把提示詞做成連結，點一下就會開啟 AI 並自動填入。可以存成書籤、貼進筆記，或設成網址列的搜尋捷徑。"
+    },
+    "link_builder_header_actions_label": {
+        "message": "其他動作"
+    },
+    "link_builder_import_button": {
+        "message": "匯入連結"
+    },
+    "link_builder_manage_prompts": {
+        "message": "管理自訂提示"
+    },
+    "link_builder_service_title": {
+        "message": "AI 服務"
+    },
+    "link_builder_service_desc": {
+        "message": "連結會開啟這個網站並填入提示詞。"
+    },
+    "link_builder_custom_name": {
+        "message": "自訂網址"
+    },
+    "link_builder_custom_hint": {
+        "message": "GPTs、專案等"
+    },
+    "link_builder_custom_url_label": {
+        "message": "網址"
+    },
+    "link_builder_custom_url_help": {
+        "message": "可以填入 GPTs 或專案的網址，例如 https://chatgpt.com/g/…"
+    },
+    "link_builder_custom_url_empty": {
+        "message": "請輸入網址。"
+    },
+    "link_builder_custom_url_invalid": {
+        "message": "網址格式不正確，例如：https://chatgpt.com/g/…"
+    },
+    "link_builder_custom_url_unsupported": {
+        "message": "擴充套件不會在這個網站上執行，開啟連結時不會自動填入提示詞。"
+    },
+    "link_builder_prompt_title": {
+        "message": "提示詞"
+    },
+    "link_builder_templates_button": {
+        "message": "範本"
+    },
+    "link_builder_prompt_label": {
+        "message": "提示詞內容"
+    },
+    "link_builder_prompt_placeholder": {
+        "message": "例如：請把以下內容翻譯成正體中文："
+    },
+    "link_builder_prompt_help": {
+        "message": "設成網址列搜尋捷徑時，可以用這個代表您輸入的文字："
+    },
+    "link_builder_insert_search_terms": {
+        "message": "插入 %s"
+    },
+    "link_builder_title_label": {
+        "message": "連結名稱"
+    },
+    "link_builder_title_help": {
+        "message": "書籤、Markdown 和搜尋捷徑都會使用這個名稱；留白則使用 AI 服務的名稱。"
+    },
+    "link_builder_behavior_title": {
+        "message": "開啟連結後"
+    },
+    "link_builder_auto_submit_label": {
+        "message": "自動送出"
+    },
+    "link_builder_auto_submit_help": {
+        "message": "填入提示詞後立即送出。"
+    },
+    "link_builder_paste_image_label": {
+        "message": "貼上剪貼簿中的圖片"
+    },
+    "link_builder_paste_image_help": {
+        "message": "把剪貼簿裡的圖片一起附加到訊息中。"
+    },
+    "link_builder_image_tool_label": {
+        "message": "使用圖片生成工具"
+    },
+    "link_builder_image_tool_help": {
+        "message": "先切換到圖片生成，再填入提示詞。"
+    },
+    "link_builder_feature_unavailable": {
+        "message": "$1 不支援這個功能"
+    },
+    "link_builder_image_tool_builtin": {
+        "message": "$1 本身就是圖片生成模式"
+    },
+    "link_builder_site_unsupported": {
+        "message": "這個網站不支援"
+    },
+    "link_builder_result_title": {
+        "message": "您的連結"
+    },
+    "link_builder_drag_hint": {
+        "message": "把書籤拖曳到瀏覽器的書籤列即可保存"
+    },
+    "link_builder_bookmarks_bar_shortcut": {
+        "message": "顯示書籤列"
+    },
+    "link_builder_bookmark_placeholder": {
+        "message": "您的書籤"
+    },
+    "link_builder_result_empty": {
+        "message": "輸入提示詞後，這裡就會產生連結。"
+    },
+    "link_builder_result_url_problem": {
+        "message": "輸入有效的網址後，這裡就會產生連結。"
+    },
+    "link_builder_open": {
+        "message": "在 $1 開啟"
+    },
+    "link_builder_open_fallback": {
+        "message": "開啟連結"
+    },
+    "link_builder_output_url": {
+        "message": "網址"
+    },
+    "link_builder_output_markdown": {
+        "message": "Markdown"
+    },
+    "link_builder_copy": {
+        "message": "複製"
+    },
+    "link_builder_copied": {
+        "message": "已複製"
+    },
+    "link_builder_copy_url_label": {
+        "message": "複製網址"
+    },
+    "link_builder_copy_markdown_label": {
+        "message": "複製 Markdown"
+    },
+    "link_builder_copy_search_name_label": {
+        "message": "複製名稱"
+    },
+    "link_builder_copy_search_url_label": {
+        "message": "複製搜尋網址"
+    },
+    "link_builder_copy_error": {
+        "message": "無法寫入剪貼簿，請選取文字後手動複製。"
+    },
+    "link_builder_status_copied": {
+        "message": "已複製到剪貼簿"
+    },
+    "link_builder_search_title": {
+        "message": "網址列搜尋捷徑"
+    },
+    "link_builder_search_desc": {
+        "message": "在網址列輸入搜尋捷徑並按 Tab，接著輸入文字，就能直接交給 AI。"
+    },
+    "link_builder_search_step_open": {
+        "message": "開啟 Chrome 的搜尋引擎設定"
+    },
+    "link_builder_search_open_settings": {
+        "message": "開啟設定"
+    },
+    "link_builder_search_step_add": {
+        "message": "在「網站搜尋」（新版介面為「你的網站捷徑」）旁按「新增」，填入以下內容："
+    },
+    "link_builder_search_field_name": {
+        "message": "姓名"
+    },
+    "link_builder_search_field_shortcut": {
+        "message": "搜尋捷徑"
+    },
+    "link_builder_search_field_url": {
+        "message": "以 %s 取代查詢的網址"
+    },
+    "link_builder_search_shortcut_hint": {
+        "message": "自訂一個好記的字，例如 ss"
+    },
+    "link_builder_search_terms_in_prompt": {
+        "message": "您在網址列輸入的文字會取代提示詞中的 %s。"
+    },
+    "link_builder_search_terms_appended": {
+        "message": "提示詞中沒有 %s，您輸入的文字會接在提示詞後面。"
+    },
+    "link_builder_search_settings_error": {
+        "message": "無法開啟設定頁，請在網址列輸入 chrome://settings/searchEngines。"
+    },
+    "link_builder_templates_title": {
+        "message": "提示範本"
+    },
+    "link_builder_templates_desc": {
+        "message": "選一個範本當作起點，套用後會取代目前的提示詞，仍可繼續修改。"
+    },
+    "link_builder_template_applied": {
+        "message": "已套用「$1」，按 $2 可復原"
+    },
+    "link_builder_import_title": {
+        "message": "匯入連結"
+    },
+    "link_builder_import_label": {
+        "message": "貼上連結"
+    },
+    "link_builder_import_help": {
+        "message": "可以貼上本工具產生的提示連結或 Markdown 連結，或舊版網頁「提示連結產生器」的分享連結。匯入後會取代目前的設定。"
+    },
+    "link_builder_import_error": {
+        "message": "這不是提示連結，請貼上完整的網址。"
+    },
+    "link_builder_import_confirm": {
+        "message": "匯入"
+    },
+    "link_builder_import_success": {
+        "message": "已匯入連結"
     }
 }

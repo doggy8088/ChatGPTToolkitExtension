@@ -307,5 +307,224 @@
     },
     "options_import_error_missing_fields": {
         "message": "Prompt #$1 must include text title and prompt fields."
+    },
+    "context_menu_open_link_builder": {
+        "message": "Open prompt link builder"
+    },
+    "link_builder_page_title": {
+        "message": "$1 - Prompt link builder"
+    },
+    "link_builder_heading": {
+        "message": "Prompt link builder"
+    },
+    "link_builder_intro": {
+        "message": "Turn a prompt into a link that opens your AI chat with the prompt filled in. Save it as a bookmark, paste it into your notes, or make it an address bar shortcut."
+    },
+    "link_builder_header_actions_label": {
+        "message": "More actions"
+    },
+    "link_builder_import_button": {
+        "message": "Import link"
+    },
+    "link_builder_manage_prompts": {
+        "message": "Manage prompts"
+    },
+    "link_builder_service_title": {
+        "message": "AI service"
+    },
+    "link_builder_service_desc": {
+        "message": "The link opens this site and fills in your prompt."
+    },
+    "link_builder_custom_name": {
+        "message": "Custom URL"
+    },
+    "link_builder_custom_hint": {
+        "message": "GPTs, projects…"
+    },
+    "link_builder_custom_url_label": {
+        "message": "URL"
+    },
+    "link_builder_custom_url_help": {
+        "message": "For example the URL of a GPT or a project, like https://chatgpt.com/g/…"
+    },
+    "link_builder_custom_url_empty": {
+        "message": "Enter a URL."
+    },
+    "link_builder_custom_url_invalid": {
+        "message": "This isn’t a valid URL. Example: https://chatgpt.com/g/…"
+    },
+    "link_builder_custom_url_unsupported": {
+        "message": "The extension doesn’t run on this site, so the prompt won’t be filled in."
+    },
+    "link_builder_prompt_title": {
+        "message": "Prompt"
+    },
+    "link_builder_templates_button": {
+        "message": "Templates"
+    },
+    "link_builder_prompt_label": {
+        "message": "Prompt text"
+    },
+    "link_builder_prompt_placeholder": {
+        "message": "For example: Translate the following into English:"
+    },
+    "link_builder_prompt_help": {
+        "message": "For an address bar shortcut, use this where the text you type should go:"
+    },
+    "link_builder_insert_search_terms": {
+        "message": "Insert %s"
+    },
+    "link_builder_title_label": {
+        "message": "Link name"
+    },
+    "link_builder_title_help": {
+        "message": "Used for the bookmark, the Markdown link and the shortcut. Leave it empty to use the AI service’s name."
+    },
+    "link_builder_behavior_title": {
+        "message": "When the link opens"
+    },
+    "link_builder_auto_submit_label": {
+        "message": "Send automatically"
+    },
+    "link_builder_auto_submit_help": {
+        "message": "Sends the prompt right after filling it in."
+    },
+    "link_builder_paste_image_label": {
+        "message": "Paste the image in your clipboard"
+    },
+    "link_builder_paste_image_help": {
+        "message": "Attaches the image in your clipboard to the message."
+    },
+    "link_builder_image_tool_label": {
+        "message": "Use the image generation tool"
+    },
+    "link_builder_image_tool_help": {
+        "message": "Switches to image generation before filling in the prompt."
+    },
+    "link_builder_feature_unavailable": {
+        "message": "Not available on $1"
+    },
+    "link_builder_image_tool_builtin": {
+        "message": "$1 already generates images"
+    },
+    "link_builder_site_unsupported": {
+        "message": "Not available on this site"
+    },
+    "link_builder_result_title": {
+        "message": "Your link"
+    },
+    "link_builder_drag_hint": {
+        "message": "Drag the bookmark to your bookmarks bar to save it"
+    },
+    "link_builder_bookmarks_bar_shortcut": {
+        "message": "Show bookmarks bar"
+    },
+    "link_builder_bookmark_placeholder": {
+        "message": "Your bookmark"
+    },
+    "link_builder_result_empty": {
+        "message": "Write a prompt to create the link."
+    },
+    "link_builder_result_url_problem": {
+        "message": "Enter a valid URL to create the link."
+    },
+    "link_builder_open": {
+        "message": "Open in $1"
+    },
+    "link_builder_open_fallback": {
+        "message": "Open link"
+    },
+    "link_builder_output_url": {
+        "message": "URL"
+    },
+    "link_builder_output_markdown": {
+        "message": "Markdown"
+    },
+    "link_builder_copy": {
+        "message": "Copy"
+    },
+    "link_builder_copied": {
+        "message": "Copied"
+    },
+    "link_builder_copy_url_label": {
+        "message": "Copy URL"
+    },
+    "link_builder_copy_markdown_label": {
+        "message": "Copy Markdown"
+    },
+    "link_builder_copy_search_name_label": {
+        "message": "Copy name"
+    },
+    "link_builder_copy_search_url_label": {
+        "message": "Copy shortcut URL"
+    },
+    "link_builder_copy_error": {
+        "message": "Couldn’t copy to the clipboard. Select the text and copy it manually."
+    },
+    "link_builder_status_copied": {
+        "message": "Copied to clipboard"
+    },
+    "link_builder_search_title": {
+        "message": "Address bar shortcut"
+    },
+    "link_builder_search_desc": {
+        "message": "Type the shortcut in the address bar, press Tab, then type your text to send it to the AI."
+    },
+    "link_builder_search_step_open": {
+        "message": "Open Chrome’s search engine settings"
+    },
+    "link_builder_search_open_settings": {
+        "message": "Open settings"
+    },
+    "link_builder_search_step_add": {
+        "message": "Next to “Site search” (“Your site shortcuts” in newer versions), click “Add” and fill in:"
+    },
+    "link_builder_search_field_name": {
+        "message": "Name"
+    },
+    "link_builder_search_field_shortcut": {
+        "message": "Shortcut"
+    },
+    "link_builder_search_field_url": {
+        "message": "URL with %s in place of query"
+    },
+    "link_builder_search_shortcut_hint": {
+        "message": "Anything short and easy to type, like ss"
+    },
+    "link_builder_search_terms_in_prompt": {
+        "message": "The text you type in the address bar replaces %s in the prompt."
+    },
+    "link_builder_search_terms_appended": {
+        "message": "The prompt has no %s, so the text you type goes after the prompt."
+    },
+    "link_builder_search_settings_error": {
+        "message": "Couldn’t open the settings. Go to chrome://settings/searchEngines in the address bar."
+    },
+    "link_builder_templates_title": {
+        "message": "Prompt templates"
+    },
+    "link_builder_templates_desc": {
+        "message": "Pick a template to start from. It replaces the current prompt, and you can keep editing it."
+    },
+    "link_builder_template_applied": {
+        "message": "Applied “$1”. Press $2 to undo."
+    },
+    "link_builder_import_title": {
+        "message": "Import a link"
+    },
+    "link_builder_import_label": {
+        "message": "Link"
+    },
+    "link_builder_import_help": {
+        "message": "Paste a prompt link or Markdown link made with this tool, or a share link from the previous web version of the link builder. It replaces the current settings."
+    },
+    "link_builder_import_error": {
+        "message": "This isn’t a prompt link. Paste the full URL."
+    },
+    "link_builder_import_confirm": {
+        "message": "Import"
+    },
+    "link_builder_import_success": {
+        "message": "Link imported"
     }
 }

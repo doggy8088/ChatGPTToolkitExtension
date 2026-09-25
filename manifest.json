@@ -12,7 +12,8 @@
       "default_title": "__MSG_chatgpttoolkit_name__"
     },
     "permissions": [
-      "storage"
+      "storage",
+      "contextMenus"
     ],
     "icons": {
       "16": "images/icon-16.png",
