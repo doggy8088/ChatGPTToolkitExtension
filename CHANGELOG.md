@@ -1,5 +1,31 @@
 # Changelog
 
+- 0.47.1 (2026/09/25)
+
+  - Chore
+    - 將擴充套件版本由 `0.47.0` 升級為 `0.47.1`。
+    - 同步更新 `options.html` 與 `link-builder.html` 頁尾顯示版本為 `0.47.1`。
+    - 新增 `contextMenus` 權限（用於工具列圖示的右鍵選單，不會顯示權限警告）。
+    - 選項頁與提示連結產生器共用 `styles/common.css` 設計樣式，頁面直接載入、不需建置；Service Worker 改以 TypeScript 撰寫（`src/background/`），建置輸出 `scripts/background.js`。
+    - 提示連結產生器的頁面腳本輸出到 `scripts/link-builder.js` 並納入版控，未重新建置的開發環境也能正常使用；發佈封裝加入 `link-builder.html` 與 `styles/`。
+    - 新增提示連結產生器、右鍵選單、頁面資源等測試（共 233 個 Bun 測試）。
+
+  - New features
+    - 整併「提示連結產生器」到擴充套件：在工具列的擴充套件圖示上按滑鼠右鍵，選擇「開啟提示連結產生器」即可開啟（已開啟時會切換到該分頁）。
+      - 支援 ChatGPT、ChatGPT Images、Claude、Gemini、Groq、Perplexity 與自訂網址（例如 GPTs）。
+      - 內建提示範本庫（依介面語言提供），套用後自動命名連結並可復原；提供 `%s` 插入按鈕。
+      - 依各網站支援的功能，自動停用「貼上剪貼簿中的圖片」與「使用圖片生成工具」並說明原因，連結也不會帶入不支援的參數。
+      - 即時預覽書籤，可直接拖曳到瀏覽器的書籤列；一鍵複製網址或 Markdown 連結。
+      - 網址列搜尋捷徑設定引導，並可一鍵開啟 Chrome 的搜尋引擎設定頁。
+      - 可匯入既有的提示連結、Markdown 連結或舊版網頁「提示連結產生器」的分享連結繼續編輯。
+      - 支援系統／淺色／深色主題（預設跟隨系統，與選項頁共用設定），介面支援正體中文、英文與日文。
+
+  - Bug fixes
+    - None
+
+  - Breaking changes
+    - None
+
 - 0.47.0 (2026/09/25)
 
   - Chore
