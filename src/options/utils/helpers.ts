@@ -1,4 +1,15 @@
 /**
+ * `window.localStorage`, or `null` when it is unavailable (accessing it can throw when storage is blocked).
+ */
+export function getLocalStorage(): Storage | null {
+  try {
+    return typeof localStorage !== 'undefined' ? localStorage : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Delay before revoking a download's object URL. Revoking synchronously right after `click()` can
  * cancel the download before the browser has started reading the blob.
  */

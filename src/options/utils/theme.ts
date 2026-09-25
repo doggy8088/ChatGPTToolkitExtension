@@ -37,17 +37,6 @@ export function getThemeAttribute(preference: ThemePreference): ResolvedTheme | 
   return preference === 'system' ? null : preference;
 }
 
-/**
- * Safely obtain `window.localStorage` (access itself can throw when storage is blocked).
- */
-export function getThemeStorage(): ThemeStorage | null {
-  try {
-    return typeof localStorage !== 'undefined' ? localStorage : null;
-  } catch {
-    return null;
-  }
-}
-
 export function readThemePreference(storage: Pick<Storage, 'getItem'> | null | undefined): ThemePreference {
   if (!storage) return 'system';
   try {

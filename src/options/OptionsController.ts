@@ -3,8 +3,9 @@ import { PROMPTS_STORAGE_KEY, PromptsStorageService } from './services/PromptsSt
 import { OptionsUIController, onDialogBackdropClick } from './ui/OptionsUIController';
 import { PromptRenderer, type PromptCardCallbacks } from './ui/PromptRenderer';
 import { ThemeSwitcher } from './ui/ThemeSwitcher';
+import { byId, insertTextAtCaret, shortcutKbds } from './utils/dom';
 import { downloadFile } from './utils/helpers';
-import { getMessage } from './utils/i18n';
+import { applyPageI18n, getMessage } from './utils/i18n';
 import { renderPromptIcon } from './utils/promptIcon';
 import {
   ARGS_PLACEHOLDER,
@@ -48,12 +49,6 @@ type ViewTransitionDocument = { startViewTransition?: (update: () => void) => un
 const GROUPS: readonly PromptGroup[] = ['initial', 'followUp'];
 const EXPORT_FILENAME = 'chatgpt-toolkit-prompts.json';
 const MAX_TRACKED_WRITES = 20;
-
-const byId = <T extends HTMLElement = HTMLElement>(id: string): T => {
-  const node = document.getElementById(id);
-  if (!node) throw new Error(`options.html is missing #${id}`);
-  return node as T;
-};
 
 const errorMessage = (error: unknown): string => (error instanceof Error ? error.message : String(error));
 
@@ -191,57 +186,8 @@ class OptionsController {
   }
 
   private applyI18n(): void {
-    const lang = getMessage('options_lang_tag');
-    if (lang && lang !== 'options_lang_tag') {
-      document.documentElement.lang = lang;
-    }
-
-    this.applyI18nText();
-    this.applyI18nPlaceholders();
-    this.applyI18nAriaLabels();
-    this.applyI18nTitles();
+    applyPageI18n();
     this.renderShortcutHint();
-  }
-
-  private applyI18nText(): void {
-    document.querySelectorAll<HTMLElement>('[data-i18n]').forEach((element) => {
-      const key = element.dataset.i18n;
-      if (!key) return;
-      element.textContent = getMessage(key, this.resolveI18nArgs(element.dataset.i18nArgs));
-    });
-  }
-
-  private applyI18nPlaceholders(): void {
-    document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('[data-i18n-placeholder]').forEach((element) => {
-      const key = element.dataset.i18nPlaceholder;
-      if (!key) return;
-      element.placeholder = getMessage(key, this.resolveI18nArgs(element.dataset.i18nArgs));
-    });
-  }
-
-  private applyI18nAriaLabels(): void {
-    document.querySelectorAll<HTMLElement>('[data-i18n-aria-label]').forEach((element) => {
-      const key = element.dataset.i18nAriaLabel;
-      if (!key) return;
-      const label = getMessage(key, this.resolveI18nArgs(element.dataset.i18nArgs));
-      element.setAttribute('aria-label', label);
-      if (element.classList.contains('has-tooltip')) element.dataset.tooltip = label;
-    });
-  }
-
-  private applyI18nTitles(): void {
-    document.querySelectorAll<HTMLElement>('[data-i18n-title]').forEach((element) => {
-      const key = element.dataset.i18nTitle;
-      if (!key) return;
-      element.title = getMessage(key, this.resolveI18nArgs(element.dataset.i18nArgs));
-    });
-  }
-
-  private resolveI18nArgs(rawArgs?: string): string[] | undefined {
-    if (!rawArgs) return undefined;
-    const parts = rawArgs.split(',').map((part) => part.trim()).filter(Boolean);
-    if (parts.length === 0) return undefined;
-    return parts.map((part) => getMessage(part));
   }
 
   /**
@@ -251,16 +197,9 @@ class OptionsController {
     const hint = document.getElementById('saveShortcutHint');
     if (!hint) return;
 
-    const isApple = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || '');
-    const keys = [isApple ? '⌘' : 'Ctrl', 'Enter'];
     const marker = '';
     const [before, after = ''] = getMessage('options_modal_save_shortcut', marker).split(marker);
-    const keyNodes = keys.map((key) => {
-      const kbd = document.createElement('kbd');
-      kbd.textContent = key;
-      return kbd;
-    });
-    hint.replaceChildren(before, ...keyNodes, after);
+    hint.replaceChildren(before, ...shortcutKbds('Enter'), after);
   }
 
   private attachEventListeners(): void {
@@ -838,21 +777,7 @@ class OptionsController {
 
   private insertPromptArgsAtCursor(): void {
     if (!this.promptAutoPaste.checked) return;
-
-    this.promptText.focus();
-    // `insertText` keeps the edit on the textarea's undo stack; fall back when unsupported.
-    let inserted = false;
-    try {
-      inserted = document.execCommand('insertText', false, ARGS_PLACEHOLDER);
-    } catch {
-      inserted = false;
-    }
-
-    if (!inserted) {
-      const { selectionStart, selectionEnd } = this.promptText;
-      this.promptText.setRangeText(ARGS_PLACEHOLDER, selectionStart, selectionEnd, 'end');
-      this.promptText.dispatchEvent(new Event('input', { bubbles: true }));
-    }
+    insertTextAtCaret(this.promptText, ARGS_PLACEHOLDER);
   }
 
   private async requestClosePromptModal(): Promise<void> {

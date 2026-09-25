@@ -9,7 +9,7 @@ const manifestPath = resolve(process.cwd(), 'manifest.json');
 const { version } = JSON.parse(readFileSync(manifestPath, 'utf8'));
 const fileName = `ChatGPTToolkitExtension_v${version}.zip`;
 
-execSync(`7z a ${fileName} _locales images scripts dist options.html CHANGELOG.md manifest.json README.md`, {
+execSync(`7z a ${fileName} _locales images scripts styles dist options.html CHANGELOG.md manifest.json README.md`, {
   stdio: 'inherit',
 });
 

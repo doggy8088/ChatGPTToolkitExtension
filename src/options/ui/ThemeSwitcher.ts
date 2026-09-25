@@ -1,12 +1,12 @@
 import {
   THEME_STORAGE_KEY,
   applyThemePreference,
-  getThemeStorage,
   parseThemePreference,
   readThemePreference,
   writeThemePreference,
   type ThemePreference,
 } from '../utils/theme';
+import { getLocalStorage } from '../utils/helpers';
 
 /**
  * Wires the System / Light / Dark radio group to the stored theme preference.
@@ -19,13 +19,13 @@ export class ThemeSwitcher {
   }
 
   init(): void {
-    this.apply(readThemePreference(getThemeStorage()));
+    this.apply(readThemePreference(getLocalStorage()));
 
     this.inputs.forEach((input) => {
       input.addEventListener('change', () => {
         if (!input.checked) return;
         const preference = parseThemePreference(input.value);
-        writeThemePreference(getThemeStorage(), preference);
+        writeThemePreference(getLocalStorage(), preference);
         this.apply(preference);
       });
     });
@@ -33,7 +33,7 @@ export class ThemeSwitcher {
     // Keep other open options tabs in sync.
     window.addEventListener('storage', (event) => {
       if (event.key !== THEME_STORAGE_KEY && event.key !== null) return;
-      this.apply(readThemePreference(getThemeStorage()));
+      this.apply(readThemePreference(getLocalStorage()));
     });
   }
 

@@ -1,4 +1,5 @@
 import type { CustomPrompt } from '../models/CustomPrompt';
+import { element } from '../utils/dom';
 import { getMessage } from '../utils/i18n';
 import { renderPromptIcon } from '../utils/promptIcon';
 import {
@@ -44,13 +45,6 @@ export interface EmptyStateOptions {
 const REORDER_HINT_ID = 'reorderDisabledHint';
 
 const asText = (value: unknown): string => (typeof value === 'string' ? value : '');
-
-function element<K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, text?: string): HTMLElementTagNameMap[K] {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
 
 /**
  * Builds the prompt cards and list placeholders with DOM APIs (user data is only ever set as text).

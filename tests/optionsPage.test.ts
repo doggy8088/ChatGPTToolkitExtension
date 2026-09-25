@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { DEFAULT_PROMPTS, type CustomPrompt } from '../src/options/models/CustomPrompt';
 import { ensureHappyDom } from './utils/happyDom';
+import { loadMessages } from './utils/messages';
 
 ensureHappyDom();
 
@@ -11,17 +12,11 @@ ensureHappyDom();
  */
 const ROOT = resolve(import.meta.dir, '..');
 const STORAGE_KEY = 'chatgpttoolkit.customPrompts';
-const messages = JSON.parse(readFileSync(resolve(ROOT, '_locales/en/messages.json'), 'utf8')) as Record<string, { message: string }>;
 
 const store: Record<string, unknown> = {};
 const storageListeners: Array<(changes: Record<string, { newValue?: unknown; oldValue?: unknown }>, area: string) => void> = [];
 
-function t(key: string, substitutions?: string | string[]): string {
-  const entry = messages[key];
-  if (!entry) return '';
-  const subs = substitutions === undefined ? [] : Array.isArray(substitutions) ? substitutions : [substitutions];
-  return entry.message.replace(/\$(\d)/g, (_, n: string) => subs[Number(n) - 1] ?? '');
-}
+const t = loadMessages('en');
 
 function installChromeStub(): void {
   (globalThis as any).chrome = {
