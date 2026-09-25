@@ -7,22 +7,49 @@ on:
       - main
 
 jobs:
+  # 沒有升版號的 push（文件、workflow 等）不發布：同版本上傳會被 Chrome Web Store 以 PKG_INVALID_VERSION_NUMBER 拒絕
+  check-version:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    outputs:
+      released: ${{ steps.check.outputs.released }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: 檢查版本是否已發布
+        id: check
+        run: |
+          version=$(jq -r .version manifest.json)
+          if git ls-remote --exit-code --tags origin "refs/tags/v$version" > /dev/null; then
+            echo "released=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::v$version 已發布過，略過發布。若上次發布失敗，請重新執行失敗的 job 或手動執行此 workflow。"
+          else
+            echo "released=false" >> "$GITHUB_OUTPUT"
+          fi
+
   publish:
+    needs: check-version
+    # 手動執行一律發布，用來重試失敗的發布
+    if: github.event_name == 'workflow_dispatch' || needs.check-version.outputs.released != 'true'
     runs-on: windows-latest
 
     permissions:
       contents: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: 設定 Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: 設定 Bun
-        uses: oven-sh/setup-bun@v1
+        uses: oven-sh/setup-bun@v2
         with:
           bun-version: 'latest'
 
@@ -39,7 +66,7 @@ jobs:
 
       - name: 建立 GitHub Release
         id: create_release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ steps.get_version.outputs.version }}
           name: Release v${{ steps.get_version.outputs.version }}
@@ -52,16 +79,17 @@ jobs:
           7z a $filePath _locales images scripts styles dist options.html link-builder.html CHANGELOG.md manifest.json README.md
 
       - name: 上傳 Release 附件
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ steps.get_version.outputs.version }}
           files: ./ChatGPTToolkitExtension_v${{ steps.get_version.outputs.version }}.zip
 
       - name: 發布至 Chrome Web Store
-        uses: mnao305/chrome-extension-upload@v4.0.1
+        uses: mnao305/chrome-extension-upload@v7.0.0
         with:
           file-path: 'ChatGPTToolkitExtension_v${{ steps.get_version.outputs.version }}.zip'
           extension-id: ${{ secrets.EXTENSION_ID }}
+          publisher-id: ${{ secrets.PUBLISHER_ID }}
           client-id: ${{ secrets.CLIENT_ID }}
           client-secret: ${{ secrets.CLIENT_SECRET }}
           refresh-token: ${{ secrets.REFRESH_TOKEN }}

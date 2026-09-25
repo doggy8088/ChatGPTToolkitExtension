@@ -41,7 +41,7 @@ For manual testing, load the repository root as an unpacked extension in Chrome.
 - Prefer `bun test` for routine validation.
 
 ## Release and CI
-- `.github/workflows/publish.yml` creates a GitHub Release and uploads a zip on pushes to `main`.
+- `.github/workflows/publish.yml` creates a GitHub Release and uploads a zip on pushes to `main`, unless the tag for the `manifest.json` version already exists (a manual run always publishes).
 - Release tags follow `vX.Y.Z`, derived from `manifest.json`.
 - Before release, update `manifest.json` and `CHANGELOG.md`.
 - The zip file list is spelled out in both `publish.yml` and `tools/pack-release.mjs`; a new top-level page or folder must be added to both.
