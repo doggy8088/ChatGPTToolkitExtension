@@ -7,14 +7,18 @@ export function parseChatGPTWidth(value: unknown): ChatGPTWidth {
   return CHATGPT_WIDTHS.includes(value as ChatGPTWidth) ? value as ChatGPTWidth : 'default';
 }
 
-function parseWidthWrite(value: unknown): { width: ChatGPTWidth; writer: string } | null {
+function parseWidthWrite(value: unknown): { width: ChatGPTWidth; writer: string; revision?: string } | null {
   if (!value || typeof value !== 'object' || !('width' in value) || !('writer' in value)) return null;
   if (typeof value.writer !== 'string' || !CHATGPT_WIDTHS.includes(value.width as ChatGPTWidth)) return null;
-  return { width: value.width as ChatGPTWidth, writer: value.writer };
+  return {
+    width: value.width as ChatGPTWidth,
+    writer: value.writer,
+    revision: 'revision' in value && typeof value.revision === 'string' ? value.revision : undefined,
+  };
 }
 
 /** Subscribe before reading so a slow initial read cannot overwrite a newer setting. */
-export function watchChatGPTWidth(onWidth: (width: ChatGPTWidth, writer?: string) => void, onError: (error: unknown) => void): void {
+export function watchChatGPTWidth(onWidth: (width: ChatGPTWidth, writer?: string, revision?: string) => void, onError: (error: unknown) => void): void {
   let changed = false;
   try {
     chrome.storage.onChanged.addListener((changes, area) => {
@@ -24,7 +28,7 @@ export function watchChatGPTWidth(onWidth: (width: ChatGPTWidth, writer?: string
       if (!widthChanged && !write) return;
       changed = true;
       const width = parseChatGPTWidth(widthChanged ? changes[CHATGPT_WIDTH_KEY].newValue : write?.width);
-      onWidth(width, write?.width === width ? write.writer : undefined);
+      onWidth(width, write?.width === width ? write.writer : undefined, write?.width === width ? write.revision : undefined);
     });
     chrome.storage.local.get([CHATGPT_WIDTH_KEY], (items) => {
       if (chrome.runtime?.lastError) {
@@ -38,13 +42,13 @@ export function watchChatGPTWidth(onWidth: (width: ChatGPTWidth, writer?: string
   }
 }
 
-export function saveChatGPTWidth(width: ChatGPTWidth, writer: string = crypto.randomUUID()): Promise<void> {
+export function saveChatGPTWidth(width: ChatGPTWidth, writer: string = crypto.randomUUID(), revision: string = crypto.randomUUID()): Promise<void> {
   return new Promise((resolve, reject) => {
     const validWidth = parseChatGPTWidth(width);
     // Store origin metadata with the value, including same-value writes from another page.
     chrome.storage.local.set({
       [CHATGPT_WIDTH_KEY]: validWidth,
-      [CHATGPT_WIDTH_WRITE_KEY]: { width: validWidth, writer, revision: crypto.randomUUID() },
+      [CHATGPT_WIDTH_WRITE_KEY]: { width: validWidth, writer, revision },
     }, () => {
       if (chrome.runtime?.lastError) reject(new Error(chrome.runtime.lastError.message));
       else resolve();

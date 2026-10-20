@@ -1127,7 +1127,11 @@
       return null;
     if (typeof value.writer !== "string" || !CHATGPT_WIDTHS.includes(value.width))
       return null;
-    return { width: value.width, writer: value.writer };
+    return {
+      width: value.width,
+      writer: value.writer,
+      revision: "revision" in value && typeof value.revision === "string" ? value.revision : undefined
+    };
   }
   function watchChatGPTWidth(onWidth, onError) {
     let changed = false;
@@ -1141,7 +1145,7 @@
           return;
         changed = true;
         const width = parseChatGPTWidth(widthChanged ? changes[CHATGPT_WIDTH_KEY].newValue : write?.width);
-        onWidth(width, write?.width === width ? write.writer : undefined);
+        onWidth(width, write?.width === width ? write.writer : undefined, write?.width === width ? write.revision : undefined);
       });
       chrome.storage.local.get([CHATGPT_WIDTH_KEY], (items) => {
         if (chrome.runtime?.lastError) {
@@ -2269,4 +2273,4 @@
   runContentScript();
 })();
 
-//# debugId=CC74D01BFD356AF564756E2164756E21
+//# debugId=8A719C9DC7346FD964756E2164756E21
