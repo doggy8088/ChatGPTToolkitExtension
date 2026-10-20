@@ -308,6 +308,39 @@ describe('options page (smoke)', () => {
     }
   });
 
+  test('repairs stale writes even when callbacks arrive before storage events', async () => {
+    const select = $<HTMLSelectElement>('#chatgptConversationWidth');
+    const api = (globalThis as any).chrome;
+    const originalSet = api.storage.local.set;
+    const key = 'chatgpttoolkit.chatgptConversationWidth';
+    const pending: Array<{ items: Record<string, unknown>; callback: () => void }> = [];
+    api.storage.local.set = (items: Record<string, unknown>, callback: () => void) => pending.push({ items, callback });
+    try {
+      select.value = '60';
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      await tick();
+      // Storage commits external 100, then local 60, but delays both events.
+      store[key] = '100';
+      Object.assign(store, pending[0].items);
+      pending[0].callback();
+      await tick();
+      storageListeners.forEach((listener) => listener({ [key]: { newValue: '100' } }, 'local'));
+      const changes = Object.fromEntries(Object.entries(pending[0].items).map(([name, value]) => [name, { newValue: value }]));
+      storageListeners.forEach((listener) => listener(changes, 'local'));
+      await tick();
+      expect(select.value).toBe('100');
+      expect(pending).toHaveLength(2);
+      originalSet(pending[1].items, pending[1].callback);
+      await tick();
+      expect(store[key]).toBe('100');
+      expect(select.value).toBe('100');
+    } finally {
+      api.storage.local.set = originalSet;
+      originalSet({ [key]: 'default' });
+      await tick();
+    }
+  });
+
   test('renders the composer preview with {{args}} semantics and send state', () => {
     const summary = visibleCards()[1];
     expect(summary.querySelector('.token--appended')).not.toBeNull();
