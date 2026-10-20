@@ -1155,8 +1155,16 @@
     }
   }
 
+  // src/content/sites/chatgptSelectors.ts
+  var CHATGPT_COMPOSER_FORM_SELECTORS = [
+    "form[data-chatgpt-composer]",
+    'form[data-type="unified-composer"]',
+    "form[data-mobile-composer]"
+  ];
+
   // src/content/sites/chatgptLayout.ts
   var CHATGPT_LAYOUT_STYLE_ID = "chatgpttoolkit-conversation-width";
+  var COMPOSER_SELECTOR = `:is(${CHATGPT_COMPOSER_FORM_SELECTORS.join(", ")})`;
   function applyChatGPTWidth(width) {
     if (width === "default") {
       document.getElementById(CHATGPT_LAYOUT_STYLE_ID)?.remove();
@@ -1171,11 +1179,11 @@
     style.textContent = `
     @media screen and (min-width: 768px) {
       main:has(#thread), main:has([data-thread-find-target="conversation"]),
-      main:has(form[data-chatgpt-composer]) {
+      main:has(${COMPOSER_SELECTOR}) {
         container-type: inline-size;
       }
       main :is(#thread, [data-thread-find-target="conversation"], #thread-bottom-container),
-      main form[data-chatgpt-composer],
+      main ${COMPOSER_SELECTOR},
       main [class*="--thread-content-max-width"] {
         --thread-content-max-width: ${width}cqw !important;
         --thread-content-responsive-max-width: ${width}cqw !important;
@@ -1186,7 +1194,7 @@
       main :is(#thread, #thread-bottom-container) [class*="max-w-"][class*="thread-content"],
       main #thread article[data-testid^="conversation-turn-"] > div > div,
       main[data-app-shell-main-surface] [data-thread-find-target="conversation"],
-      main form[data-chatgpt-composer] {
+      main ${COMPOSER_SELECTOR} {
         box-sizing: border-box;
         width: min(100%, ${width}cqw) !important;
         max-width: min(100%, ${width}cqw) !important;
@@ -1200,11 +1208,6 @@
   }
 
   // src/content/sites/chatgpt.ts
-  var COMPOSER_FORM_SELECTORS = [
-    "form[data-chatgpt-composer]",
-    'form[data-type="unified-composer"]',
-    "form[data-mobile-composer]"
-  ];
   var PROMPT_EDITOR_SELECTORS = [
     "#prompt-textarea",
     '[data-composer-markdown][contenteditable="true"]',
@@ -1362,7 +1365,7 @@
       return Boolean(el.closest(CONVERSATION_CONTENT_SELECTOR));
     }
     function getComposerForm() {
-      for (const selector of COMPOSER_FORM_SELECTORS) {
+      for (const selector of CHATGPT_COMPOSER_FORM_SELECTORS) {
         const forms = Array.from(document.querySelectorAll(selector)).filter((form) => !isInsideConversation(form));
         const match = forms.find((form) => isElementVisible(form)) || forms[0];
         if (match)
@@ -2266,4 +2269,4 @@
   runContentScript();
 })();
 
-//# debugId=1B5F6EB6E1859B3864756E2164756E21
+//# debugId=CC74D01BFD356AF564756E2164756E21

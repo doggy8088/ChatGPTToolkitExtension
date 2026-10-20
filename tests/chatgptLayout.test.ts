@@ -114,9 +114,13 @@ describe('ChatGPT conversation layout', () => {
     }
   });
 
-  test('home composer establishes a main query container without a conversation', () => {
+  test.each([
+    '<form data-composer-placement="home" data-chatgpt-composer></form>',
+    '<form data-type="unified-composer"></form>',
+    '<form data-mobile-composer></form>',
+  ])('home composer establishes a main query container: %s', (markup) => {
     const main = document.createElement('main');
-    main.innerHTML = '<form data-composer-placement="home" data-chatgpt-composer></form>';
+    main.innerHTML = markup;
     document.body.appendChild(main);
     try {
       applyChatGPTWidth('80');

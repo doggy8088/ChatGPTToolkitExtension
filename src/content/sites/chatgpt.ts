@@ -1,5 +1,6 @@
 import type { ContentContext } from '../context';
 import { initChatGPTLayout } from './chatgptLayout';
+import { CHATGPT_COMPOSER_FORM_SELECTORS as COMPOSER_FORM_SELECTORS } from './chatgptSelectors';
 import { extractPromptEditorText } from '../editorText';
 import {
   CUSTOM_PROMPTS_KEY,
@@ -20,12 +21,6 @@ type MarkmapInstanceHandle = {
 // ChatGPT serves several front-ends side by side: the 2026 app shell (logged in), the older
 // React app and the logged-out "Octane" app. Every lookup lists the current markup first and
 // keeps the older selectors as fallbacks.
-const COMPOSER_FORM_SELECTORS = [
-  'form[data-chatgpt-composer]',
-  'form[data-type="unified-composer"]',
-  'form[data-mobile-composer]',
-];
-
 const PROMPT_EDITOR_SELECTORS = [
   '#prompt-textarea',
   '[data-composer-markdown][contenteditable="true"]',
