@@ -550,5 +550,11 @@
   },
   "options_advanced_save_error": {
       "message": "レイアウト設定を保存できませんでした。もう一度お試しください。"
+  },
+  "options_footer_maintainer_prefix": {
+    "message": "このツールは "
+  },
+  "options_footer_maintainer_suffix": {
+    "message": " が設計・開発・保守しています。"
   }
 }

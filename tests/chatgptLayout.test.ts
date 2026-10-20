@@ -83,4 +83,22 @@ describe('ChatGPT conversation layout', () => {
     applyChatGPTWidth('80');
     expect(document.getElementById(CHATGPT_LAYOUT_STYLE_ID)?.textContent).toContain('@media screen and (min-width: 768px)');
   });
+
+  test('app-shell width rules match both the conversation and its sibling composer', () => {
+    const main = document.createElement('main');
+    main.dataset.appShellMainSurface = 'browser';
+    main.innerHTML = '<div data-thread-find-target="conversation"></div><form data-chatgpt-composer></form>';
+    document.body.appendChild(main);
+    try {
+      applyChatGPTWidth('80');
+      const style = document.getElementById(CHATGPT_LAYOUT_STYLE_ID) as HTMLStyleElement;
+      const media = style.sheet!.cssRules[0] as CSSMediaRule;
+      const widthRule = Array.from(media.cssRules).find((rule) => (rule as CSSStyleRule).style?.getPropertyValue('max-width')) as CSSStyleRule;
+      const matches = Array.from(main.querySelectorAll(widthRule.selectorText));
+      expect(matches).toEqual([main.firstElementChild, main.lastElementChild]);
+      expect(widthRule.style.getPropertyValue('max-width')).toContain('80cqw');
+    } finally {
+      main.remove();
+    }
+  });
 });

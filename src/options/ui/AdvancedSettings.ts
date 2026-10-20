@@ -6,6 +6,8 @@ import type { OptionsUIController } from './OptionsUIController';
 export function initAdvancedSettings(ui: OptionsUIController): void {
   const select = byId<HTMLSelectElement>('chatgptConversationWidth');
   let savedWidth: ChatGPTWidth = 'default';
+  let saveChain: Promise<void> = Promise.resolve();
+  let latestRequest = 0;
 
   watchChatGPTWidth((width) => {
     savedWidth = width;
@@ -13,18 +15,20 @@ export function initAdvancedSettings(ui: OptionsUIController): void {
     select.disabled = false;
   }, () => ui.showStatus(getMessage('options_advanced_load_error'), 'error'));
 
-  select.addEventListener('change', async () => {
+  select.addEventListener('change', () => {
     const width = parseChatGPTWidth(select.value);
-    select.disabled = true;
-    try {
-      await saveChatGPTWidth(width);
-      savedWidth = width;
-      ui.showStatus(getMessage('options_advanced_saved'));
-    } catch {
-      select.value = savedWidth;
-      ui.showStatus(getMessage('options_advanced_save_error'), 'error');
-    } finally {
-      select.disabled = false;
-    }
+    const request = ++latestRequest;
+    // Keep keyboard focus and serialize rapid changes without disabling the control.
+    saveChain = saveChain.then(async () => {
+      try {
+        await saveChatGPTWidth(width);
+        if (request === latestRequest) ui.showStatus(getMessage('options_advanced_saved'));
+      } catch {
+        if (request === latestRequest) {
+          select.value = savedWidth;
+          ui.showStatus(getMessage('options_advanced_save_error'), 'error');
+        }
+      }
+    });
   });
 }

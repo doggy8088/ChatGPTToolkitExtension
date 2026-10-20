@@ -156,6 +156,70 @@ describe('options page (smoke)', () => {
     }
   });
 
+  test('keeps keyboard focus and serializes rapid width changes', async () => {
+    const select = $<HTMLSelectElement>('#chatgptConversationWidth');
+    const api = (globalThis as any).chrome;
+    const originalSet = api.storage.local.set;
+    const pending: Array<{ items: Record<string, unknown>; callback: () => void }> = [];
+    api.storage.local.set = (items: Record<string, unknown>, callback: () => void) => pending.push({ items, callback });
+    try {
+      select.focus();
+      for (const value of ['60', '80']) {
+        select.value = value;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      await tick();
+      expect(select.disabled).toBe(false);
+      expect(document.activeElement).toBe(select);
+      expect(pending).toHaveLength(1);
+      originalSet(pending[0].items, pending[0].callback);
+      await tick();
+      expect(pending).toHaveLength(2);
+      originalSet(pending[1].items, pending[1].callback);
+      await tick();
+      expect(store['chatgpttoolkit.chatgptConversationWidth']).toBe('80');
+      expect(document.activeElement).toBe(select);
+    } finally {
+      api.storage.local.set = originalSet;
+      originalSet({ 'chatgpttoolkit.chatgptConversationWidth': 'default' });
+      await tick();
+    }
+  });
+
+  test('an older save completion cannot replace a newer externally saved width', async () => {
+    const select = $<HTMLSelectElement>('#chatgptConversationWidth');
+    const api = (globalThis as any).chrome;
+    const originalSet = api.storage.local.set;
+    let finishSave = () => {};
+    api.storage.local.set = (items: Record<string, unknown>, callback: () => void) => {
+      originalSet(items);
+      finishSave = callback;
+    };
+    try {
+      select.value = '60';
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      await tick();
+      originalSet({ 'chatgpttoolkit.chatgptConversationWidth': '100' });
+      await tick();
+      finishSave();
+      await tick();
+      api.storage.local.set = (_items: unknown, callback: () => void) => {
+        api.runtime.lastError = { message: 'Storage unavailable' };
+        callback();
+        api.runtime.lastError = undefined;
+      };
+      select.value = '80';
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      await tick();
+      expect(select.value).toBe('100');
+      expect(store['chatgpttoolkit.chatgptConversationWidth']).toBe('100');
+    } finally {
+      api.storage.local.set = originalSet;
+      originalSet({ 'chatgpttoolkit.chatgptConversationWidth': 'default' });
+      await tick();
+    }
+  });
+
   test('renders the composer preview with {{args}} semantics and send state', () => {
     const summary = visibleCards()[1];
     expect(summary.querySelector('.token--appended')).not.toBeNull();

@@ -550,5 +550,11 @@
     },
     "options_advanced_save_error": {
         "message": "無法儲存版面設定，請再試一次。"
+    },
+    "options_footer_maintainer_prefix": {
+        "message": "本工具由 "
+    },
+    "options_footer_maintainer_suffix": {
+        "message": " 設計、開發與維護"
     }
 }

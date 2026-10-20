@@ -550,5 +550,11 @@
     },
     "options_advanced_save_error": {
         "message": "Unable to save layout settings. Please try again."
+    },
+    "options_footer_maintainer_prefix": {
+        "message": "This tool is designed, developed, and maintained by "
+    },
+    "options_footer_maintainer_suffix": {
+        "message": "."
     }
 }
