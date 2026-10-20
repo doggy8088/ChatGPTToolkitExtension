@@ -1157,11 +1157,12 @@
     }
     style.textContent = `
     @media screen and (min-width: 768px) {
-      main:has(#thread), main:has([data-thread-find-target="conversation"]) {
+      main:has(#thread), main:has([data-thread-find-target="conversation"]),
+      main:has(form[data-chatgpt-composer]) {
         container-type: inline-size;
       }
       main :is(#thread, [data-thread-find-target="conversation"], #thread-bottom-container),
-      main[data-app-shell-main-surface] form[data-chatgpt-composer],
+      main form[data-chatgpt-composer],
       main [class*="--thread-content-max-width"] {
         --thread-content-max-width: ${width}cqw !important;
         --thread-content-responsive-max-width: ${width}cqw !important;
@@ -1172,7 +1173,7 @@
       main :is(#thread, #thread-bottom-container) [class*="max-w-"][class*="thread-content"],
       main #thread article[data-testid^="conversation-turn-"] > div > div,
       main[data-app-shell-main-surface] [data-thread-find-target="conversation"],
-      main[data-app-shell-main-surface] form[data-chatgpt-composer] {
+      main form[data-chatgpt-composer] {
         box-sizing: border-box;
         width: min(100%, ${width}cqw) !important;
         max-width: min(100%, ${width}cqw) !important;
@@ -2252,4 +2253,4 @@
   runContentScript();
 })();
 
-//# debugId=B27C3DD1D10D8D5F64756E2164756E21
+//# debugId=7FA39B3AA18510F364756E2164756E21

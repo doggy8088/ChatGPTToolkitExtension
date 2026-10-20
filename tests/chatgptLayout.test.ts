@@ -101,4 +101,21 @@ describe('ChatGPT conversation layout', () => {
       main.remove();
     }
   });
+
+  test('home composer establishes a main query container without a conversation', () => {
+    const main = document.createElement('main');
+    main.innerHTML = '<form data-composer-placement="home" data-chatgpt-composer></form>';
+    document.body.appendChild(main);
+    try {
+      applyChatGPTWidth('80');
+      const style = document.getElementById(CHATGPT_LAYOUT_STYLE_ID) as HTMLStyleElement;
+      const rules = Array.from((style.sheet!.cssRules[0] as CSSMediaRule).cssRules) as CSSStyleRule[];
+      const containerRule = rules.find((rule) => rule.style.getPropertyValue('container-type'))!;
+      const widthRule = rules.find((rule) => rule.style.getPropertyValue('max-width'))!;
+      expect(main.matches(containerRule.selectorText)).toBe(true);
+      expect(main.firstElementChild!.matches(widthRule.selectorText)).toBe(true);
+    } finally {
+      main.remove();
+    }
+  });
 });

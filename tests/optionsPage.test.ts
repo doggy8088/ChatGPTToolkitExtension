@@ -220,6 +220,36 @@ describe('options page (smoke)', () => {
     }
   });
 
+  test('a newer external update cancels stale queued width writes', async () => {
+    const select = $<HTMLSelectElement>('#chatgptConversationWidth');
+    const api = (globalThis as any).chrome;
+    const originalSet = api.storage.local.set;
+    const pending: Array<() => void> = [];
+    api.storage.local.set = (items: Record<string, unknown>, callback: () => void) => {
+      originalSet(items);
+      pending.push(callback);
+    };
+    try {
+      for (const value of ['60', '80']) {
+        select.value = value;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      await tick();
+      expect(pending).toHaveLength(1);
+      originalSet({ 'chatgpttoolkit.chatgptConversationWidth': '100' });
+      await tick();
+      pending[0]();
+      await tick();
+      expect(pending).toHaveLength(1);
+      expect(select.value).toBe('100');
+      expect(store['chatgpttoolkit.chatgptConversationWidth']).toBe('100');
+    } finally {
+      api.storage.local.set = originalSet;
+      originalSet({ 'chatgpttoolkit.chatgptConversationWidth': 'default' });
+      await tick();
+    }
+  });
+
   test('renders the composer preview with {{args}} semantics and send state', () => {
     const summary = visibleCards()[1];
     expect(summary.querySelector('.token--appended')).not.toBeNull();
