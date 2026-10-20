@@ -526,5 +526,29 @@
   },
   "link_builder_import_success": {
     "message": "リンクを読み込みました"
+  },
+  "options_advanced_title": {
+      "message": "詳細設定"
+  },
+  "options_advanced_chatgpt_title": {
+      "message": "ChatGPT のレイアウト"
+  },
+  "options_advanced_width_label": {
+      "message": "会話の幅"
+  },
+  "options_advanced_width_default": {
+      "message": "ChatGPT の既定値"
+  },
+  "options_advanced_width_help": {
+      "message": "サイドバーを除いた会話領域に対する割合です。変更は自動保存され、開いている ChatGPT タブにすぐに反映されます。デスクトップ版のみ対象です。100% でも少量の余白は残ります。既定値を選択すると元のレイアウトに戻ります。"
+  },
+  "options_advanced_saved": {
+      "message": "レイアウト設定を保存しました。"
+  },
+  "options_advanced_load_error": {
+      "message": "詳細設定を読み込めませんでした。ページを再読み込みしてください。"
+  },
+  "options_advanced_save_error": {
+      "message": "レイアウト設定を保存できませんでした。もう一度お試しください。"
   }
 }

@@ -526,5 +526,29 @@
     },
     "link_builder_import_success": {
         "message": "已匯入連結"
+    },
+    "options_advanced_title": {
+        "message": "進階設定"
+    },
+    "options_advanced_chatgpt_title": {
+        "message": "ChatGPT 版面微調"
+    },
+    "options_advanced_width_label": {
+        "message": "對話寬度"
+    },
+    "options_advanced_width_default": {
+        "message": "原廠預設"
+    },
+    "options_advanced_width_help": {
+        "message": "以扣除側邊欄後的對話區域為基準。變更會自動儲存，並即時套用至已開啟的 ChatGPT 分頁。僅調整桌面版；100% 仍保留少量閱讀邊距。選擇「原廠預設」即可恢復原本版面。"
+    },
+    "options_advanced_saved": {
+        "message": "版面設定已儲存。"
+    },
+    "options_advanced_load_error": {
+        "message": "無法載入進階設定，請重新整理此頁後再試。"
+    },
+    "options_advanced_save_error": {
+        "message": "無法儲存版面設定，請再試一次。"
     }
 }

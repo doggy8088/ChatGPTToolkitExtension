@@ -11,6 +11,40 @@
     <link rel="stylesheet" href="styles/common.css">
     <style>
         /* Options page styles; the shared tokens and components live in styles/common.css. */
+        .page-footer .footer {
+            margin-top: 12px;
+            line-height: 1.8;
+        }
+        .page-footer .footer a {
+            color: var(--accent-ink);
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+        .advanced-settings {
+            margin-block-end: 24px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: var(--surface);
+        }
+        .advanced-settings > summary {
+            padding: 16px 20px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .advanced-settings__body { padding: 0 20px 20px; }
+        .advanced-settings__body h2 { margin: 0 0 16px; font-size: 1rem; }
+        .advanced-settings select {
+            display: block;
+            width: 100%;
+            max-width: 280px;
+            margin-block-start: 8px;
+            padding: 10px 12px;
+            border: 1px solid var(--line-strong);
+            border-radius: 8px;
+            background: var(--surface);
+            color: var(--ink);
+            font: inherit;
+        }
 
         /* Group identity colors: initial buttons are green, follow-up buttons are indigo. */
         :root,
@@ -1254,6 +1288,21 @@
     <main id="main" class="page">
         <p class="page-intro" data-i18n="options_header_subtitle"></p>
 
+        <details id="advancedSettings" class="advanced-settings">
+            <summary data-i18n="options_advanced_title"></summary>
+            <div class="advanced-settings__body">
+                <h2 data-i18n="options_advanced_chatgpt_title"></h2>
+                <label for="chatgptConversationWidth" class="field__label" data-i18n="options_advanced_width_label"></label>
+                <select id="chatgptConversationWidth" aria-describedby="chatgptWidthHelp" disabled>
+                    <option value="default" data-i18n="options_advanced_width_default"></option>
+                    <option value="60">60%</option>
+                    <option value="80">80%</option>
+                    <option value="100">100%</option>
+                </select>
+                <p id="chatgptWidthHelp" class="field__help" data-i18n="options_advanced_width_help"></p>
+            </div>
+        </details>
+
         <section class="prompt-groups" data-i18n-aria-label="options_prompt_groups_label">
             <div class="group-tabs" role="tablist" data-i18n-aria-label="options_prompt_tablist_label">
                 <button type="button" id="tabInitialBtn" class="group-tab" data-group="initial" role="tab" aria-selected="true" aria-controls="panelInitial" aria-describedby="tabInitialDesc" tabindex="0">
@@ -1306,6 +1355,10 @@
 
     <footer class="page-footer">
         <span data-i18n="options_footer_version_label"></span><span id="appVersion">0.47.1</span>
+        <div class="footer">
+            本工具由 <a href="https://www.facebook.com/will.fans/" target="_blank" rel="noopener noreferrer">Will 保哥的技術交流中心</a> 設計、開發與維護
+            <div>Copyright © 2026 <a href="https://blog.miniasp.com" target="_blank" rel="noopener noreferrer">Will 保哥</a></div>
+        </div>
     </footer>
 
     <div id="statusMessage" class="toast-region" aria-live="polite"></div>

@@ -1115,6 +1115,73 @@
     return true;
   }
 
+  // src/shared/chatgptLayout.ts
+  var CHATGPT_WIDTH_KEY = "chatgpttoolkit.chatgptConversationWidth";
+  var CHATGPT_WIDTHS = ["default", "60", "80", "100"];
+  function parseChatGPTWidth(value) {
+    return CHATGPT_WIDTHS.includes(value) ? value : "default";
+  }
+  function watchChatGPTWidth(onWidth, onError) {
+    let changed = false;
+    try {
+      chrome.storage.onChanged.addListener((changes, area) => {
+        if (area !== "local" || !Object.prototype.hasOwnProperty.call(changes, CHATGPT_WIDTH_KEY))
+          return;
+        changed = true;
+        onWidth(parseChatGPTWidth(changes[CHATGPT_WIDTH_KEY].newValue));
+      });
+      chrome.storage.local.get([CHATGPT_WIDTH_KEY], (items) => {
+        if (chrome.runtime?.lastError) {
+          onError(new Error(chrome.runtime.lastError.message));
+        } else if (!changed) {
+          onWidth(parseChatGPTWidth(items[CHATGPT_WIDTH_KEY]));
+        }
+      });
+    } catch (error) {
+      onError(error);
+    }
+  }
+
+  // src/content/sites/chatgptLayout.ts
+  var CHATGPT_LAYOUT_STYLE_ID = "chatgpttoolkit-conversation-width";
+  function applyChatGPTWidth(width) {
+    if (width === "default") {
+      document.getElementById(CHATGPT_LAYOUT_STYLE_ID)?.remove();
+      return;
+    }
+    let style = document.getElementById(CHATGPT_LAYOUT_STYLE_ID);
+    if (!style) {
+      style = document.createElement("style");
+      style.id = CHATGPT_LAYOUT_STYLE_ID;
+      document.head.appendChild(style);
+    }
+    style.textContent = `
+    @media screen and (min-width: 768px) {
+      main:has(#thread), main:has([data-thread-find-target="conversation"]) {
+        container-type: inline-size;
+      }
+      main :is(#thread, [data-thread-find-target="conversation"], #thread-bottom-container),
+      main [class*="--thread-content-max-width"] {
+        --thread-content-max-width: ${width}cqw !important;
+        --thread-content-responsive-max-width: ${width}cqw !important;
+      }
+      main #thread [class*="--thread-content-margin"] {
+        --thread-content-margin: 16px !important;
+      }
+      main :is(#thread, #thread-bottom-container) [class*="max-w-"][class*="thread-content"],
+      main #thread article[data-testid^="conversation-turn-"] > div > div {
+        box-sizing: border-box;
+        width: min(100%, ${width}cqw) !important;
+        max-width: min(100%, ${width}cqw) !important;
+        margin-inline: auto !important;
+      }
+    }
+  `;
+  }
+  function initChatGPTLayout() {
+    watchChatGPTWidth(applyChatGPTWidth, (error) => console.warn("Unable to load ChatGPT layout settings:", error));
+  }
+
   // src/content/sites/chatgpt.ts
   var COMPOSER_FORM_SELECTORS = [
     "form[data-chatgpt-composer]",
@@ -1257,6 +1324,7 @@
 `;
   var MINDMAP_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="12" viewBox="0 0 128 128" aria-hidden="true"><path fill="#F5E41C" stroke="#010100" stroke-width="2" d="M76.35 109.75C61.4 101.92 53.99 89.4 51.84 73.08c-10.98 0-21.78.02-32.59-.01-6.37-.02-10.02-2.86-10.14-7.79-.12-5.04 3.8-8.19 10.32-8.21 10.65-.03 21.3-.01 31.75-.01.38-.47.7-.68.74-.95 4.5-25.18 19.67-39.08 46.09-42.08 4.79-.54 9.62-.89 14.44-.97 5.2-.09 8.51 3.02 8.67 7.62.17 4.86-3.14 7.72-8.53 8.4-8.53 1.07-17.29 1.71-25.44 4.2-11.36 3.46-17.21 11.76-18.83 23.78h39.47c1.67 0 3.34-.08 5 .03 5.1.33 8.32 3.55 8.25 8.17-.07 4.6-3.33 7.74-8.53 7.78-12.83.09-25.65.03-38.48.04h-5.8c1.45 10.83 6.64 18.94 16.52 22.73 7.02 2.69 14.74 3.62 22.19 5.15 2.09.43 4.33.03 6.48.28 5.05.57 8.02 4 7.68 8.68-.31 4.4-3.5 7.19-8.52 7.22-12.45.07-24.53-1.79-36.23-7.37z"/></svg>';
   function initChatGPT(ctx) {
+    initChatGPTLayout();
     const { state, debug } = ctx;
     function isInitialButtonsAllowedPage() {
       const pathname = (location.pathname || "/").replace(/\/+$/, "") || "/";
@@ -2181,4 +2249,4 @@
   runContentScript();
 })();
 
-//# debugId=BEAD9039910AF1B764756E2164756E21
+//# debugId=DC5D20235B288A7864756E2164756E21

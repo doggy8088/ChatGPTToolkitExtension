@@ -113,6 +113,49 @@ describe('options page (smoke)', () => {
     expect($('#resetBtn').getAttribute('aria-label')).toBe('Restore defaults');
   });
 
+  test('saves advanced layout independently and reflects changes from other pages', async () => {
+    const select = $<HTMLSelectElement>('#chatgptConversationWidth');
+    const key = 'chatgpttoolkit.chatgptConversationWidth';
+    expect($<HTMLDetailsElement>('#advancedSettings').open).toBe(false);
+    expect(select.value).toBe('default');
+    expect(select.disabled).toBe(false);
+    const prompts = structuredClone(stored());
+    select.value = '80';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    await tick();
+    expect(store[key]).toBe('80');
+    expect(stored()).toEqual(prompts);
+    (globalThis as any).chrome.storage.local.set({ [key]: '100' });
+    await tick();
+    expect(select.value).toBe('100');
+    select.value = 'default';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    await tick();
+    expect(store[key]).toBe('default');
+  });
+
+  test('restores the last saved width when saving fails', async () => {
+    const select = $<HTMLSelectElement>('#chatgptConversationWidth');
+    const previous = select.value;
+    const api = (globalThis as any).chrome;
+    const originalSet = api.storage.local.set;
+    api.storage.local.set = (_items: unknown, callback: () => void) => {
+      api.runtime.lastError = { message: 'Storage unavailable' };
+      callback();
+      api.runtime.lastError = undefined;
+    };
+    try {
+      select.value = '60';
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      await tick();
+      expect(select.value).toBe(previous);
+      expect(select.disabled).toBe(false);
+      expect($('#statusMessage').textContent).toContain(t('options_advanced_save_error'));
+    } finally {
+      api.storage.local.set = originalSet;
+    }
+  });
+
   test('renders the composer preview with {{args}} semantics and send state', () => {
     const summary = visibleCards()[1];
     expect(summary.querySelector('.token--appended')).not.toBeNull();
