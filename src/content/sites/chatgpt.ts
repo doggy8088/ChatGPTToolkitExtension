@@ -1,4 +1,6 @@
 import type { ContentContext } from '../context';
+import { initChatGPTLayout } from './chatgptLayout';
+import { CHATGPT_COMPOSER_FORM_SELECTORS as COMPOSER_FORM_SELECTORS } from './chatgptSelectors';
 import { extractPromptEditorText } from '../editorText';
 import {
   CUSTOM_PROMPTS_KEY,
@@ -19,12 +21,6 @@ type MarkmapInstanceHandle = {
 // ChatGPT serves several front-ends side by side: the 2026 app shell (logged in), the older
 // React app and the logged-out "Octane" app. Every lookup lists the current markup first and
 // keeps the older selectors as fallbacks.
-const COMPOSER_FORM_SELECTORS = [
-  'form[data-chatgpt-composer]',
-  'form[data-type="unified-composer"]',
-  'form[data-mobile-composer]',
-];
-
 const PROMPT_EDITOR_SELECTORS = [
   '#prompt-textarea',
   '[data-composer-markdown][contenteditable="true"]',
@@ -176,6 +172,7 @@ const MINDMAP_ICON_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" width="12" viewBox="0 0 128 128" aria-hidden="true"><path fill="#F5E41C" stroke="#010100" stroke-width="2" d="M76.35 109.75C61.4 101.92 53.99 89.4 51.84 73.08c-10.98 0-21.78.02-32.59-.01-6.37-.02-10.02-2.86-10.14-7.79-.12-5.04 3.8-8.19 10.32-8.21 10.65-.03 21.3-.01 31.75-.01.38-.47.7-.68.74-.95 4.5-25.18 19.67-39.08 46.09-42.08 4.79-.54 9.62-.89 14.44-.97 5.2-.09 8.51 3.02 8.67 7.62.17 4.86-3.14 7.72-8.53 8.4-8.53 1.07-17.29 1.71-25.44 4.2-11.36 3.46-17.21 11.76-18.83 23.78h39.47c1.67 0 3.34-.08 5 .03 5.1.33 8.32 3.55 8.25 8.17-.07 4.6-3.33 7.74-8.53 7.78-12.83.09-25.65.03-38.48.04h-5.8c1.45 10.83 6.64 18.94 16.52 22.73 7.02 2.69 14.74 3.62 22.19 5.15 2.09.43 4.33.03 6.48.28 5.05.57 8.02 4 7.68 8.68-.31 4.4-3.5 7.19-8.52 7.22-12.45.07-24.53-1.79-36.23-7.37z"/></svg>';
 
 export function initChatGPT(ctx: ContentContext) {
+  initChatGPTLayout();
   const { state, debug } = ctx;
 
   // Initial buttons are only allowed on the ChatGPT home page (root path).

@@ -113,6 +113,234 @@ describe('options page (smoke)', () => {
     expect($('#resetBtn').getAttribute('aria-label')).toBe('Restore defaults');
   });
 
+  test('saves advanced layout independently and reflects changes from other pages', async () => {
+    const select = $<HTMLSelectElement>('#chatgptConversationWidth');
+    const key = 'chatgpttoolkit.chatgptConversationWidth';
+    expect($<HTMLDetailsElement>('#advancedSettings').open).toBe(false);
+    expect(select.value).toBe('default');
+    expect(select.disabled).toBe(false);
+    const prompts = structuredClone(stored());
+    select.value = '80';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    await tick();
+    expect(store[key]).toBe('80');
+    expect(stored()).toEqual(prompts);
+    (globalThis as any).chrome.storage.local.set({ [key]: '100' });
+    await tick();
+    expect(select.value).toBe('100');
+    select.value = 'default';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    await tick();
+    expect(store[key]).toBe('default');
+  });
+
+  test('restores the last saved width when saving fails', async () => {
+    const select = $<HTMLSelectElement>('#chatgptConversationWidth');
+    const previous = select.value;
+    const api = (globalThis as any).chrome;
+    const originalSet = api.storage.local.set;
+    api.storage.local.set = (_items: unknown, callback: () => void) => {
+      api.runtime.lastError = { message: 'Storage unavailable' };
+      callback();
+      api.runtime.lastError = undefined;
+    };
+    try {
+      select.value = '60';
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      await tick();
+      expect(select.value).toBe(previous);
+      expect(select.disabled).toBe(false);
+      expect($('#statusMessage').textContent).toContain(t('options_advanced_save_error'));
+    } finally {
+      api.storage.local.set = originalSet;
+    }
+  });
+
+  test('keeps keyboard focus and serializes rapid width changes', async () => {
+    const select = $<HTMLSelectElement>('#chatgptConversationWidth');
+    const api = (globalThis as any).chrome;
+    const originalSet = api.storage.local.set;
+    const pending: Array<{ items: Record<string, unknown>; callback: () => void }> = [];
+    api.storage.local.set = (items: Record<string, unknown>, callback: () => void) => pending.push({ items, callback });
+    try {
+      select.focus();
+      for (const value of ['60', '80']) {
+        select.value = value;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      await tick();
+      expect(select.disabled).toBe(false);
+      expect(document.activeElement).toBe(select);
+      expect(pending).toHaveLength(1);
+      originalSet(pending[0].items, pending[0].callback);
+      await tick();
+      expect(pending).toHaveLength(2);
+      originalSet(pending[1].items, pending[1].callback);
+      await tick();
+      expect(store['chatgpttoolkit.chatgptConversationWidth']).toBe('80');
+      expect(document.activeElement).toBe(select);
+    } finally {
+      api.storage.local.set = originalSet;
+      originalSet({ 'chatgpttoolkit.chatgptConversationWidth': 'default' });
+      await tick();
+    }
+  });
+
+  test('an older save completion cannot replace a newer externally saved width', async () => {
+    const select = $<HTMLSelectElement>('#chatgptConversationWidth');
+    const api = (globalThis as any).chrome;
+    const originalSet = api.storage.local.set;
+    let finishSave = () => {};
+    api.storage.local.set = (items: Record<string, unknown>, callback: () => void) => {
+      originalSet(items);
+      finishSave = callback;
+    };
+    try {
+      select.value = '60';
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      await tick();
+      originalSet({ 'chatgpttoolkit.chatgptConversationWidth': '100' });
+      await tick();
+      finishSave();
+      await tick();
+      api.storage.local.set = (_items: unknown, callback: () => void) => {
+        api.runtime.lastError = { message: 'Storage unavailable' };
+        callback();
+        api.runtime.lastError = undefined;
+      };
+      select.value = '80';
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      await tick();
+      expect(select.value).toBe('100');
+      expect(store['chatgpttoolkit.chatgptConversationWidth']).toBe('100');
+    } finally {
+      api.storage.local.set = originalSet;
+      originalSet({ 'chatgpttoolkit.chatgptConversationWidth': 'default' });
+      await tick();
+    }
+  });
+
+  test('a newer external update cancels stale queued width writes', async () => {
+    const select = $<HTMLSelectElement>('#chatgptConversationWidth');
+    const api = (globalThis as any).chrome;
+    const originalSet = api.storage.local.set;
+    const pending: Array<() => void> = [];
+    api.storage.local.set = (items: Record<string, unknown>, callback: () => void) => {
+      originalSet(items);
+      pending.push(callback);
+    };
+    try {
+      for (const value of ['60', '80']) {
+        select.value = value;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      await tick();
+      expect(pending).toHaveLength(1);
+      originalSet({ 'chatgpttoolkit.chatgptConversationWidth': '100' });
+      await tick();
+      pending[0]();
+      await tick();
+      expect(pending).toHaveLength(1);
+      expect(select.value).toBe('100');
+      expect(store['chatgpttoolkit.chatgptConversationWidth']).toBe('100');
+    } finally {
+      api.storage.local.set = originalSet;
+      originalSet({ 'chatgpttoolkit.chatgptConversationWidth': 'default' });
+      await tick();
+    }
+  });
+
+  test('same-value writes from another page also cancel stale queued requests', async () => {
+    const select = $<HTMLSelectElement>('#chatgptConversationWidth');
+    const api = (globalThis as any).chrome;
+    const originalSet = api.storage.local.set;
+    const pending: Array<() => void> = [];
+    api.storage.local.set = (_items: Record<string, unknown>, callback: () => void) => pending.push(callback);
+    try {
+      for (const value of ['60', '80']) {
+        select.value = value;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      await tick();
+      originalSet({
+        'chatgpttoolkit.chatgptConversationWidth': '60',
+        'chatgpttoolkit.chatgptConversationWidth.write': { width: '60', writer: 'another-page', revision: '1' },
+      });
+      await tick();
+      pending[0]();
+      await tick();
+      expect(pending).toHaveLength(1);
+      expect(select.value).toBe('60');
+      expect(store['chatgpttoolkit.chatgptConversationWidth']).toBe('60');
+    } finally {
+      api.storage.local.set = originalSet;
+      originalSet({ 'chatgpttoolkit.chatgptConversationWidth': 'default' });
+      await tick();
+    }
+  });
+
+  test('repairs an in-flight write that commits after a newer external selection', async () => {
+    const select = $<HTMLSelectElement>('#chatgptConversationWidth');
+    const api = (globalThis as any).chrome;
+    const originalSet = api.storage.local.set;
+    const pending: Array<{ items: Record<string, unknown>; callback: () => void }> = [];
+    api.storage.local.set = (items: Record<string, unknown>, callback: () => void) => pending.push({ items, callback });
+    try {
+      select.value = '60';
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      await tick();
+      originalSet({ 'chatgpttoolkit.chatgptConversationWidth': '100' });
+      await tick();
+      // Commit the older local request only after the external write finished.
+      originalSet(pending[0].items, pending[0].callback);
+      await tick();
+      expect(select.value).toBe('100');
+      expect(pending).toHaveLength(2);
+      expect(pending[1].items['chatgpttoolkit.chatgptConversationWidth']).toBe('100');
+      originalSet(pending[1].items, pending[1].callback);
+      await tick();
+      expect(select.value).toBe('100');
+      expect(store['chatgpttoolkit.chatgptConversationWidth']).toBe('100');
+    } finally {
+      api.storage.local.set = originalSet;
+      originalSet({ 'chatgpttoolkit.chatgptConversationWidth': 'default' });
+      await tick();
+    }
+  });
+
+  test('repairs stale writes even when callbacks arrive before storage events', async () => {
+    const select = $<HTMLSelectElement>('#chatgptConversationWidth');
+    const api = (globalThis as any).chrome;
+    const originalSet = api.storage.local.set;
+    const key = 'chatgpttoolkit.chatgptConversationWidth';
+    const pending: Array<{ items: Record<string, unknown>; callback: () => void }> = [];
+    api.storage.local.set = (items: Record<string, unknown>, callback: () => void) => pending.push({ items, callback });
+    try {
+      select.value = '60';
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      await tick();
+      // Storage commits external 100, then local 60, but delays both events.
+      store[key] = '100';
+      Object.assign(store, pending[0].items);
+      pending[0].callback();
+      await tick();
+      storageListeners.forEach((listener) => listener({ [key]: { newValue: '100' } }, 'local'));
+      const changes = Object.fromEntries(Object.entries(pending[0].items).map(([name, value]) => [name, { newValue: value }]));
+      storageListeners.forEach((listener) => listener(changes, 'local'));
+      await tick();
+      expect(select.value).toBe('100');
+      expect(pending).toHaveLength(2);
+      originalSet(pending[1].items, pending[1].callback);
+      await tick();
+      expect(store[key]).toBe('100');
+      expect(select.value).toBe('100');
+    } finally {
+      api.storage.local.set = originalSet;
+      originalSet({ [key]: 'default' });
+      await tick();
+    }
+  });
+
   test('renders the composer preview with {{args}} semantics and send state', () => {
     const summary = visibleCards()[1];
     expect(summary.querySelector('.token--appended')).not.toBeNull();

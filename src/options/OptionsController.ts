@@ -3,6 +3,7 @@ import { PROMPTS_STORAGE_KEY, PromptsStorageService } from './services/PromptsSt
 import { OptionsUIController, onDialogBackdropClick } from './ui/OptionsUIController';
 import { PromptRenderer, type PromptCardCallbacks } from './ui/PromptRenderer';
 import { ThemeSwitcher } from './ui/ThemeSwitcher';
+import { initAdvancedSettings } from './ui/AdvancedSettings';
 import { byId, insertTextAtCaret, shortcutKbds } from './utils/dom';
 import { downloadFile } from './utils/helpers';
 import { applyPageI18n, getMessage } from './utils/i18n';
@@ -130,6 +131,7 @@ class OptionsController {
     this.initializeDOM();
     this.applyI18n();
     new ThemeSwitcher().init();
+    initAdvancedSettings(this.ui);
     this.attachEventListeners();
     this.listenForStorageChanges();
     this.updateTabsUI();

@@ -526,5 +526,35 @@
     },
     "link_builder_import_success": {
         "message": "Link imported"
+    },
+    "options_advanced_title": {
+        "message": "Advanced settings"
+    },
+    "options_advanced_chatgpt_title": {
+        "message": "ChatGPT layout"
+    },
+    "options_advanced_width_label": {
+        "message": "Conversation width"
+    },
+    "options_advanced_width_default": {
+        "message": "ChatGPT default"
+    },
+    "options_advanced_width_help": {
+        "message": "Uses the available conversation area, excluding the sidebar. Saves automatically and applies to open ChatGPT tabs. Desktop only; 100% keeps a small reading margin. Select ChatGPT default to restore the original layout."
+    },
+    "options_advanced_saved": {
+        "message": "Layout settings saved."
+    },
+    "options_advanced_load_error": {
+        "message": "Unable to load advanced settings. Reload this page to try again."
+    },
+    "options_advanced_save_error": {
+        "message": "Unable to save layout settings. Please try again."
+    },
+    "options_footer_maintainer_prefix": {
+        "message": "This tool is designed, developed, and maintained by "
+    },
+    "options_footer_maintainer_suffix": {
+        "message": "."
     }
 }
