@@ -1117,18 +1117,31 @@
 
   // src/shared/chatgptLayout.ts
   var CHATGPT_WIDTH_KEY = "chatgpttoolkit.chatgptConversationWidth";
+  var CHATGPT_WIDTH_WRITE_KEY = `${CHATGPT_WIDTH_KEY}.write`;
   var CHATGPT_WIDTHS = ["default", "60", "80", "100"];
   function parseChatGPTWidth(value) {
     return CHATGPT_WIDTHS.includes(value) ? value : "default";
+  }
+  function parseWidthWrite(value) {
+    if (!value || typeof value !== "object" || !("width" in value) || !("writer" in value))
+      return null;
+    if (typeof value.writer !== "string" || !CHATGPT_WIDTHS.includes(value.width))
+      return null;
+    return { width: value.width, writer: value.writer };
   }
   function watchChatGPTWidth(onWidth, onError) {
     let changed = false;
     try {
       chrome.storage.onChanged.addListener((changes, area) => {
-        if (area !== "local" || !Object.prototype.hasOwnProperty.call(changes, CHATGPT_WIDTH_KEY))
+        if (area !== "local")
+          return;
+        const widthChanged = Object.prototype.hasOwnProperty.call(changes, CHATGPT_WIDTH_KEY);
+        const write = parseWidthWrite(changes[CHATGPT_WIDTH_WRITE_KEY]?.newValue);
+        if (!widthChanged && !write)
           return;
         changed = true;
-        onWidth(parseChatGPTWidth(changes[CHATGPT_WIDTH_KEY].newValue));
+        const width = parseChatGPTWidth(widthChanged ? changes[CHATGPT_WIDTH_KEY].newValue : write?.width);
+        onWidth(width, write?.width === width ? write.writer : undefined);
       });
       chrome.storage.local.get([CHATGPT_WIDTH_KEY], (items) => {
         if (chrome.runtime?.lastError) {
@@ -2253,4 +2266,4 @@
   runContentScript();
 })();
 
-//# debugId=7FA39B3AA18510F364756E2164756E21
+//# debugId=1B5F6EB6E1859B3864756E2164756E21

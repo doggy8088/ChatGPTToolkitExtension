@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { CHATGPT_WIDTH_KEY, parseChatGPTWidth, saveChatGPTWidth, watchChatGPTWidth } from '../src/shared/chatgptLayout';
+import { CHATGPT_WIDTH_KEY, CHATGPT_WIDTH_WRITE_KEY, parseChatGPTWidth, saveChatGPTWidth, watchChatGPTWidth } from '../src/shared/chatgptLayout';
 import { applyChatGPTWidth, CHATGPT_LAYOUT_STYLE_ID, initChatGPTLayout } from '../src/content/sites/chatgptLayout';
 import { ensureHappyDom } from './utils/happyDom';
 
@@ -30,6 +30,7 @@ function storageStub(value: unknown) {
     api,
     finishRead: () => finishRead(),
     change: (next: unknown, area = 'local') => listener({ [CHATGPT_WIDTH_KEY]: { newValue: next } }, area),
+    writeChange: (next: unknown) => listener({ [CHATGPT_WIDTH_WRITE_KEY]: { newValue: next } }, 'local'),
   };
 }
 
@@ -65,6 +66,17 @@ describe('ChatGPT conversation layout', () => {
     stub.change('100');
     stub.finishRead();
     expect(widths).toEqual(['100']);
+  });
+
+  test('same-width metadata events retain their origin and reject malformed metadata', () => {
+    const stub = storageStub('60');
+    const seen: unknown[] = [];
+    watchChatGPTWidth((width, writer) => seen.push({ width, writer }), () => {});
+    stub.finishRead();
+    stub.writeChange({ width: '60', writer: 'another-page', revision: '2' });
+    stub.writeChange({ width: 'invalid', writer: 'another-page' });
+    stub.writeChange(null);
+    expect(seen).toEqual([{ width: '60', writer: undefined }, { width: '60', writer: 'another-page' }]);
   });
 
   test('reports storage failures instead of claiming the setting was saved', async () => {

@@ -250,6 +250,35 @@ describe('options page (smoke)', () => {
     }
   });
 
+  test('same-value writes from another page also cancel stale queued requests', async () => {
+    const select = $<HTMLSelectElement>('#chatgptConversationWidth');
+    const api = (globalThis as any).chrome;
+    const originalSet = api.storage.local.set;
+    const pending: Array<() => void> = [];
+    api.storage.local.set = (_items: Record<string, unknown>, callback: () => void) => pending.push(callback);
+    try {
+      for (const value of ['60', '80']) {
+        select.value = value;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      await tick();
+      originalSet({
+        'chatgpttoolkit.chatgptConversationWidth': '60',
+        'chatgpttoolkit.chatgptConversationWidth.write': { width: '60', writer: 'another-page', revision: '1' },
+      });
+      await tick();
+      pending[0]();
+      await tick();
+      expect(pending).toHaveLength(1);
+      expect(select.value).toBe('60');
+      expect(store['chatgpttoolkit.chatgptConversationWidth']).toBe('60');
+    } finally {
+      api.storage.local.set = originalSet;
+      originalSet({ 'chatgpttoolkit.chatgptConversationWidth': 'default' });
+      await tick();
+    }
+  });
+
   test('renders the composer preview with {{args}} semantics and send state', () => {
     const summary = visibleCards()[1];
     expect(summary.querySelector('.token--appended')).not.toBeNull();
