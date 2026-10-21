@@ -1174,6 +1174,8 @@
       document.getElementById(CHATGPT_LAYOUT_STYLE_ID)?.remove();
       return;
     }
+    const shift = "var(--thread-wide-block-inline-shift, 0px)";
+    const contentWidth = `max(0px, min(calc(${width}cqw - ${shift} * ${Number(width) / 50}), calc(100cqw - ${shift} * 2 - 32px)))`;
     let style = document.getElementById(CHATGPT_LAYOUT_STYLE_ID);
     if (!style) {
       style = document.createElement("style");
@@ -1189,8 +1191,8 @@
       main :is(#thread, [data-thread-find-target="conversation"], #thread-bottom-container),
       main ${COMPOSER_SELECTOR},
       main [class*="--thread-content-max-width"] {
-        --thread-content-max-width: ${width}cqw !important;
-        --thread-content-responsive-max-width: ${width}cqw !important;
+        --thread-content-max-width: ${contentWidth} !important;
+        --thread-content-responsive-max-width: ${contentWidth} !important;
       }
       main #thread [class*="--thread-content-margin"] {
         --thread-content-margin: 16px !important;
@@ -1200,8 +1202,8 @@
       main[data-app-shell-main-surface] [data-thread-find-target="conversation"],
       main ${COMPOSER_SELECTOR} {
         box-sizing: border-box;
-        width: min(100%, ${width}cqw) !important;
-        max-width: min(100%, ${width}cqw) !important;
+        width: min(100%, ${contentWidth}) !important;
+        max-width: min(100%, ${contentWidth}) !important;
         margin-inline: auto !important;
       }
     }
@@ -2273,4 +2275,4 @@
   runContentScript();
 })();
 
-//# debugId=8A719C9DC7346FD964756E2164756E21
+//# debugId=2EC145C6A614C60064756E2164756E21
